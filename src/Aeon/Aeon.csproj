@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Aeon.Emulator.Launcher</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Aeon</Company>
+    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
+    <Product>Aeon</Product>
+    <Title>Aeon</Title>
+    <Description>Runtime environment for the Aeon x86 emulator.</Description>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Aeon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="8.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+    <ProjectReference Include="..\Aeon.DiskImages\Aeon.DiskImages.csproj" />
+    <ProjectReference Include="..\Aeon.Emulator.Input\Aeon.Emulator.Input.csproj" />
+    <ProjectReference Include="..\Aeon.Presentation\Aeon.Presentation.csproj" />
+    <ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
+    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\MouseIntegration.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Aeon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\openfolderHS.png" />
+  </ItemGroup>
+</Project>

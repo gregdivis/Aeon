@@ -1,0 +1,51 @@
+﻿namespace Aeon.Emulator
+{
+    partial class FlagState
+    {
+        private enum FlagOperation
+        {
+            Mul,
+            IMul,
+            IMul23_Word,
+            IMul23_DWord,
+            Add_Byte,
+            Add_Word,
+            Add_DWord,
+            Adc_Byte,
+            Adc_Word,
+            Adc_DWord,
+            Sub_Byte,
+            Sub_Word,
+            Sub_DWord,
+            Sbb_Byte,
+            Sbb_Word,
+            Sbb_DWord,
+            Inc_Byte,
+            Inc_Word,
+            Inc_DWord,
+            Dec_Byte,
+            Dec_Word,
+            Dec_DWord,
+            Sar1,
+            Sar_Byte,
+            Sar_Word,
+            Sar_DWord,
+            Shl1_Byte,
+            Shl1_Word,
+            Shl1_DWord,
+            Shl_Byte,
+            Shl_Word,
+            Shl_DWord,
+            Shr1_Byte,
+            Shr1_Word,
+            Shr1_DWord,
+            Shr,
+            Rol1_Byte,
+            Rol1_Word,
+            Rol1_DWord,
+            Rol,
+            Shld_Word,
+            Shld_DWord
+        }
+    }
+}

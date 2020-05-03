@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Aeon</Company>
+    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
+    <Product>Aeon</Product>
+    <Title>Aeon Disk Image Support</Title>
+    <Description>Implements Aeon disk images.</Description>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,19 @@
+﻿<Application x:Class="Aeon.Emulator.Launcher.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="EmulatorDisplayResources.xaml" />
+                <ResourceDictionary Source="RoundButtonResources.xaml" />
+                <ResourceDictionary>
+                    <LinearGradientBrush x:Key="backgroundGradient">
+                        <GradientStop Color="SteelBlue" Offset="0" />
+                        <GradientStop Color="#FF1D4461" Offset="1" />
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

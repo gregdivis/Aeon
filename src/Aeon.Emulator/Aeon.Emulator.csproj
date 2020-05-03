@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Aeon</Company>
+    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
+    <Product>Aeon</Product>
+    <Description>Aeon x86 emulator core library</Description>
+    <Title>Aeon Core</Title>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="Resources\Command.bin" />
+    <None Include="Resources\DefaultFont14.fnt" />
+    <None Include="Resources\DefaultFont16.fnt" />
+    <None Include="Resources\Font8x8.fnt" />
+    <None Include="Resources\Font9x14.fnt" />
+  </ItemGroup>
+</Project>

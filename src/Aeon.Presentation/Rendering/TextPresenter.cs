@@ -1,0 +1,97 @@
+﻿using System;
+using Aeon.Emulator.Video;
+
+namespace Aeon.Presentation.Rendering
+{
+    /// <summary>
+    /// Renders text-mode graphics to a bitmap.
+    /// </summary>
+    internal sealed class TextPresenter : Presenter
+    {
+        private readonly int consoleWidth;
+        private readonly int consoleHeight;
+        private readonly int fontHeight;
+        private readonly unsafe ushort*[] pages;
+        private readonly byte[] font;
+        private readonly unsafe byte* videoRam;
+
+        /// <summary>
+        /// Initializes a new instance of the TextPresenter class.
+        /// </summary>
+        /// <param name="dest">Pointer to destination bitmap.</param>
+        /// <param name="videoMode">VideoMode instance describing the video mode.</param>
+        public TextPresenter(IntPtr dest, VideoMode videoMode)
+            : base(dest, videoMode)
+        {
+            unsafe
+            {
+                this.videoRam = (byte*)videoMode.VideoRam.ToPointer();
+                byte* srcPtr = (byte*)videoMode.VideoRam.ToPointer();
+
+                this.pages = new ushort*[8];
+                for (int i = 0; i < this.pages.Length; i++)
+                    this.pages[i] = (ushort*)(srcPtr + Emulator.Video.VideoMode.DisplayPageSize * i);
+            }
+
+            this.consoleWidth = videoMode.Width;
+            this.consoleHeight = videoMode.Height;
+            this.font = videoMode.Font;
+            this.fontHeight = videoMode.FontHeight;
+        }
+
+        /// <summary>
+        /// Updates the bitmap to match the current state of the video RAM.
+        /// </summary>
+        public override void Update()
+        {
+            var palette = this.VideoMode.Palette;
+            byte[] internalPalette = this.VideoMode.InternalPalette;
+            int displayPage = this.VideoMode.ActiveDisplayPage;
+
+            unsafe
+            {
+                uint* destPtr = (uint*)this.Destination.ToPointer();
+
+                byte* textPlane = this.videoRam + VideoMode.DisplayPageSize * displayPage;
+                byte* attrPlane = this.videoRam + VideoMode.PlaneSize + VideoMode.DisplayPageSize * displayPage;
+
+                for (int y = 0; y < consoleHeight; y++)
+                {
+                    for (int x = 0; x < consoleWidth; x++)
+                    {
+                        int srcOffset = y * consoleWidth + x;
+
+                        //ushort c = pages[displayPage][y * consoleWidth + x];
+                        uint* dest = destPtr + y * consoleWidth * 8 * fontHeight + x * 8;
+                        //DrawCharacter(dest, (byte)c, palette[internalPalette[(c >> 8) & 0x0F]], palette[internalPalette[(c >> 12) & 0x0F]]);
+                        DrawCharacter(dest, textPlane[srcOffset], palette[internalPalette[attrPlane[srcOffset] & 0x0F]], palette[internalPalette[attrPlane[srcOffset] >> 4]]);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Draws a single character to the bitmap.
+        /// </summary>
+        /// <param name="dest">Pointer in bitmap to top-left corner of the character.</param>
+        /// <param name="index">Index of the character.</param>
+        /// <param name="foregroundColor">Foreground color of the character.</param>
+        /// <param name="backgroundColor">Background color of the character.</param>
+        private unsafe void DrawCharacter(uint* dest, byte index, uint foregroundColor, uint backgroundColor)
+        {
+            for (int y = 0; y < this.fontHeight; y++)
+            {
+                byte current = this.font[(index * fontHeight) + y];
+                for (int x = 0; x < 8; x++)
+                {
+                    if (((current >> (7 - x)) & 1) != 0)
+                        dest[x] = foregroundColor;
+                    else
+                        dest[x] = backgroundColor;
+                }
+
+                dest += this.consoleWidth * 8;
+            }
+        }
+    }
+}

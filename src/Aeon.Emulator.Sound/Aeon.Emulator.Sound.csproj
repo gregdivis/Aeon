@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Aeon</Company>
+    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
+    <Product>Aeon</Product>
+    <Title>Aeon Sound Emulation</Title>
+    <Description>Emulates sound cards for Aeon</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Ymf262Emu" Version="1.0.0" />
+    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+  </ItemGroup>
+</Project>

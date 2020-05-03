@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Aeon</Company>
+    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
+    <Product>Aeon</Product>
+    <Title>Aeon Joystick Emulation</Title>
+    <Description>Emulates joysticks for Aeon</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+  </ItemGroup>
+</Project>

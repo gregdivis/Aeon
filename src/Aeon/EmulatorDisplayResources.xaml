@@ -1,0 +1,37 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:emu="clr-namespace:Aeon.Presentation;assembly=Aeon.Presentation">
+    <Style TargetType="{x:Type emu:EmulatorDisplay}">
+        <Style.Triggers>
+            <Trigger Property="EmulatorState" Value="Paused">
+                <Setter Property="Opacity" Value="0.5" />
+            </Trigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="EmulatorState" Value="Running" />
+                    <Condition Property="MouseInputMode" Value="Absolute" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Cursor" Value="None" />
+            </MultiTrigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="EmulatorState" Value="Running" />
+                    <Condition Property="IsMouseCursorCaptured" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Cursor" Value="None" />
+            </MultiTrigger>
+            <Trigger Property="EmulatorState" Value="ProgramExited">
+                <Trigger.EnterActions>
+                    <BeginStoryboard Name="dimStoryboard">
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:2" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <StopStoryboard BeginStoryboardName="dimStoryboard" />
+                </Trigger.ExitActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>
