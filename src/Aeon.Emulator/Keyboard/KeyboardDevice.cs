@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Aeon.Emulator.Keyboard
 {
@@ -14,6 +15,8 @@ namespace Aeon.Emulator.Keyboard
         private const ushort CtrlUp = 0x9D;
         private const ushort AltUp = 0xB8;
         private const ushort InsertUp = 0xD2;
+        private const int InitialRepeatDelay = 250;
+        private const int RepeatDelay = 30;
 
         private VirtualMachine vm;
         private readonly ConcurrentQueue<byte> hardwareQueue = new ConcurrentQueue<byte>();
@@ -24,11 +27,14 @@ namespace Aeon.Emulator.Keyboard
         private bool rightShiftDown;
         private readonly SortedList<Keys, bool> pressedKeys = new SortedList<Keys, bool>();
         private int expectedInputByteCount;
+        private volatile Keys lastKey;
+        private Timer autoRepeatTimer;
+        private readonly object autoRepeatTimerLock = new object();
 
         public KeyboardDevice()
         {
             foreach (Keys k in Enum.GetValues(typeof(Keys)))
-                pressedKeys[k] = false;
+                this.pressedKeys[k] = false;
         }
 
         /// <summary>
@@ -51,10 +57,21 @@ namespace Aeon.Emulator.Keyboard
         /// <param name="key">Key pressed on the keyboard.</param>
         public void PressKey(Keys key)
         {
-            if (!pressedKeys[key])
+            lock (this.pressedKeys)
             {
-                pressedKeys[key] = true;
-                HardwareEnqueue(key, true);
+                if (!this.pressedKeys[key])
+                {
+                    this.pressedKeys[key] = true;
+                    this.HardwareEnqueue(key, true);
+                    this.lastKey = key;
+                    lock (this.autoRepeatTimerLock)
+                    {
+                        if (this.autoRepeatTimer != null)
+                            this.autoRepeatTimer.Change(InitialRepeatDelay, Timeout.Infinite);
+                        else
+                            this.autoRepeatTimer = new Timer(this.AutoRepeatTrigger, null, InitialRepeatDelay, Timeout.Infinite);
+                    }
+                }
             }
         }
         /// <summary>
@@ -63,10 +80,14 @@ namespace Aeon.Emulator.Keyboard
         /// <param name="key">Key released on the keyboard.</param>
         public void ReleaseKey(Keys key)
         {
-            if (pressedKeys[key])
+            lock (this.pressedKeys)
             {
-                pressedKeys[key] = false;
-                HardwareEnqueue(key, false);
+                this.lastKey = default;
+                if (this.pressedKeys[key])
+                {
+                    this.pressedKeys[key] = false;
+                    this.HardwareEnqueue(key, false);
+                }
             }
         }
         /// <summary>
@@ -344,6 +365,22 @@ namespace Aeon.Emulator.Keyboard
                 value |= 8;
 
             vm.Processor.AL = value;
+        }
+        private void AutoRepeatTrigger(object obj)
+        {
+            lock (this.pressedKeys)
+            {
+                var key = this.lastKey;
+
+                if (this.pressedKeys[key])
+                {
+                    this.HardwareEnqueue(key, true);
+                    lock (this.autoRepeatTimerLock)
+                    {
+                        this.autoRepeatTimer.Change(RepeatDelay, Timeout.Infinite);
+                    }
+                }
+            }
         }
 
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { new InterruptHandlerInfo(0x09, Registers.AX | Registers.CX), 0x16 };
