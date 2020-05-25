@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Aeon.Emulator.Sound.PCSpeaker
 {
@@ -23,9 +24,9 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         private readonly ConcurrentQueue<QueuedNote> queuedNotes = new ConcurrentQueue<QueuedNote>();
         private readonly object threadStateLock = new object();
         private DirectSound directSound;
-        private DirectSoundBuffer soundBuffer;
         private SpeakerControl controlRegister = SpeakerControl.UseTimer;
-        private volatile bool isThreadActive;
+        private Task generateWaveformTask;
+        private readonly CancellationTokenSource cancelGenerateWaveform = new CancellationTokenSource();
         private int currentPeriod;
 
         /// <summary>
@@ -90,30 +91,18 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         public void Dispose()
         {
             this.frequencyRegister.ValueChanged -= this.FrequencyChanged;
-            this.isThreadActive = false;
-            this.directSound = null;
+            lock (this.threadStateLock)
+            {
+                this.cancelGenerateWaveform.Cancel();
+            }
         }
 
         /// <summary>
         /// Fills a buffer with silence.
         /// </summary>
         /// <param name="buffer">Buffer to fill.</param>
-        private static void GenerateSilence(byte[] buffer)
-        {
-            for (int i = 0; i < buffer.Length; i++)
-                buffer[i] = 127;
-        }
+        private static void GenerateSilence(Span<byte> buffer) => buffer.Fill(127);
 
-        /// <summary>
-        /// Starts the tone generator thread.
-        /// </summary>
-        private void BeginToneGenerator()
-        {
-            this.soundBuffer = this.directSound.CreateBuffer(this.outputSampleRate, ChannelMode.Monaural, BitsPerSample.Eight, this.outputSampleRate / 4);
-            var thread = new Thread(this.ToneGenerator) { IsBackground = true };
-            this.isThreadActive = true;
-            thread.Start();
-        }
         /// <summary>
         /// Invoked when the speaker has been turned off.
         /// </summary>
@@ -150,8 +139,8 @@ namespace Aeon.Emulator.Sound.PCSpeaker
 
                 lock (this.threadStateLock)
                 {
-                    if (!this.isThreadActive)
-                        this.BeginToneGenerator();
+                    if (this.generateWaveformTask == null || this.generateWaveformTask.IsCompleted)
+                        this.generateWaveformTask = Task.Run(this.GenerateWaveformAsync);
                 }
             }
         }
@@ -180,19 +169,21 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// <summary>
         /// Generates the PC speaker waveform.
         /// </summary>
-        private void ToneGenerator()
+        private async Task GenerateWaveformAsync()
         {
-            var buffer = new byte[8192];
+            using var soundBuffer = this.directSound.CreateBuffer(this.outputSampleRate, ChannelMode.Monaural, BitsPerSample.Eight, this.outputSampleRate / 8);
+
+            var buffer = new byte[4096];
             GenerateSilence(buffer);
 
             // Initialize the buffer with an empty waveform.
-            while (this.soundBuffer.Write(buffer, 0, buffer.Length)) { }
+            while (soundBuffer.Write(buffer, 0, buffer.Length)) { }
 
-            this.soundBuffer.Play(PlaybackMode.LoopContinuously);
+            soundBuffer.Play(PlaybackMode.LoopContinuously);
 
             int idleCount = 0;
 
-            while (this.isThreadActive)
+            while (idleCount < 10000)
             {
                 if (this.queuedNotes.TryDequeue(out var note))
                 {
@@ -201,9 +192,9 @@ namespace Aeon.Emulator.Sound.PCSpeaker
 
                     while (periods > 0)
                     {
-                        while (!this.soundBuffer.Write(buffer, 0, samples))
+                        while (!soundBuffer.Write(buffer, 0, samples))
                         {
-                            Thread.Sleep(1);
+                            Thread.SpinWait(10);
                         }
 
                         periods--;
@@ -214,25 +205,13 @@ namespace Aeon.Emulator.Sound.PCSpeaker
                 }
                 else
                 {
-                    if (idleCount >= 10000)
-                    {
-                        lock (this.threadStateLock)
-                        {
-                            this.soundBuffer.Dispose();
-                            this.soundBuffer = null;
-                            this.isThreadActive = false;
-                            return;
-                        }
-                    }
-
-                    this.soundBuffer.Write(buffer, 0, buffer.Length / 2);
-                    Thread.Sleep(5);
+                    soundBuffer.Write(buffer, 0, buffer.Length / 2);
+                    await Task.Delay(5, this.cancelGenerateWaveform.Token);
                     idleCount++;
                 }
-            }
 
-            this.soundBuffer.Dispose();
-            this.soundBuffer = null;
+                this.cancelGenerateWaveform.Token.ThrowIfCancellationRequested();
+            }
         }
     }
 }
