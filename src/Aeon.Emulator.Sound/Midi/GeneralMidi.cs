@@ -60,7 +60,7 @@ namespace Aeon.Emulator.Sound
                     return (byte)(~(byte)this.Status & 0xC0);
 
                 default:
-                    throw new ArgumentException("Invalid MIDI port.", "port");
+                    throw new ArgumentException("Invalid MIDI port.");
             }
         }
         ushort IInputPort.ReadWord(int port) => ((IInputPort)this).ReadByte(port);

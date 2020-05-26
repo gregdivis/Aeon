@@ -13,7 +13,7 @@ namespace Aeon.Emulator.Sound
         /// </summary>
         public MidiMapper()
         {
-            SafeNativeMethods.midiOutOpen(out midiOutHandle, SafeNativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
+            NativeMethods.midiOutOpen(out midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }
         ~MidiMapper()
         {
@@ -45,7 +45,7 @@ namespace Aeon.Emulator.Sound
 
             if(bytesReceived >= bytesExpected)
             {
-                SafeNativeMethods.midiOutShortMsg(midiOutHandle, currentMessage);
+                NativeMethods.midiOutShortMsg(midiOutHandle, currentMessage);
                 bytesReceived = 0;
                 bytesExpected = 0;
             }
@@ -55,7 +55,7 @@ namespace Aeon.Emulator.Sound
         /// </summary>
         public void Reset()
         {
-            SafeNativeMethods.midiOutReset(midiOutHandle);
+            NativeMethods.midiOutReset(midiOutHandle);
         }
         /// <summary>
         /// Releases resources used by the midi mapper.
@@ -76,7 +76,7 @@ namespace Aeon.Emulator.Sound
         {
             if(midiOutHandle != IntPtr.Zero)
             {
-                SafeNativeMethods.midiOutClose(midiOutHandle);
+                NativeMethods.midiOutClose(midiOutHandle);
                 midiOutHandle = IntPtr.Zero;
             }
         }

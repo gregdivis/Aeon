@@ -370,7 +370,7 @@ namespace Aeon.Emulator.Sound.Blaster
                     break;
 
                 default:
-                    throw new NotImplementedException(string.Format("Sound Blaster command {0:X2}h not implemented.", currentCommand));
+                    throw new NotImplementedException($"Sound Blaster command {currentCommand:X2}h not implemented.");
             }
 
             this.state = BlasterState.WaitingForCommand;
@@ -378,9 +378,6 @@ namespace Aeon.Emulator.Sound.Blaster
 
         private DirectSoundBuffer currentSoundBuffer;
 
-        /// <summary>
-        /// Polls the PlaybackEngine instance.
-        /// </summary>
         private void AudioPlayback()
         {
             byte[] buffer = new byte[512];

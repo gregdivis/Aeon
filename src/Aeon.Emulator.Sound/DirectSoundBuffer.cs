@@ -8,7 +8,6 @@ namespace Aeon.Emulator.Sound
     /// </summary>
     public sealed class DirectSoundBuffer : IDisposable
     {
-        #region Constructors
         /// <summary>
         /// Initializes a new instance of the DirectSoundBuffer class.
         /// </summary>
@@ -48,11 +47,9 @@ namespace Aeon.Emulator.Sound
         }
         ~DirectSoundBuffer()
         {
-            Dispose(false);
+            this.Dispose(false);
         }
-        #endregion
 
-        #region Public Properties
         /// <summary>
         /// Gets or sets the playback frequency of the buffer.
         /// </summary>
@@ -60,16 +57,15 @@ namespace Aeon.Emulator.Sound
         {
             get
             {
-                if(disposed)
+                if (this.disposed)
                     return 0;
 
-                int frequency;
-                this.getFrequency(soundBuffer, out frequency);
+                this.getFrequency(this.soundBuffer, out int frequency);
                 return frequency;
             }
             set
             {
-                if(!disposed)
+                if (!this.disposed)
                     this.setFrequency(soundBuffer, value);
             }
         }
@@ -80,17 +76,16 @@ namespace Aeon.Emulator.Sound
         {
             get
             {
-                if(disposed)
+                if (this.disposed)
                     return 0;
 
-                int pan;
-                this.getPan(soundBuffer, out pan);
+                this.getPan(this.soundBuffer, out int pan);
                 return pan;
             }
             set
             {
-                if(!disposed)
-                    this.setPan(soundBuffer, value);
+                if (!this.disposed)
+                    this.setPan(this.soundBuffer, value);
             }
         }
         /// <summary>
@@ -100,17 +95,16 @@ namespace Aeon.Emulator.Sound
         {
             get
             {
-                if(this.disposed)
+                if (this.disposed)
                     return 0;
 
-                int volume;
-                this.getVolume(soundBuffer, out volume);
+                this.getVolume(this.soundBuffer, out int volume);
                 return volume;
             }
             set
             {
-                if(!this.disposed)
-                    this.setVolume(soundBuffer, value);
+                if (!this.disposed)
+                    this.setVolume(this.soundBuffer, value);
             }
         }
         /// <summary>
@@ -120,11 +114,10 @@ namespace Aeon.Emulator.Sound
         {
             get
             {
-                if(disposed)
+                if (this.disposed)
                     return false;
 
-                int status;
-                this.getStatus(soundBuffer, out status);
+                this.getStatus(this.soundBuffer, out int status);
 
                 return (status & 0x01) != 0;
             }
@@ -136,13 +129,10 @@ namespace Aeon.Emulator.Sound
         {
             get
             {
-                if(this.disposed)
+                if (this.disposed)
                     return 0;
 
-                uint playPos;
-                uint writePos;
-
-                this.getPosition(this.soundBuffer, out playPos, out writePos);
+                this.getPosition(this.soundBuffer, out uint playPos, out uint writePos);
 
                 return (int)playPos;
             }
@@ -150,38 +140,30 @@ namespace Aeon.Emulator.Sound
         /// <summary>
         /// Gets the size of the buffer in bytes.
         /// </summary>
-        public int BufferSize
-        {
-            get
-            {
-                return (int)this.bufferSize;
-            }
-        }
-        #endregion
+        public int BufferSize => (int)this.bufferSize;
 
-        #region Public Methods
         /// <summary>
         /// Begins playback of the sound buffer.
         /// </summary>
         /// <param name="playbackMode">Specifies the buffer playback behavior.</param>
         public void Play(PlaybackMode playbackMode)
         {
-            if(disposed)
-                throw new ObjectDisposedException("DirectSoundBuffer");
+            if (disposed)
+                throw new ObjectDisposedException(nameof(DirectSoundBuffer));
 
             uint res = 0;
-            switch(playbackMode)
+            switch (playbackMode)
             {
-            case PlaybackMode.PlayOnce:
-                res = this.play(soundBuffer, 0, 0, 0);
-                break;
+                case PlaybackMode.PlayOnce:
+                    res = this.play(this.soundBuffer, 0, 0, 0);
+                    break;
 
-            case PlaybackMode.LoopContinuously:
-                res = this.play(soundBuffer, 0, 0, 1);
-                break;
+                case PlaybackMode.LoopContinuously:
+                    res = this.play(this.soundBuffer, 0, 0, 1);
+                    break;
             }
 
-            if(res != 0)
+            if (res != 0)
                 throw new InvalidOperationException("Unable to play DirectSound buffer.");
         }
         /// <summary>
@@ -189,8 +171,8 @@ namespace Aeon.Emulator.Sound
         /// </summary>
         public void Stop()
         {
-            if(!disposed)
-                stop(soundBuffer);
+            if (!this.disposed)
+                this.stop(this.soundBuffer);
         }
         /// <summary>
         /// Writes waveform data to the buffer.
@@ -201,16 +183,16 @@ namespace Aeon.Emulator.Sound
         /// <returns>True if data was written to the buffer; false if data does not yet fit.</returns>
         public bool Write(byte[] source, int offset, int length)
         {
-            if(disposed)
-                throw new ObjectDisposedException("DirectSoundBuffer");
-            if(source == null)
-                throw new ArgumentNullException("source");
-            if(offset < 0 || offset > source.Length)
-                throw new ArgumentOutOfRangeException("offset");
-            if(length < 0 || offset + length > source.Length || length > bufferSize)
-                throw new ArgumentOutOfRangeException("length");
+            if (disposed)
+                throw new ObjectDisposedException(nameof(DirectSoundBuffer));
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (offset < 0 || offset > source.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (length < 0 || offset + length > source.Length || length > bufferSize)
+                throw new ArgumentOutOfRangeException(nameof(length));
 
-            if(length == 0)
+            if (length == 0)
                 return true;
 
             uint playPos;
@@ -218,36 +200,32 @@ namespace Aeon.Emulator.Sound
             this.getPosition(soundBuffer, out playPos, out safeWritePos);
 
             uint maxBytes;
-            if(this.isEmpty)
+            if (this.isEmpty)
                 maxBytes = bufferSize;
-            else if(writePos > playPos)
+            else if (writePos > playPos)
                 maxBytes = bufferSize - writePos + playPos;
-            else if(writePos < playPos)
+            else if (writePos < playPos)
                 maxBytes = playPos - writePos;
             else
                 return false;
 
-            if(length > maxBytes)
+            if (length > maxBytes)
                 return false;
-            
-            IntPtr ptr1;
-            IntPtr ptr2;
-            uint length1;
-            uint length2;
-            uint res = this.lockBuffer(soundBuffer, writePos, (uint)length, out ptr1, out length1, out ptr2, out length2, 0);
-            if(res != 0)
+
+            uint res = this.lockBuffer(this.soundBuffer, this.writePos, (uint)length, out var ptr1, out uint length1, out var ptr2, out uint length2, 0);
+            if (res != 0)
                 throw new InvalidOperationException("Unable to lock DirectSound buffer.");
 
-            if(ptr1 == IntPtr.Zero)
+            if (ptr1 == IntPtr.Zero)
                 throw new InvalidOperationException();
 
             try
             {
-                if(ptr2 == IntPtr.Zero)
+                if (ptr2 == IntPtr.Zero)
                 {
                     Marshal.Copy(source, offset, ptr1, length);
                     writePos += (uint)length;
-                    if(writePos >= bufferSize)
+                    if (writePos >= bufferSize)
                         writePos = 0;
                 }
                 else
@@ -262,7 +240,7 @@ namespace Aeon.Emulator.Sound
             }
             finally
             {
-                unlockBuffer(soundBuffer, ptr1, length1, ptr2, length2);
+                this.unlockBuffer(soundBuffer, ptr1, length1, ptr2, length2);
             }
         }
         /// <summary>
@@ -274,53 +252,47 @@ namespace Aeon.Emulator.Sound
         /// <returns>True if data was written to the buffer; false if data does not yet fit.</returns>
         public bool Write(short[] source, int offset, int length)
         {
-            if(disposed)
-                throw new ObjectDisposedException("DirectSoundBuffer");
-            if(source == null)
-                throw new ArgumentNullException("source");
-            if(offset < 0 || offset > source.Length)
-                throw new ArgumentOutOfRangeException("offset");
-            if(length < 0 || offset + length > source.Length || length > bufferSize / 2)
-                throw new ArgumentOutOfRangeException("length");
+            if (disposed)
+                throw new ObjectDisposedException(nameof(DirectSoundBuffer));
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (offset < 0 || offset > source.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (length < 0 || offset + length > source.Length || length > bufferSize / 2)
+                throw new ArgumentOutOfRangeException(nameof(length));
 
-            if(length == 0)
+            if (length == 0)
                 return true;
 
-            uint playPos;
-            uint safeWritePos;
-            getPosition(soundBuffer, out playPos, out safeWritePos);
+            this.getPosition(this.soundBuffer, out uint playPos, out uint safeWritePos);
 
             uint maxBytes;
-            if(this.isEmpty)
+            if (this.isEmpty)
                 maxBytes = bufferSize;
-            else if(writePos > playPos)
+            else if (writePos > playPos)
                 maxBytes = bufferSize - writePos + playPos;
-            else if(writePos < playPos)
+            else if (writePos < playPos)
                 maxBytes = playPos - writePos;
             else
                 return false;
 
-            if(length > maxBytes / 2)
+            if (length > maxBytes / 2)
                 return false;
 
-            IntPtr ptr1;
-            IntPtr ptr2;
-            uint length1;
-            uint length2;
-            uint res = lockBuffer(soundBuffer, writePos, (uint)length * 2, out ptr1, out length1, out ptr2, out length2, 0);
-            if(res != 0)
+            uint res = this.lockBuffer(this.soundBuffer, this.writePos, (uint)length * 2, out var ptr1, out uint length1, out var ptr2, out uint length2, 0);
+            if (res != 0)
                 throw new InvalidOperationException("Unable to lock DirectSound buffer.");
 
-            if(ptr1 == IntPtr.Zero)
+            if (ptr1 == IntPtr.Zero)
                 throw new InvalidOperationException();
 
             try
             {
-                if(ptr2 == IntPtr.Zero)
+                if (ptr2 == IntPtr.Zero)
                 {
                     Marshal.Copy(source, offset, ptr1, length);
                     writePos += (uint)length * 2u;
-                    if(writePos >= bufferSize)
+                    if (writePos >= bufferSize)
                         writePos = 0;
                 }
                 else
@@ -335,7 +307,7 @@ namespace Aeon.Emulator.Sound
             }
             finally
             {
-                unlockBuffer(soundBuffer, ptr1, length1, ptr2, length2);
+                this.unlockBuffer(this.soundBuffer, ptr1, length1, ptr2, length2);
             }
         }
         /// <summary>
@@ -345,10 +317,7 @@ namespace Aeon.Emulator.Sound
         /// <param name="playPos">Current position of the playback pointer.</param>
         public void GetPositions(out int writePos, out int playPos)
         {
-            uint tempPlayPos;
-            uint tempSafeWritePos;
-            this.getPosition(this.soundBuffer, out tempPlayPos, out tempSafeWritePos);
-
+            this.getPosition(this.soundBuffer, out uint tempPlayPos, out uint tempSafeWritePos);
             writePos = (int)this.writePos;
             playPos = (int)tempPlayPos;
         }
@@ -357,24 +326,20 @@ namespace Aeon.Emulator.Sound
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            this.Dispose(true);
             GC.SuppressFinalize(this);
         }
-        #endregion
 
-        #region Private Methods
         private void Dispose(bool disposing)
         {
-            if(!disposed)
+            if (!this.disposed)
             {
-                disposed = true;
-                this.release(soundBuffer);
+                this.disposed = true;
+                this.release(this.soundBuffer);
                 this.releaseHandle.Free();
             }
         }
-        #endregion
 
-        #region Private Fields
         private bool disposed;
         private bool isEmpty = true;
         private uint writePos;
@@ -396,7 +361,6 @@ namespace Aeon.Emulator.Sound
         private readonly SetPositionProc setPosition;
         private readonly NoParamProc stop;
         private readonly UnlockProc unlockBuffer;
-        #endregion
     }
 
     /// <summary>

@@ -150,7 +150,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// <param name="buffer">Buffer to fill.</param>
         /// <param name="period">The number of samples in the period.</param>
         /// <returns>Number of bytes written to the buffer.</returns>
-        private int GenerateSquareWave(byte[] buffer, int period)
+        private int GenerateSquareWave(Span<byte> buffer, int period)
         {
             if (period < 2)
             {
@@ -158,11 +158,9 @@ namespace Aeon.Emulator.Sound.PCSpeaker
                 return 1;
             }
 
-            for (int i = 0; i < period / 2; i++)
-                buffer[i] = 96;
-
-            for (int i = period / 2; i < period; i++)
-                buffer[i] = 160;
+            int halfPeriod = period / 2;
+            buffer.Slice(0, halfPeriod).Fill(96);
+            buffer.Slice(halfPeriod, halfPeriod).Fill(120);
 
             return period;
         }

@@ -7,15 +7,12 @@ namespace Aeon.Emulator.Sound.PCSpeaker
     /// </summary>
     public sealed class LatchedUInt16
     {
-        #region Private Fields
         private ushort value;
         private bool wroteLow;
         private bool readLow;
         private byte latchedHighByte;
         private byte latchedLowByte;
-        #endregion
 
-        #region Constructors
         /// <summary>
         /// Initializes a new instance of the LatchedUInt16 class.
         /// </summary>
@@ -26,51 +23,23 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// Initializes a new instance of the LatchedUInt16 class.
         /// </summary>
         /// <param name="value">The initial value.</param>
-        public LatchedUInt16(ushort value)
-        {
-            this.value = value;
-        }
-        #endregion
+        public LatchedUInt16(ushort value) => this.value = value;
 
-        #region Public Events
         /// <summary>
         /// Occurs when the value has changed.
         /// </summary>
         public event EventHandler ValueChanged;
-        #endregion
 
-        #region Operators
-        /// <summary>
-        /// Returns the current value.
-        /// </summary>
-        /// <param name="value">Current value.</param>
-        /// <returns>The current value.</returns>
-        public static implicit operator ushort(LatchedUInt16 value)
-        {
-            if(value == null)
-                return 0;
+        public static implicit operator ushort(LatchedUInt16 value) => value == null ? (ushort)0 : value.value;
+        public static implicit operator LatchedUInt16(ushort value) => new LatchedUInt16(value);
 
-            return value.value;
-        }
-        /// <summary>
-        /// Returns a new LatchedUInt16 instance with an initial value.
-        /// </summary>
-        /// <param name="value">Initial value of the new LatchedUInt16 instance.</param>
-        /// <returns>New LatchedUInt16 instance.</returns>
-        public static implicit operator LatchedUInt16(ushort value)
-        {
-            return new LatchedUInt16(value);
-        }
-        #endregion
-
-        #region Public Methods
         /// <summary>
         /// Returns the next byte of the value.
         /// </summary>
         /// <returns>The next byte of the value.</returns>
         public byte ReadByte()
         {
-            if(this.readLow)
+            if (this.readLow)
             {
                 this.readLow = false;
                 return this.latchedHighByte;
@@ -89,7 +58,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// <param name="value">The next byte of the value.</param>
         public void WriteByte(byte value)
         {
-            if(this.wroteLow)
+            if (this.wroteLow)
             {
                 this.wroteLow = false;
                 this.value = (ushort)((value << 8) | this.latchedLowByte);
@@ -108,29 +77,18 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         public void SetValue(ushort value)
         {
             this.value = value;
-            OnValueChanged(EventArgs.Empty);
+            this.OnValueChanged(EventArgs.Empty);
         }
         /// <summary>
         /// Returns a string representation of the value.
         /// </summary>
         /// <returns>String representation of the value.</returns>
-        public override string ToString()
-        {
-            return this.value.ToString();
-        }
-        #endregion
+        public override string ToString() => this.value.ToString();
 
-        #region Private Methods
         /// <summary>
         /// Raises the ValueChanged event.
         /// </summary>
         /// <param name="e">Unused EventArgs instance.</param>
-        private void OnValueChanged(EventArgs e)
-        {
-            var handler = this.ValueChanged;
-            if(handler != null)
-                handler(this, e);
-        }
-        #endregion
+        private void OnValueChanged(EventArgs e) => this.ValueChanged?.Invoke(this, e);
     }
 }
