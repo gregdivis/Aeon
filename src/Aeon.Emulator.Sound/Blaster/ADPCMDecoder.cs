@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace Aeon.Emulator.Sound.Blaster
 {
     /// <summary>
@@ -12,17 +13,12 @@ namespace Aeon.Emulator.Sound.Blaster
         protected int step;
 
         /// <summary>
-        /// The compression factor.
-        /// </summary>
-        private readonly int factor;
-
-        /// <summary>
         /// Initializes a new instance of the ADPCMDecoder class.
         /// </summary>
         /// <param name="factor">The compression factor.</param>
         protected ADPCMDecoder(int factor)
         {
-            this.factor = factor;
+            this.CompressionFactor = factor;
         }
 
         /// <summary>
@@ -32,10 +28,7 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <summary>
         /// Gets the compression ratio.
         /// </summary>
-        public int CompressionFactor
-        {
-            get { return this.factor; }
-        }
+        public int CompressionFactor { get; }
 
         /// <summary>
         /// Resets the decoder to its initial state.
@@ -52,8 +45,7 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <param name="source">Source array containing ADPCM data to decode.</param>
         /// <param name="sourceOffset">Offset in source array to start decoding.</param>
         /// <param name="count">Number of bytes to decode.</param>
-        /// <param name="destination">Destination array to write decoded PCM data.</param>
-        /// <param name="destinationOffset">Offset in destination array to start writing.</param>
-        public abstract void Decode(byte[] source, int sourceOffset, int count, byte[] destination, int destinationOffset);
+        /// <param name="destination">Destination buffer to write decoded PCM data.</param>
+        public abstract void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination);
     }
 }

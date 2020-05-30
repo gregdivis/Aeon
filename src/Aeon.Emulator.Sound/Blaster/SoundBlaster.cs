@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Aeon.Emulator.Sound.Blaster
@@ -73,19 +74,6 @@ namespace Aeon.Emulator.Sound.Blaster
         /// Gets the DMA channel assigned to the device.
         /// </summary>
         public int DMA { get; }
-        /// <summary>
-        /// Gets the size of the playback buffer in bytes.
-        /// </summary>
-        public int BufferSize
-        {
-            get
-            {
-                var buffer = this.currentSoundBuffer;
-                if (buffer == null)
-                    return 0;
-                return buffer.BufferSize;
-            }
-        }
 
         IEnumerable<int> IInputPort.InputPorts => new int[] { Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData };
         byte IInputPort.ReadByte(int port)
@@ -165,7 +153,7 @@ namespace Aeon.Emulator.Sound.Blaster
         void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
 
         int IDmaDevice8.Channel => this.DMA;
-        int IDmaDevice8.WriteBytes(IntPtr source, int count) => this.dsp.DmaWrite(source, count);
+        int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => this.dsp.DmaWrite(source);
         void IDmaDevice8.SingleCycleComplete()
         {
             this.dsp.IsEnabled = false;
@@ -189,20 +177,6 @@ namespace Aeon.Emulator.Sound.Blaster
             {
                 this.endPlayback = true;
                 this.playbackThread.Join();
-            }
-        }
-
-        public void GetBufferPositions(out int writePos, out int playPos)
-        {
-            var buffer = this.currentSoundBuffer;
-            if (buffer != null)
-            {
-                buffer.GetPositions(out writePos, out playPos);
-            }
-            else
-            {
-                writePos = 0;
-                playPos = 0;
             }
         }
 
@@ -376,29 +350,26 @@ namespace Aeon.Emulator.Sound.Blaster
             this.state = BlasterState.WaitingForCommand;
         }
 
-        private DirectSoundBuffer currentSoundBuffer;
-
         private void AudioPlayback()
         {
-            byte[] buffer = new byte[512];
+            Span<byte> buffer = stackalloc byte[512];
             short[] writeBuffer = new short[65536 * 2];
 
             using var soundBuffer = DirectSound.GetInstance(hwnd).CreateBuffer(44100, ChannelMode.Stereo, BitsPerSample.Sixteen, TimeSpan.FromSeconds(0.25));
-            this.currentSoundBuffer = soundBuffer;
             soundBuffer.Play(PlaybackMode.LoopContinuously);
 
             while (!this.endPlayback)
             {
-                dsp.Read(buffer, 0, buffer.Length);
+                this.dsp.Read(buffer);
                 int length;
                 if (this.dsp.Is16Bit && this.dsp.IsStereo)
-                    length = Resample16Stereo(dsp.SampleRate, 44100, buffer, writeBuffer);
+                    length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, 44100, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
                 else if (this.dsp.Is16Bit)
-                    length = Resample16Monaural(dsp.SampleRate, 44100, buffer, writeBuffer);
+                    length = LinearUpsampler.Resample16Mono(dsp.SampleRate, 44100, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
                 else if (this.dsp.IsStereo)
-                    length = Resample8Stereo(dsp.SampleRate, 44100, buffer, writeBuffer);
+                    length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, 44100, buffer, writeBuffer);
                 else
-                    length = Resample8Monaural(dsp.SampleRate, 44100, buffer, writeBuffer);
+                    length = LinearUpsampler.Resample8Mono(dsp.SampleRate, 44100, buffer, writeBuffer);
 
                 while (!soundBuffer.Write(writeBuffer, 0, length))
                 {
@@ -432,103 +403,6 @@ namespace Aeon.Emulator.Sound.Blaster
                     RaiseInterrupt();
                 }
             }
-        }
-        /// <summary>
-        /// Converts a chunk of 8-bit monaural sound data to 16-bit stereo sound data.
-        /// </summary>
-        /// <param name="sourceRate">Source sampling rate.</param>
-        /// <param name="destRate">Destination sampling rate.</param>
-        /// <param name="source">Source data.</param>
-        /// <param name="dest">Destination data.</param>
-        /// <returns>Size of destination data in samples.</returns>
-        private int Resample8Monaural(int sourceRate, int destRate, byte[] source, short[] dest)
-        {
-            double src2Dest = (double)destRate / (double)sourceRate;
-            double dest2Src = (double)sourceRate / (double)destRate;
-
-            int length = (int)(src2Dest * source.Length);
-
-            for (int i = 0; i < length; i++)
-            {
-                short value = (short)(((int)source[(int)(i * dest2Src)] - 128) << 8);
-                dest[(i << 1)] = value;
-                dest[(i << 1) + 1] = value;
-            }
-
-            return length * 2;
-        }
-        /// <summary>
-        /// Converts a chunk of 8-bit stereo sound data to 16-bit stereo sound data.
-        /// </summary>
-        /// <param name="sourceRate">Source sampling rate.</param>
-        /// <param name="destRate">Destination sampling rate.</param>
-        /// <param name="source">Source data.</param>
-        /// <param name="dest">Destination data.</param>
-        /// <returns>Size of destination data in samples.</returns>
-        private int Resample8Stereo(int sourceRate, int destRate, byte[] source, short[] dest)
-        {
-            double src2Dest = (double)destRate / (double)sourceRate;
-            double dest2Src = (double)sourceRate / (double)destRate;
-
-            int length = (int)(src2Dest * source.Length) / 2;
-
-            for (int i = 0; i < length; i++)
-            {
-                int srcIndex = (int)(i * dest2Src) << 1;
-                dest[(i << 1)] = (short)(((int)source[srcIndex] - 128) << 8);
-                dest[(i << 1) + 1] = (short)(((int)source[srcIndex + 1] - 128) << 8);
-            }
-
-            return length * 2;
-        }
-        /// <summary>
-        /// Converts a chunk of 16-bit monaural sound data to 16-bit stereo sound data.
-        /// </summary>
-        /// <param name="sourceRate">Source sampling rate.</param>
-        /// <param name="destRate">Destination sampling rate.</param>
-        /// <param name="source">Source data.</param>
-        /// <param name="dest">Destination data.</param>
-        /// <returns>Size of destination data in samples.</returns>
-        private int Resample16Monaural(int sourceRate, int destRate, byte[] source, short[] dest)
-        {
-            double src2Dest = (double)destRate / (double)sourceRate;
-            double dest2Src = (double)sourceRate / (double)destRate;
-
-            int length = (int)(src2Dest * source.Length) / 2;
-
-            for (int i = 0; i < length; i++)
-            {
-                int srcIndex = (int)(i * dest2Src) << 1;
-                short value = (short)(ushort)(source[srcIndex] | (source[srcIndex + 1] << 8));
-                dest[(i << 1)] = value;
-                dest[(i << 1) + 1] = value;
-            }
-
-            return length * 2;
-        }
-        /// <summary>
-        /// Converts a chunk of 16-bit stereo sound data to 16-bit stereo sound data.
-        /// </summary>
-        /// <param name="sourceRate">Source sampling rate.</param>
-        /// <param name="destRate">Destination sampling rate.</param>
-        /// <param name="source">Source data.</param>
-        /// <param name="dest">Destination data.</param>
-        /// <returns>Size of destination data in samples.</returns>
-        private int Resample16Stereo(int sourceRate, int destRate, byte[] source, short[] dest)
-        {
-            double src2Dest = (double)destRate / (double)sourceRate;
-            double dest2Src = (double)sourceRate / (double)destRate;
-
-            int length = (int)(src2Dest * source.Length) / 4;
-
-            for (int i = 0; i < length; i++)
-            {
-                int srcIndex = (int)(i * dest2Src) << 2;
-                dest[(i << 1)] = (short)(ushort)(source[srcIndex] | (source[srcIndex + 1] << 8));
-                dest[(i << 1) + 1] = (short)(ushort)(source[srcIndex + 2] | (source[srcIndex + 3] << 8));
-            }
-
-            return length * 2;
         }
     }
 

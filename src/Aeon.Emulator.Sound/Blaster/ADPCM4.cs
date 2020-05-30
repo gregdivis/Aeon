@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace Aeon.Emulator.Sound.Blaster
 {
     /// <summary>
@@ -27,19 +28,19 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <param name="count">Number of bytes to decode.</param>
         /// <param name="destination">Destination array to write decoded PCM data.</param>
         /// <param name="destinationOffset">Offset in destination array to start writing.</param>
-        public override void Decode(byte[] source, int sourceOffset, int count, byte[] destination, int destinationOffset)
+        public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination)
         {
             byte current = this.Reference;
 
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
                 int sample = source[sourceOffset + i] & 0x0F;
                 current = DecodeSample(current, sample);
-                destination[destinationOffset + (i * 2)] = current;
+                destination[(i * 2)] = current;
 
                 sample = (source[sourceOffset + i] >> 4) & 0x0F;
                 current = DecodeSample(current, sample);
-                destination[destinationOffset + (i * 2) + 1] = current;
+                destination[(i * 2) + 1] = current;
             }
 
             this.Reference = current;
@@ -53,21 +54,21 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <returns>Decoded 8-bit sample.</returns>
         private byte DecodeSample(byte current, int sample)
         {
-            if((sample & 0x08) == 0)
+            if ((sample & 0x08) == 0)
                 current += (byte)(sample << this.step);
             else
                 current -= (byte)((sample & 0x07) << this.step);
 
-            if(current >= Limit)
+            if (current >= Limit)
             {
                 this.step++;
-                if(this.step > 3)
+                if (this.step > 3)
                     this.step = 3;
             }
-            else if(current == 0)
+            else if (current == 0)
             {
                 this.step--;
-                if(this.step < 0)
+                if (this.step < 0)
                     this.step = 0;
             }
 

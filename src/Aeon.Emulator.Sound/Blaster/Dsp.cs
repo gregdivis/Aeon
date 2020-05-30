@@ -8,7 +8,6 @@ namespace Aeon.Emulator.Sound.Blaster
     /// </summary>
     internal sealed class Dsp
     {
-        #region Constructors
         /// <summary>
         /// Initializes a new instance of the Dsp class.
         /// </summary>
@@ -17,22 +16,17 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
         public Dsp(VirtualMachine vm, int dma8, int dma16)
         {
-            this.vm = vm;
             this.dmaChannel8 = vm.DmaController.Channels[dma8];
             this.dmaChannel16 = vm.DmaController.Channels[dma16];
             this.SampleRate = 22050;
             this.BlockTransferSize = 65536;
         }
-        #endregion
 
-        #region Public Events
         /// <summary>
         /// Occurs when a buffer has been transferred in auto-initialize mode.
         /// </summary>
         public event EventHandler AutoInitBufferComplete;
-        #endregion
 
-        #region Public Properties
         /// <summary>
         /// Gets or sets the DSP's sample rate.
         /// </summary>
@@ -48,24 +42,16 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <summary>
         /// Gets a value indicating whether the waveform data is 16-bit.
         /// </summary>
-        public bool Is16Bit
-        {
-            get { return this.is16Bit; }
-        }
+        public bool Is16Bit { get; private set; }
         /// <summary>
         /// Gets a value indicating whether the waveform data is stereo.
         /// </summary>
-        public bool IsStereo
-        {
-            get { return this.isStereo; }
-        }
+        public bool IsStereo { get; private set; }
         /// <summary>
         /// Gets or sets a value indicating whether a DMA transfer is active.
         /// </summary>
         public bool IsEnabled { get; set; }
-        #endregion
 
-        #region Public Methods
         /// <summary>
         /// Starts a new DMA transfer.
         /// </summary>
@@ -76,8 +62,8 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <param name="referenceByte">Value indicating whether a reference byte is expected.</param>
         public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compression = CompressionLevel.None, bool referenceByte = false)
         {
-            this.is16Bit = is16Bit;
-            this.isStereo = isStereo;
+            this.Is16Bit = is16Bit;
+            this.IsStereo = isStereo;
             this.AutoInitialize = autoInitialize;
             this.referenceByteExpected = referenceByte;
             this.compression = compression;
@@ -85,35 +71,24 @@ namespace Aeon.Emulator.Sound.Blaster
 
             this.decodeRemainderOffset = -1;
 
-            switch(compression)
+            this.decoder = compression switch
             {
-            case CompressionLevel.ADPCM2:
-                this.decoder = new ADPCM2();
-                break;
-
-            case CompressionLevel.ADPCM3:
-                this.decoder = new ADPCM3();
-                break;
-
-            case CompressionLevel.ADPCM4:
-                this.decoder = new ADPCM4();
-                break;
-
-            default:
-                this.decoder = null;
-                break;
-            }
+                CompressionLevel.ADPCM2 => new ADPCM2(),
+                CompressionLevel.ADPCM3 => new ADPCM3(),
+                CompressionLevel.ADPCM4 => new ADPCM4(),
+                _ => null,
+            };
 
             this.currentChannel = this.dmaChannel8;
 
             int transferRate = this.SampleRate;
-            if(this.is16Bit)
+            if (this.Is16Bit)
                 transferRate *= 2;
-            if(this.isStereo)
+            if (this.IsStereo)
                 transferRate *= 2;
 
             double factor = 1.0;
-            if(autoInitialize)
+            if (autoInitialize)
                 factor = 1.5;
 
             this.currentChannel.TransferRate = (int)(transferRate * factor);
@@ -130,20 +105,21 @@ namespace Aeon.Emulator.Sound.Blaster
         /// Reads samples from the internal buffer.
         /// </summary>
         /// <param name="buffer">Buffer into which sample data is written.</param>
-        /// <param name="offset">Offset in buffer to start writing.</param>
-        /// <param name="length">Number of samples to read.</param>
-        public void Read(byte[] buffer, int offset, int length)
+        public void Read(Span<byte> buffer)
         {
-            if(this.compression == CompressionLevel.None)
+            if (this.compression == CompressionLevel.None)
             {
-                InternalRead(buffer, offset, length);
+                this.InternalRead(buffer);
                 return;
             }
 
-            if(this.decodeBuffer == null || this.decodeBuffer.Length < length * 4)
-                this.decodeBuffer = new byte[length * 4];
+            if (this.decodeBuffer == null || this.decodeBuffer.Length < buffer.Length * 4)
+                this.decodeBuffer = new byte[buffer.Length * 4];
 
-            while(length > 0 && this.decodeRemainderOffset >= 0)
+            int offset = 0;
+            int length = buffer.Length;
+
+            while (buffer.Length > 0 && this.decodeRemainderOffset >= 0)
             {
                 buffer[offset] = this.decodeRemainder[this.decodeRemainderOffset];
                 offset++;
@@ -151,33 +127,33 @@ namespace Aeon.Emulator.Sound.Blaster
                 this.decodeRemainderOffset--;
             }
 
-            if(length <= 0)
+            if (length <= 0)
                 return;
 
-            if(this.referenceByteExpected)
+            if (this.referenceByteExpected)
             {
-                InternalRead(buffer, offset, 1);
+                this.InternalRead(buffer.Slice(offset, 1));
                 this.referenceByteExpected = false;
                 this.decoder.Reference = decodeBuffer[offset];
                 offset++;
                 length--;
             }
 
-            if(length <= 0)
+            if (length <= 0)
                 return;
 
             int blocks = length / this.decoder.CompressionFactor;
 
-            if(blocks > 0)
+            if (blocks > 0)
             {
-                InternalRead(this.decodeBuffer, 0, blocks);
-                this.decoder.Decode(this.decodeBuffer, 0, blocks, buffer, offset);
+                this.InternalRead(this.decodeBuffer.AsSpan(0, blocks));
+                this.decoder.Decode(this.decodeBuffer, 0, blocks, buffer.Slice(offset));
             }
 
             int remainder = length % this.decoder.CompressionFactor;
-            if(remainder > 0)
+            if (remainder > 0)
             {
-                InternalRead(this.decodeRemainder, 0, remainder);
+                this.InternalRead(this.decodeRemainder.AsSpan(0, remainder));
                 Array.Reverse(this.decodeRemainder, 0, remainder);
                 this.decodeRemainderOffset = remainder - 1;
             }
@@ -186,16 +162,15 @@ namespace Aeon.Emulator.Sound.Blaster
         /// Writes data from a DMA transfer.
         /// </summary>
         /// <param name="source">Pointer to data in memory.</param>
-        /// <param name="count">Number of bytes to write.</param>
         /// <returns>Number of bytes actually written.</returns>
-        public int DmaWrite(IntPtr source, int count)
+        public int DmaWrite(ReadOnlySpan<byte> source)
         {
-            int actualCount = this.waveBuffer.Write(source, count);
+            int actualCount = this.waveBuffer.Write(source);
 
-            if(this.AutoInitialize)
+            if (this.AutoInitialize)
             {
                 this.autoInitTotal += actualCount;
-                if(this.autoInitTotal >= this.BlockTransferSize)
+                if (this.autoInitTotal >= this.BlockTransferSize)
                 {
                     this.autoInitTotal -= this.BlockTransferSize;
                     OnAutoInitBufferComplete(EventArgs.Empty);
@@ -212,38 +187,30 @@ namespace Aeon.Emulator.Sound.Blaster
             this.SampleRate = 22050;
             this.BlockTransferSize = 65536;
             this.AutoInitialize = false;
-            this.is16Bit = false;
-            this.isStereo = false;
+            this.Is16Bit = false;
+            this.IsStereo = false;
             this.autoInitTotal = 0;
             this.readIdleCycles = 0;
         }
-        #endregion
 
-        #region Private Methods
         /// <summary>
         /// Reads samples from the internal buffer.
         /// </summary>
         /// <param name="buffer">Buffer into which sample data is written.</param>
-        /// <param name="offset">Offset in buffer to start writing.</param>
-        /// <param name="length">Number of samples to read.</param>
-        private void InternalRead(byte[] buffer, int offset, int length)
+        private void InternalRead(Span<byte> buffer)
         {
-            int remaining = length;
+            var dest = buffer;
 
-            while(remaining > 0)
+            while (dest.Length > 0)
             {
-                int writePos = offset + length - remaining;
-                int amt = waveBuffer.Read(buffer, writePos, remaining);
+                int amt = waveBuffer.Read(dest);
 
-                if(amt == 0)
+                if (amt == 0)
                 {
-                    if(!this.IsEnabled || this.readIdleCycles >= 100)
+                    if (!this.IsEnabled || this.readIdleCycles >= 100)
                     {
                         byte zeroValue = this.Is16Bit ? (byte)0 : (byte)128;
-
-                        for(int i = 0; i < remaining; i++)
-                            buffer[writePos + i] = zeroValue;
-
+                        dest.Fill(zeroValue);
                         return;
                     }
 
@@ -251,29 +218,19 @@ namespace Aeon.Emulator.Sound.Blaster
                     Thread.Sleep(1);
                 }
                 else
+                {
                     this.readIdleCycles = 0;
+                }
 
-                writePos += amt;
-                remaining -= amt;
+                dest = dest.Slice(amt);
             }
         }
         /// <summary>
         /// Raises the AutoInitBufferComplete event.
         /// </summary>
         /// <param name="e">Unused EventArgs instance.</param>
-        private void OnAutoInitBufferComplete(EventArgs e)
-        {
-            var handler = this.AutoInitBufferComplete;
-            if(handler != null)
-                handler(this, e);
-        }
-        #endregion
+        private void OnAutoInitBufferComplete(EventArgs e) => this.AutoInitBufferComplete?.Invoke(this, e);
 
-        #region Private Fields
-        /// <summary>
-        /// Virtual machine instance which owns the Sound Blaster device.
-        /// </summary>
-        private readonly VirtualMachine vm;
         /// <summary>
         /// DMA channel used for 8-bit data transfers.
         /// </summary>
@@ -295,15 +252,6 @@ namespace Aeon.Emulator.Sound.Blaster
         /// Number of cycles with no new input data.
         /// </summary>
         private int readIdleCycles;
-
-        /// <summary>
-        /// Indicates whether DMA data is 16-bit.
-        /// </summary>
-        private bool is16Bit;
-        /// <summary>
-        /// Indicates whether DMA data is in stereo.
-        /// </summary>
-        private bool isStereo;
 
         /// <summary>
         /// The current compression level.
@@ -328,19 +276,16 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <summary>
         /// Remaining decoded bytes.
         /// </summary>
-        private byte[] decodeRemainder = new byte[4];
+        private readonly byte[] decodeRemainder = new byte[4];
 
         /// <summary>
         /// Contains generated waveform data waiting to be read.
         /// </summary>
         private readonly CircularBuffer waveBuffer = new CircularBuffer(TargetBufferSize);
-        #endregion
 
-        #region Private Constants
         /// <summary>
         /// Size of output buffer in samples.
         /// </summary>
         private const int TargetBufferSize = 2048;
-        #endregion
     }
 }

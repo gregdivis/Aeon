@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Aeon.Emulator.Sound.Blaster
 {
@@ -29,25 +26,24 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <param name="source">Source array containing ADPCM data to decode.</param>
         /// <param name="sourceOffset">Offset in source array to start decoding.</param>
         /// <param name="count">Number of bytes to decode.</param>
-        /// <param name="destination">Destination array to write decoded PCM data.</param>
-        /// <param name="destinationOffset">Offset in destination array to start writing.</param>
-        public override void Decode(byte[] source, int sourceOffset, int count, byte[] destination, int destinationOffset)
+        /// <param name="destination">Destination buffer to write decoded PCM data.</param>
+        public override void Decode(byte[] source, int sourceOffset, int count, Span<byte> destination)
         {
             byte current = this.Reference;
 
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
                 int sample = source[sourceOffset + i] & 0x07;
                 current = DecodeSample(current, sample);
-                destination[destinationOffset + (i * 3)] = current;
+                destination[(i * 3)] = current;
 
                 sample = (source[sourceOffset + i] >> 3) & 0x07;
                 current = DecodeSample(current, sample);
-                destination[destinationOffset + (i * 3) + 1] = current;
+                destination[(i * 3) + 1] = current;
 
                 sample = (source[sourceOffset + i] >> 6) & 0x03;
                 current = base.DecodeSample(current, sample);
-                destination[destinationOffset + (i * 3) + 2] = current;
+                destination[(i * 3) + 2] = current;
             }
 
             this.Reference = current;
@@ -61,21 +57,21 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <returns>Decoded 8-bit sample.</returns>
         private new byte DecodeSample(byte current, int sample)
         {
-            if((sample & 0x04) == 0)
+            if ((sample & 0x04) == 0)
                 current += (byte)(sample << this.step);
             else
                 current -= (byte)((sample & 0x03) << this.step);
 
-            if(current >= Limit)
+            if (current >= Limit)
             {
                 this.step++;
-                if(this.step > 3)
+                if (this.step > 3)
                     this.step = 3;
             }
-            else if(current == 0)
+            else if (current == 0)
             {
                 this.step--;
-                if(this.step < 0)
+                if (this.step < 0)
                     this.step = 0;
             }
 

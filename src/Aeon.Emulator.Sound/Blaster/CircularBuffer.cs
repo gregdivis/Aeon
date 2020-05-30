@@ -8,7 +8,12 @@ namespace Aeon.Emulator.Sound.Blaster
     /// </summary>
     internal sealed class CircularBuffer
     {
-        #region Constructors
+        private readonly byte[] data;
+        private readonly int sizeMask;
+        private volatile int readPosition;
+        private volatile int writePosition;
+        private volatile int bytesInBuffer;
+
         /// <summary>
         /// Initializes a new instance of the CircularBuffer class.
         /// </summary>
@@ -18,45 +23,40 @@ namespace Aeon.Emulator.Sound.Blaster
             this.sizeMask = capacity - 1;
             this.data = new byte[capacity];
         }
-        #endregion
 
-        #region Public Properties
         /// <summary>
         /// Gets the size of the buffer in bytes.
         /// </summary>
-        public int Capacity
-        {
-            get { return this.sizeMask + 1; }
-        }
-        #endregion
+        public int Capacity => this.sizeMask + 1;
 
-        #region Public Methods
         /// <summary>
         /// Reads bytes from the buffer to an array and advances the read pointer.
         /// </summary>
-        /// <param name="buffer">Array into which bytes are written.</param>
-        /// <param name="offset">Offset into array to begin writing.</param>
-        /// <param name="count">Number of bytes to read.</param>
+        /// <param name="buffer">Buffer into which bytes are written.</param>
         /// <returns>Number of bytes actually read.</returns>
-        public int Read(byte[] buffer, int offset, int count)
+        public int Read(Span<byte> buffer)
         {
             int bufferBytes = this.bytesInBuffer;
-            if(count > bufferBytes)
-                count = bufferBytes;
+            int count = Math.Min(buffer.Length, bufferBytes);
 
-            if(count > 0)
+            if (count > 0)
             {
                 int readPos = this.readPosition;
-
-                for(int i = 0; i < count; i++)
+                if (count <= this.data.Length - readPos)
                 {
-                    buffer[offset + i] = this.data[readPos];
-                    readPos = (readPos + 1) & this.sizeMask;
+                    var source = this.data.AsSpan(readPos, count);
+                    source.CopyTo(buffer);
+                }
+                else
+                {
+                    var src1 = this.data.AsSpan(readPos, this.data.Length - readPos);
+                    var src2 = this.data.AsSpan(0, count - src1.Length);
+                    src1.CopyTo(buffer);
+                    src2.CopyTo(buffer.Slice(src1.Length));
                 }
 
                 Interlocked.Add(ref this.bytesInBuffer, -count);
-                Interlocked.Exchange(ref this.readPosition, readPos);
-                this.readPosition = readPos;
+                this.readPosition = (readPos + count) & this.sizeMask;
             }
 
             return count;
@@ -64,45 +64,33 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <summary>
         /// Writes bytes from a location in memory to the buffer and advances the write pointer.
         /// </summary>
-        /// <param name="source">Pointer to data to read.</param>
-        /// <param name="count">Number of bytes to write.</param>
+        /// <param name="source">Data to read.</param>
         /// <returns>Number of bytes actually written.</returns>
-        public int Write(IntPtr source, int count)
+        public int Write(ReadOnlySpan<byte> source)
         {
             int bytesAvailable = this.bytesInBuffer;
             int bytesFree = this.Capacity - bytesAvailable;
 
-            if(count > bytesFree)
-                count = bytesFree;
+            var sourceSpan = source.Length <= bytesFree ? source : source.Slice(0, bytesFree);
 
-            if(count > 0)
+            if (sourceSpan.Length > 0)
             {
-                unsafe
+                int writePos = this.writePosition;
+                var target = this.data.AsSpan(writePos);
+                if (!sourceSpan.TryCopyTo(target))
                 {
-                    byte* src = (byte*)source.ToPointer();
-                    int writePos = this.writePosition;
+                    var src1 = sourceSpan.Slice(0, target.Length);
+                    var src2 = sourceSpan.Slice(target.Length);
 
-                    for(int i = 0; i < count; i++)
-                    {
-                        this.data[writePos] = src[i];
-                        writePos = (writePos + 1) & this.sizeMask;
-                    }
-
-                    Interlocked.Add(ref this.bytesInBuffer, count);
-                    Interlocked.Exchange(ref this.writePosition, writePos);
+                    src1.CopyTo(target);
+                    src2.CopyTo(this.data.AsSpan());
                 }
+
+                Interlocked.Add(ref this.bytesInBuffer, sourceSpan.Length);
+                this.writePosition = (writePos + sourceSpan.Length) & this.sizeMask;
             }
 
-            return count;
+            return sourceSpan.Length;
         }
-        #endregion
-
-        #region Private Fields
-        private readonly byte[] data;
-        private readonly int sizeMask;
-        private int readPosition;
-        private int writePosition;
-        private int bytesInBuffer;
-        #endregion
     }
 }

@@ -298,6 +298,15 @@ namespace Aeon.Emulator
                 return new IntPtr(RawView + address);
             }
         }
+        public Span<byte> GetSpan(int address, int length)
+        {
+            address &= (int)addressMask;
+
+            unsafe
+            {
+                return new Span<byte>(RawView + address, length);
+            }
+        }
         public Span<byte> GetSpan(uint segment, uint offset, int length)
         {
             unsafe

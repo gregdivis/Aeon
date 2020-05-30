@@ -15,10 +15,9 @@ namespace Aeon.Emulator
         /// <summary>
         /// Writes bytes of data to the DMA device.
         /// </summary>
-        /// <param name="source">Address of first byte to write to the device.</param>
-        /// <param name="count">Number of bytes to write.</param>
+        /// <param name="source">Bytes to write to the device.</param>
         /// <returns>Number of bytes actually written to the device.</returns>
-        int WriteBytes(IntPtr source, int count);
+        int WriteBytes(ReadOnlySpan<byte> source);
         /// <summary>
         /// Invoked when a transfer is completed in single-cycle mode.
         /// </summary>
