@@ -185,21 +185,24 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             if (path == null)
                 throw new ArgumentNullException(nameof(path));
 
-            // This is hack. It should work as long as something isn't
-            // counting on multiple volume labels on a drive.
-            if ((includedAttributes & VirtualFileAttributes.VolumeLabel) != 0)
-            {
-                path = ResolvePath(path);
-                var label = this.Drives[(DriveLetter)path.DriveLetter].VolumeLabel ?? string.Empty;
-
-                return new[] { new VirtualFileInfo(label, VirtualFileAttributes.VolumeLabel, DateTime.Now, 0) };
-            }
+            var labelEntries = Enumerable.Empty<VirtualFileInfo>();
 
             var data = this.GetDirectory(path);
             if (data.Result == null)
                 return data;
 
-            return new ErrorCodeResult<IEnumerable<VirtualFileInfo>>(data.Result.Where(f => (f.Attributes & FindAttributeMask & includedAttributes) == (f.Attributes & FindAttributeMask)));
+            var results = data.Result;
+
+            // This is hack. It should work as long as something isn't
+            // counting on multiple volume labels on a drive.
+            if (includedAttributes.HasFlag(VirtualFileAttributes.VolumeLabel))
+            {
+                path = ResolvePath(path);
+                var label = this.Drives[(DriveLetter)path.DriveLetter].VolumeLabel ?? string.Empty;
+                results = new[] { new VirtualFileInfo(label, VirtualFileAttributes.VolumeLabel, DateTime.Now, 0) }.Concat(results);
+            }
+
+            return new ErrorCodeResult<IEnumerable<VirtualFileInfo>>(results.Where(f => (f.Attributes & FindAttributeMask & includedAttributes) == (f.Attributes & FindAttributeMask)));
         }
         /// <summary>
         /// Returns a list of all of the files in a path inside a virtual directory.
