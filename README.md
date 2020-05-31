@@ -12,7 +12,7 @@ See the [Releases](https://github.com/gregdivis/Aeon/releases) page for the late
 get the source and build it yourself (see building instructions below).
 
 Aeon doesn't haven an installer, but does require that the .NET Core 3.1 runtime is installed.
-You can download it from Microsoft at [https://dotnet.microsoft.com/download/dotnet-core/3.1].
+You can download it from Microsoft at [https://dotnet.microsoft.com/download/dotnet-core/3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1).
 
 # Usage
 The easiest way to get started is just to use the "quick launch program" button in the toolbar, and
