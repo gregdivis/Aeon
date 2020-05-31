@@ -4,10 +4,10 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Company>Aeon</Company>
-    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
     <Product>Aeon</Product>
     <Description>Aeon x86 emulator core library</Description>
     <Title>Aeon Core</Title>
+    <Version>0.7.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Resources\Command.bin" />

@@ -4,7 +4,7 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Company>Aeon</Company>
-    <Copyright>Copyright © 2009-2012 Greg Divis</Copyright>
+    <Version>0.7.0</Version>
     <Product>Aeon</Product>
     <Title>Aeon Disk Image Support</Title>
     <Description>Implements Aeon disk images.</Description>
