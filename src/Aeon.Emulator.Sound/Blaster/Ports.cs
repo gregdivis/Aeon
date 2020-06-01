@@ -1,5 +1,4 @@
-﻿
-namespace Aeon.Emulator.Sound.Blaster
+﻿namespace Aeon.Emulator.Sound.Blaster
 {
     internal static class Ports
     {

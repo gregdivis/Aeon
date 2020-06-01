@@ -1,5 +1,4 @@
-﻿
-namespace Aeon.Emulator.Sound.Blaster
+﻿namespace Aeon.Emulator.Sound.Blaster
 {
     /// <summary>
     /// Represents a Sound Blaster PCM compression level.

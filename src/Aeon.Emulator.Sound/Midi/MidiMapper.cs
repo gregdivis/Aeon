@@ -7,7 +7,12 @@ namespace Aeon.Emulator.Sound
     /// </summary>
     internal sealed class MidiMapper : IDisposable
     {
-        #region Constructors
+        private IntPtr midiOutHandle;
+        private uint currentMessage;
+        private uint bytesReceived;
+        private uint bytesExpected;
+        private static readonly uint[] messageLength = { 3, 3, 3, 3, 2, 2, 3, 1 };
+
         /// <summary>
         /// Initializes a new instance of the MidiMapper class.
         /// </summary>
@@ -19,16 +24,14 @@ namespace Aeon.Emulator.Sound
         {
             Dispose(false);
         }
-        #endregion
 
-        #region Public Methods
         /// <summary>
         /// Writes the next byte of a midi message to the midi mapper.
         /// </summary>
         /// <param name="value">Byte to write.</param>
         public void SendByte(byte value)
         {
-            if((value & 0x80) == 0x80)
+            if ((value & 0x80) == 0x80)
             {
                 currentMessage = value;
                 bytesReceived = 1;
@@ -36,14 +39,14 @@ namespace Aeon.Emulator.Sound
             }
             else
             {
-                if(bytesReceived < bytesExpected)
+                if (bytesReceived < bytesExpected)
                 {
                     currentMessage |= (uint)(value << (int)(bytesReceived * 8u));
                     bytesReceived++;
                 }
             }
 
-            if(bytesReceived >= bytesExpected)
+            if (bytesReceived >= bytesExpected)
             {
                 NativeMethods.midiOutShortMsg(midiOutHandle, currentMessage);
                 bytesReceived = 0;
@@ -65,29 +68,18 @@ namespace Aeon.Emulator.Sound
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        #endregion
 
-        #region Private Methods
         /// <summary>
         /// Releases resources used by the midi mapper.
         /// </summary>
         /// <param name="disposing">True indicates that the method was called from Dispose; false indicates that it was called from the finalizer.</param>
         private void Dispose(bool disposing)
         {
-            if(midiOutHandle != IntPtr.Zero)
+            if (midiOutHandle != IntPtr.Zero)
             {
                 NativeMethods.midiOutClose(midiOutHandle);
                 midiOutHandle = IntPtr.Zero;
             }
         }
-        #endregion
-
-        #region Private Fields
-        private IntPtr midiOutHandle;
-        private uint currentMessage;
-        private uint bytesReceived;
-        private uint bytesExpected;
-        private static readonly uint[] messageLength = { 3, 3, 3, 3, 2, 2, 3, 1 };
-        #endregion
     }
 }
