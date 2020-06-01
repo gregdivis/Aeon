@@ -30,7 +30,7 @@ namespace Aeon.Presentation.Rendering
 
                 this.pages = new ushort*[8];
                 for (int i = 0; i < this.pages.Length; i++)
-                    this.pages[i] = (ushort*)(srcPtr + Emulator.Video.VideoMode.DisplayPageSize * i);
+                    this.pages[i] = (ushort*)(srcPtr + VideoMode.DisplayPageSize * i);
             }
 
             this.consoleWidth = videoMode.Width;
@@ -61,9 +61,7 @@ namespace Aeon.Presentation.Rendering
                     {
                         int srcOffset = y * consoleWidth + x;
 
-                        //ushort c = pages[displayPage][y * consoleWidth + x];
                         uint* dest = destPtr + y * consoleWidth * 8 * fontHeight + x * 8;
-                        //DrawCharacter(dest, (byte)c, palette[internalPalette[(c >> 8) & 0x0F]], palette[internalPalette[(c >> 12) & 0x0F]]);
                         DrawCharacter(dest, textPlane[srcOffset], palette[internalPalette[attrPlane[srcOffset] & 0x0F]], palette[internalPalette[attrPlane[srcOffset] >> 4]]);
                     }
                 }
@@ -83,12 +81,7 @@ namespace Aeon.Presentation.Rendering
             {
                 byte current = this.font[(index * fontHeight) + y];
                 for (int x = 0; x < 8; x++)
-                {
-                    if (((current >> (7 - x)) & 1) != 0)
-                        dest[x] = foregroundColor;
-                    else
-                        dest[x] = backgroundColor;
-                }
+                    dest[x] = (current & (1 << (7 - x))) != 0 ? foregroundColor : backgroundColor;
 
                 dest += this.consoleWidth * 8;
             }
