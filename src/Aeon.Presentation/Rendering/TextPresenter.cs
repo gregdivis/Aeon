@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using Aeon.Emulator.Video;
 
 namespace Aeon.Presentation.Rendering
@@ -77,13 +79,45 @@ namespace Aeon.Presentation.Rendering
         /// <param name="backgroundColor">Background color of the character.</param>
         private unsafe void DrawCharacter(uint* dest, byte index, uint foregroundColor, uint backgroundColor)
         {
-            for (int y = 0; y < this.fontHeight; y++)
+            if (Vector.IsHardwareAccelerated)
             {
-                byte current = this.font[(index * fontHeight) + y];
-                for (int x = 0; x < 8; x++)
-                    dest[x] = (current & (1 << (7 - x))) != 0 ? foregroundColor : backgroundColor;
+                ReadOnlySpan<uint> indexes = stackalloc uint[] { 1 << 7, 1 << 6, 1 << 5, 1 << 4, 1 << 3, 1 << 2, 1 << 1, 1 << 0 };
+                var indexVector = MemoryMarshal.Cast<uint, Vector<uint>>(indexes);
+                var foregroundVector = new Vector<uint>(foregroundColor);
+                var backgroundVector = new Vector<uint>(backgroundColor);
 
-                dest += this.consoleWidth * 8;
+                for (int y = 0; y < this.fontHeight; y++)
+                {
+                    byte current = this.font[(index * fontHeight) + y];
+                    var currentVector = new Vector<uint>(current);
+
+                    int x = 0;
+
+                    for (int i = 0; i < indexVector.Length; i++)
+                    {
+                        var maskResult = Vector.BitwiseAnd(currentVector, indexVector[i]);
+                        var equalsResult = Vector.Equals(maskResult, indexVector[i]);
+                        var result = Vector.ConditionalSelect(equalsResult, foregroundVector, backgroundVector);
+                        for (int j = 0; j < Vector<uint>.Count; j++)
+                            dest[x + j] = result[j];
+
+                        x += Vector<uint>.Count;
+                    }
+
+                    dest += this.consoleWidth * 8;
+                }
+            }
+            else
+            {
+                for (int y = 0; y < this.fontHeight; y++)
+                {
+                    byte current = this.font[(index * fontHeight) + y];
+
+                    for (int x = 0; x < 8; x++)
+                        dest[x] = (current & (1 << (7 - x))) != 0 ? foregroundColor : backgroundColor;
+
+                    dest += this.consoleWidth * 8;
+                }
             }
         }
     }
