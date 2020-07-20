@@ -11,7 +11,7 @@ namespace Aeon.Emulator.Dos.Programs
     internal sealed class ExeFile : ProgramImage
     {
         private byte[] imageData;
-        private List<RealModeAddress> relocationTable = new List<RealModeAddress>();
+        private readonly List<RealModeAddress> relocationTable = new List<RealModeAddress>();
 
         public ExeFile(VirtualPath path, Stream stream)
             : base(path, stream)

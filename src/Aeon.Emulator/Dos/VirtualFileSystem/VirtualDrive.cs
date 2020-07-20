@@ -20,7 +20,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Command interpreter file info.
         /// </summary>
-        private static readonly VirtualFileInfo CommandFileInfo = new VirtualFileInfo("COMMAND.COM", VirtualFileAttributes.Default, new DateTime(1995, 1, 1), ComFile.CommandInterpreter.Length);
+        private static readonly VirtualFileInfo CommandFileInfo = new VirtualFileInfo("COMMAND.COM", VirtualFileAttributes.Default, new DateTime(1995, 1, 1), CommandInterpreterStream.StreamLength);
         /// <summary>
         /// Array containing only the command interpreter.
         /// </summary>
@@ -102,7 +102,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             if (this.HasCommandInterpreter && path.GetRelativePart() == ComFile.CommandPath)
             {
                 if (fileMode == FileMode.Open && fileAccess == FileAccess.Read)
-                    return new MemoryStream(ComFile.CommandInterpreter, false);
+                    return new CommandInterpreterStream();
                 else
                     return ExtendedErrorCode.FileNotFound;
             }

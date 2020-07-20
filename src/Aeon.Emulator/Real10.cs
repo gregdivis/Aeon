@@ -45,10 +45,10 @@ namespace Aeon.Emulator
         public static explicit operator double(Real10 value) => value.ToDouble();
         public static implicit operator Real10(double value) => FromDouble(value);
 
-        public override string ToString() => ((double)this).ToString();
+        public readonly override string ToString() => ((double)this).ToString();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private double ToDouble()
+        private readonly double ToDouble()
         {
             unsafe
             {

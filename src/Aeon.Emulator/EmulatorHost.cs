@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Dos.Programs;
-using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.RuntimeExceptions;
 
 namespace Aeon.Emulator
@@ -263,16 +262,19 @@ namespace Aeon.Emulator
         /// </summary>
         public void Dispose() => this.Dispose(true);
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void EmulateInstructions(int count)
         {
             var vm = this.VirtualMachine;
             vm.PerformDmaTransfers();
 
+            var p = vm.Processor;
+
             try
             {
-                if (vm.Processor.Flags.InterruptEnable & !vm.Processor.TemporaryInterruptMask)
+                if (p.Flags.InterruptEnable & !p.TemporaryInterruptMask)
                 {
-                    while (vm.Processor.InPrefix)
+                    while (p.InPrefix)
                         vm.Emulate();
 
                     this.CheckHardwareInterrupts();
@@ -288,13 +290,13 @@ namespace Aeon.Emulator
             catch (EnableInstructionTrapException)
             {
                 vm.Emulate();
-                while (vm.Processor.InPrefix)
+                while (p.InPrefix)
                     vm.Emulate();
 
-                if (vm.Processor.Flags.Trap)
+                if (p.Flags.Trap)
                 {
                     vm.RaiseInterrupt(1);
-                    vm.Processor.Flags.Trap = false;
+                    p.Flags.Trap = false;
                 }
             }
         }

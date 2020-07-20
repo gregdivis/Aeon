@@ -13,7 +13,6 @@ namespace Aeon.Emulator.Memory
         {
         }
 
-
         public override byte GetByte(uint address)
         {
             if ((address & PhysicalMemory.VramMask) != PhysicalMemory.VramAddress)

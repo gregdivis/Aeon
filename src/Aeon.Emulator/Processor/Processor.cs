@@ -663,7 +663,7 @@ namespace Aeon.Emulator
         internal bool InPrefix
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-            get => this.PrefixCount > 0;
+            get => this.PrefixCount != 0;
         }
         #endregion
 
@@ -705,15 +705,7 @@ namespace Aeon.Emulator
         /// This method must be called explicitly by instructions with no operands.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        internal void InstructionEpilog()
-        {
-            this.overrides = default;
-            //this.SegmentOverride = SegmentRegister.Default;
-            //this.RepeatPrefix = RepeatPrefix.None;
-            //this.SizeOverride = 0;
-            //this.PrefixCount = 0;
-            //this.TemporaryInterruptMask = false;
-        }
+        internal void InstructionEpilog() => this.overrides = default;
 
         internal byte[] GetCurrentState()
         {
@@ -763,7 +755,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// The number of instruction prefixes currently in effect.
         /// </summary>
-        internal int PrefixCount
+        internal uint PrefixCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             get => this.overrides.Count;

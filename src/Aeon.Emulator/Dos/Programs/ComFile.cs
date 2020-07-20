@@ -9,7 +9,6 @@ namespace Aeon.Emulator.Dos.Programs
     internal sealed class ComFile : ProgramImage
     {
         public static readonly VirtualPath CommandPath = new VirtualPath("COMMAND.COM");
-        public static readonly byte[] CommandInterpreter = Properties.Resources.Command;
 
         private byte[] imageData;
 

@@ -925,21 +925,19 @@ namespace Aeon.Emulator
         /// </summary>
         private void InitializeFonts()
         {
-            byte[] fontData = Properties.Resources.DefaultFont8;
-            System.Runtime.InteropServices.Marshal.Copy(fontData, 0, GetPointer(FontSegment, Font8x8Offset), fontData.Length);
+            var ibm8x8 = Fonts.IBM8x8;
+            ibm8x8.CopyTo(this.GetSpan(FontSegment, Font8x8Offset, ibm8x8.Length));
 
-            Reserve(0xF000, (uint)fontData.Length / 2u);
+            Reserve(0xF000, (uint)ibm8x8.Length / 2u);
 
             SetInterruptAddress(0x43, 0xF000, 0xFA6E);
 
             // Only the first half of the 8x8 font should go here.
-            System.Runtime.InteropServices.Marshal.Copy(fontData, 0, GetPointer(0xF000, 0xFA6E), fontData.Length / 2);
+            ibm8x8.Slice(0, ibm8x8.Length / 2).CopyTo(this.GetSpan(0xF000, 0xFA6E, ibm8x8.Length / 2));
 
-            fontData = Properties.Resources.DefaultFont16;
-            System.Runtime.InteropServices.Marshal.Copy(fontData, 0, GetPointer(FontSegment, Font8x16Offset), fontData.Length);
+            Fonts.VGA8x16.CopyTo(this.GetSpan(FontSegment, Font8x16Offset, Fonts.VGA8x16.Length));
 
-            fontData = Properties.Resources.DefaultFont14;
-            System.Runtime.InteropServices.Marshal.Copy(fontData, 0, GetPointer(FontSegment, Font8x14Offset), fontData.Length);
+            Fonts.EGA8x14.CopyTo(this.GetSpan(FontSegment, Font8x14Offset, Fonts.EGA8x14.Length));
         }
         /// <summary>
         /// Writes static BIOS configuration data to emulated memory.
