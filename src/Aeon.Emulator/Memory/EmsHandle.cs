@@ -11,7 +11,6 @@ namespace Aeon.Emulator.Memory
     {
         private readonly List<byte[]> pages;
         private static readonly string nullHandleName = new string((char)0, 8);
-        private string name = nullHandleName;
         private readonly byte[][] savedPageMap = new byte[ExpandedMemoryManager.MaximumPhysicalPages][];
 
         public EmsHandle()
@@ -36,7 +35,7 @@ namespace Aeon.Emulator.Memory
                     this.pages.Add(null);
             }
 
-            this.name = reader.ReadString();
+            this.Name = reader.ReadString();
 
             for (int i = 0; i < this.savedPageMap.Length; i++)
             {
@@ -52,11 +51,7 @@ namespace Aeon.Emulator.Memory
         /// <summary>
         /// Gets or sets the handle name.
         /// </summary>
-        public string Name
-        {
-            get => name;
-            set => name = value;
-        }
+        public string Name { get; set; } = nullHandleName;
         /// <summary>
         /// Gets or sets the saved page map for the handle.
         /// </summary>
@@ -123,7 +118,7 @@ namespace Aeon.Emulator.Memory
                     writer.Write(page);
             }
 
-            writer.Write(this.name);
+            writer.Write(this.Name);
 
             foreach (var pageMap in this.savedPageMap)
             {

@@ -160,7 +160,7 @@ namespace Aeon.Emulator.Sound.FM
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void GenerateWaveforms()
         {
-            var buffer = new short[4096];
+            var buffer = new short[1024];
             synth.GetData(buffer);
             soundBuffer.Play(PlaybackMode.LoopContinuously);
             while (!endThread)
@@ -170,7 +170,7 @@ namespace Aeon.Emulator.Sound.FM
                     synth.GetData(buffer);
                 }
 
-                System.Threading.Thread.Sleep(10);
+                System.Threading.Thread.Sleep(5);
             }
 
             soundBuffer.Stop();
