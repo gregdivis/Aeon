@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 
 namespace Aeon.Emulator.Video
 {
@@ -33,7 +32,6 @@ namespace Aeon.Emulator.Video
             this.crtController = video.CrtController;
             this.attributeController = video.AttributeController;
             this.VideoRam = GetVideoRamPointer(video);
-            this.ConsoleOut = new ConsoleOutStream(video.TextConsole);
 
             InitializeFont(video.VirtualMachine.PhysicalMemory);
         }
@@ -49,7 +47,6 @@ namespace Aeon.Emulator.Video
             this.crtController = baseMode.crtController;
             this.attributeController = baseMode.attributeController;
             this.VideoRam = baseMode.VideoRam;
-            this.ConsoleOut = baseMode.ConsoleOut;
         }
 
         /// <summary>
@@ -128,7 +125,6 @@ namespace Aeon.Emulator.Video
         /// Gets the current font for the video mode.
         /// </summary>
         public byte[] Font { get; } = new byte[4096];
-        public Stream ConsoleOut { get; private set; }
 
         public void Dispose()
         {

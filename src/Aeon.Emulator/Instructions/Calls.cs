@@ -69,7 +69,7 @@ namespace Aeon.Emulator.Instructions
             if (address == 0)
                 throw new InvalidOperationException("Attempted to call function at address 0.");
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
+            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 // Real mode call.
                 vm.PushToStack32(vm.Processor.CS);

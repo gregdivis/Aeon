@@ -852,14 +852,14 @@ namespace Aeon.Emulator
                 throw;
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         internal void UpdateSegment(SegmentIndex segment)
         {
             unsafe
             {
                 ushort value = *this.Processor.segmentRegisterPointers[(int)segment];
 
-                if ((this.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
+                if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
                 {
                     this.Processor.segmentBases[(int)segment] = (uint)value << 4;
                     this.BigStackPointer = false;

@@ -9,49 +9,37 @@ namespace Aeon.Emulator.Instructions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LoopWhileNotZero_16_16(Processor p, sbyte offset)
         {
-            unsafe
-            {
-                ushort* cx = (ushort*)p.PCX;
-                (*cx)--;
-                if(*cx != 0)
-                    p.EIP = (ushort)((int)p.IP + offset);
-            }
+            ref var cx = ref Unsafe.As<short, ushort>(ref p.CX);
+            cx--;
+            if (cx != 0)
+                p.EIP = (ushort)((int)p.IP + offset);
         }
         [Alternate(nameof(LoopWhileNotZero_16_16), OperandSize = 32, AddressSize = 16)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LoopWhileNotZero_32_16(Processor p, sbyte offset)
         {
-            unsafe
-            {
-                ushort* cx = (ushort*)p.PCX;
-                (*cx)--;
-                if(*cx != 0)
-                    p.EIP = (uint)((int)p.EIP + offset);
-            }
+            ref var cx = ref Unsafe.As<short, ushort>(ref p.CX);
+            cx--;
+            if (cx != 0)
+                p.EIP = (uint)((int)p.EIP + offset);
         }
         [Alternate(nameof(LoopWhileNotZero_16_16), OperandSize = 16, AddressSize = 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LoopWhileNotZero_16_32(Processor p, sbyte offset)
         {
-            unsafe
-            {
-                uint* ecx = (uint*)p.PCX;
-                (*ecx)--;
-                if(*ecx != 0)
-                    p.EIP = (ushort)((int)p.IP + offset);
-            }
+            ref var ecx = ref Unsafe.As<int, uint>(ref p.ECX);
+            ecx--;
+            if (ecx != 0)
+                p.EIP = (ushort)((int)p.IP + offset);
         }
         [Alternate(nameof(LoopWhileNotZero_16_16), OperandSize = 32, AddressSize = 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LoopWhileNotZero_32_32(Processor p, sbyte offset)
         {
-            unsafe
-            {
-                uint* ecx = (uint*)p.PCX;
-                (*ecx)--;
-                if(*ecx != 0)
-                    p.EIP = (uint)((int)p.EIP + offset);
-            }
+            ref var ecx = ref Unsafe.As<int, uint>(ref p.ECX);
+            ecx--;
+            if (ecx != 0)
+                p.EIP = (uint)((int)p.EIP + offset);
         }
         #endregion
 
