@@ -2,7 +2,7 @@
 {
     partial class FlagState
     {
-        private enum FlagOperation
+        private enum FlagOperation : byte
         {
             Mul,
             IMul,

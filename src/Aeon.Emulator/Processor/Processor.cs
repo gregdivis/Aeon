@@ -841,14 +841,14 @@ namespace Aeon.Emulator
             public RepeatPrefix Repeat
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-                get => (RepeatPrefix)(this.repeatAndInterruptMask & 0b11);
+                readonly get => (RepeatPrefix)(this.repeatAndInterruptMask & 0b11);
                 [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
                 set => this.repeatAndInterruptMask = (byte)((this.repeatAndInterruptMask & 0b100u) | (uint)value);
             }
             public bool InterruptMask
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-                get => (this.repeatAndInterruptMask & 0b100) == 0b100;
+                readonly get => (this.repeatAndInterruptMask & 0b100) == 0b100;
                 [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
                 set
                 {

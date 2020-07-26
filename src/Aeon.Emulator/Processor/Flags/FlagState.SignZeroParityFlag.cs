@@ -5,10 +5,16 @@ namespace Aeon.Emulator
 {
     partial class FlagState
     {
-        private sealed class SignZeroParityFlag
+        private struct SignZeroParityFlag
         {
-            private Overrides overrides = new Overrides(false);
+            private Overrides overrides;
             private uint result;
+
+            public SignZeroParityFlag(bool initialValue)
+            {
+                this.overrides = new Overrides(initialValue);
+                this.result = default;
+            }
 
             public bool Sign
             {

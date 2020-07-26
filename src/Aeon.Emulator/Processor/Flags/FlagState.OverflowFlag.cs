@@ -4,13 +4,15 @@ namespace Aeon.Emulator
 {
     partial class FlagState
     {
-        private sealed class OverflowFlag
+        private struct OverflowFlag
         {
-            private bool? currentValue = false;
+            private bool? currentValue;
             private FlagOperation operation;
             private uint a;
             private uint b;
             private uint c;
+
+            public OverflowFlag(bool initialValue) : this() => this.currentValue = initialValue;
 
             public bool Value
             {

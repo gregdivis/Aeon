@@ -4,9 +4,9 @@ namespace Aeon.Emulator
 {
     public sealed partial class FlagState
     {
-        private readonly SignZeroParityFlag signZeroParity = new SignZeroParityFlag();
-        private readonly CarryFlag carry = new CarryFlag();
-        private readonly OverflowFlag overflow = new OverflowFlag();
+        private SignZeroParityFlag signZeroParity = new SignZeroParityFlag(false);
+        private CarryFlag carry = new CarryFlag(false);
+        private OverflowFlag overflow = new OverflowFlag(false);
 
         public bool Carry
         {

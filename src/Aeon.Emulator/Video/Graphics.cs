@@ -71,38 +71,19 @@ namespace Aeon.Emulator.Video
         /// <returns>Current value of the register.</returns>
         public byte ReadRegister(GraphicsRegister address)
         {
-            switch (address)
+            return address switch
             {
-                case GraphicsRegister.SetReset:
-                    return this.SetReset;
-
-                case GraphicsRegister.EnableSetReset:
-                    return this.EnableSetReset;
-
-                case GraphicsRegister.ColorCompare:
-                    return this.ColorCompare;
-
-                case GraphicsRegister.DataRotate:
-                    return this.DataRotate;
-
-                case GraphicsRegister.ReadMapSelect:
-                    return ReadMapSelect;
-
-                case GraphicsRegister.GraphicsMode:
-                    return this.GraphicsMode;
-
-                case GraphicsRegister.MiscellaneousGraphics:
-                    return this.MiscellaneousGraphics;
-
-                case GraphicsRegister.ColorDontCare:
-                    return this.ColorDontCare;
-
-                case GraphicsRegister.BitMask:
-                    return this.BitMask;
-
-                default:
-                    return 0;
-            }
+                GraphicsRegister.SetReset => this.SetReset,
+                GraphicsRegister.EnableSetReset => this.EnableSetReset,
+                GraphicsRegister.ColorCompare => this.ColorCompare,
+                GraphicsRegister.DataRotate => this.DataRotate,
+                GraphicsRegister.ReadMapSelect => ReadMapSelect,
+                GraphicsRegister.GraphicsMode => this.GraphicsMode,
+                GraphicsRegister.MiscellaneousGraphics => this.MiscellaneousGraphics,
+                GraphicsRegister.ColorDontCare => this.ColorDontCare,
+                GraphicsRegister.BitMask => this.BitMask,
+                _ => 0
+            };
         }
         /// <summary>
         /// Writes to a graphics register.

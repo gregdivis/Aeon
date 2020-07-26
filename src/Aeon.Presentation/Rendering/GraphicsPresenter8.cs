@@ -23,12 +23,12 @@ namespace Aeon.Presentation.Rendering
         /// </summary>
         public override void Update()
         {
-            int totalPixels = this.VideoMode.Width * this.VideoMode.Height;
+            uint totalPixels = (uint)this.VideoMode.Width * (uint)this.VideoMode.Height;
             var palette = this.VideoMode.Palette;
 
             unsafe
             {
-                byte* srcPtr = (byte*)this.VideoMode.VideoRam.ToPointer() + this.VideoMode.StartOffset;
+                byte* srcPtr = (byte*)this.VideoMode.VideoRam.ToPointer() + (uint)this.VideoMode.StartOffset;
                 uint* destPtr = (uint*)this.Destination.ToPointer();
 
                 for (int i = 0; i < totalPixels; i++)

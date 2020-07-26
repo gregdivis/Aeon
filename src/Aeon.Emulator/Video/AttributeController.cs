@@ -49,26 +49,15 @@
             if (address >= AttributeControllerRegister.FirstPaletteEntry && address <= AttributeControllerRegister.LastPaletteEntry)
                 return this.InternalPalette[(byte)address];
 
-            switch (address)
+            return address switch
             {
-                case AttributeControllerRegister.AttributeModeControl:
-                    return this.AttributeModeControl;
-
-                case AttributeControllerRegister.OverscanColor:
-                    return this.OverscanColor;
-
-                case AttributeControllerRegister.ColorPlaneEnable:
-                    return this.ColorPlaneEnable;
-
-                case AttributeControllerRegister.HorizontalPixelPanning:
-                    return this.HorizontalPixelPanning;
-
-                case AttributeControllerRegister.ColorSelect:
-                    return this.ColorSelect;
-
-                default:
-                    return 0;
-            }
+                AttributeControllerRegister.AttributeModeControl => this.AttributeModeControl,
+                AttributeControllerRegister.OverscanColor => this.OverscanColor,
+                AttributeControllerRegister.ColorPlaneEnable => this.ColorPlaneEnable,
+                AttributeControllerRegister.HorizontalPixelPanning => this.HorizontalPixelPanning,
+                AttributeControllerRegister.ColorSelect => this.ColorSelect,
+                _ => 0
+            };
         }
         /// <summary>
         /// Writes to an attribute controller register.

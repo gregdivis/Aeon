@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Aeon.Emulator.Video;
 
@@ -10,9 +11,9 @@ namespace Aeon.Presentation.Rendering
     /// </summary>
     internal sealed class TextPresenter : Presenter
     {
-        private readonly int consoleWidth;
-        private readonly int consoleHeight;
-        private readonly int fontHeight;
+        private readonly uint consoleWidth;
+        private readonly uint consoleHeight;
+        private readonly uint fontHeight;
         private readonly unsafe ushort*[] pages;
         private readonly byte[] font;
         private readonly unsafe byte* videoRam;
@@ -35,10 +36,10 @@ namespace Aeon.Presentation.Rendering
                     this.pages[i] = (ushort*)(srcPtr + VideoMode.DisplayPageSize * i);
             }
 
-            this.consoleWidth = videoMode.Width;
-            this.consoleHeight = videoMode.Height;
+            this.consoleWidth = (uint)videoMode.Width;
+            this.consoleHeight = (uint)videoMode.Height;
             this.font = videoMode.Font;
-            this.fontHeight = videoMode.FontHeight;
+            this.fontHeight = (uint)videoMode.FontHeight;
         }
 
         /// <summary>
@@ -46,24 +47,25 @@ namespace Aeon.Presentation.Rendering
         /// </summary>
         public override void Update()
         {
-            var palette = this.VideoMode.Palette;
-            byte[] internalPalette = this.VideoMode.InternalPalette;
-            int displayPage = this.VideoMode.ActiveDisplayPage;
-
             unsafe
             {
+                var palette = this.VideoMode.Palette;
+                byte* internalPalette = stackalloc byte[16];
+                this.VideoMode.InternalPalette.CopyTo(new Span<byte>(internalPalette, 16));
+                uint displayPage = (uint)this.VideoMode.ActiveDisplayPage;
+
                 uint* destPtr = (uint*)this.Destination.ToPointer();
 
                 byte* textPlane = this.videoRam + VideoMode.DisplayPageSize * displayPage;
                 byte* attrPlane = this.videoRam + VideoMode.PlaneSize + VideoMode.DisplayPageSize * displayPage;
 
-                for (int y = 0; y < consoleHeight; y++)
+                for (uint y = 0; y < this.consoleHeight; y++)
                 {
-                    for (int x = 0; x < consoleWidth; x++)
+                    for (uint x = 0; x < this.consoleWidth; x++)
                     {
-                        int srcOffset = y * consoleWidth + x;
+                        uint srcOffset = y * this.consoleWidth + x;
 
-                        uint* dest = destPtr + y * consoleWidth * 8 * fontHeight + x * 8;
+                        uint* dest = destPtr + y * this.consoleWidth * 8 * this.fontHeight + x * 8;
                         DrawCharacter(dest, textPlane[srcOffset], palette[internalPalette[attrPlane[srcOffset] & 0x0F]], palette[internalPalette[attrPlane[srcOffset] >> 4]]);
                     }
                 }
