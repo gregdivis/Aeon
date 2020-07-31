@@ -95,7 +95,7 @@ namespace Aeon.Emulator.Launcher
             vm.RegisterVirtualDevice(new Sound.FM.FmSoundCard(handle));
             vm.RegisterVirtualDevice(new Sound.GeneralMidi());
 
-            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 200_000_000;
+            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 20_000_000;
             emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? Presentation.MouseInputMode.Absolute : Presentation.MouseInputMode.Relative;
             toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;

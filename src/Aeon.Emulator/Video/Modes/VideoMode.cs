@@ -24,6 +24,7 @@ namespace Aeon.Emulator.Video
         {
             this.Width = width;
             this.Height = height;
+            this.OriginalHeight = height;
             this.BitsPerPixel = bpp;
             this.IsPlanar = planar;
             this.FontHeight = fontHeight;
@@ -57,6 +58,14 @@ namespace Aeon.Emulator.Video
         /// Gets the height of the emulated video mode in pixels or characters.
         /// </summary>
         public int Height { get; internal set; }
+        /// <summary>
+        /// Gets the original height of the emulated video mode in pixels or characters.
+        /// </summary>
+        /// <remarks>
+        /// This remains set to the original height of the video mode before any changes due
+        /// to modifying the value of the vertical end register.
+        /// </remarks>
+        public int OriginalHeight { get; }
         /// <summary>
         /// Gets the bits per pixel of the emulated video mode.
         /// </summary>

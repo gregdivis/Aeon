@@ -18,7 +18,7 @@ namespace Aeon.Emulator
     {
         private Thread processorThread;
         private volatile EmulatorState targetState;
-        private AutoResetEvent resumeEvent = new AutoResetEvent(false);
+        private readonly AutoResetEvent resumeEvent = new AutoResetEvent(false);
         private readonly ConcurrentQueue<MouseEvent> mouseQueue = new ConcurrentQueue<MouseEvent>();
         private EmulatorState currentState;
         private bool disposed;
@@ -255,7 +255,7 @@ namespace Aeon.Emulator
             if (mouseEvent == null)
                 throw new ArgumentNullException(nameof(mouseEvent));
 
-            mouseQueue.Enqueue(mouseEvent);
+            this.mouseQueue.Enqueue(mouseEvent);
         }
         /// <summary>
         /// Releases resources used by the emulator.

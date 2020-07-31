@@ -157,9 +157,9 @@ namespace Aeon.Emulator.Mouse
         /// <returns>Virtual horizontal cursor position.</returns>
         private int GetScaledX(int realX)
         {
-            int screenWidth = vm.VideoMode.Width;
-            int virtualWidth = maxX - minX + 1;
-            double ratio = (double)virtualWidth / (double)screenWidth;
+            int screenWidth = this.vm.VideoMode.Width;
+            int virtualWidth = this.maxX - this.minX + 1;
+            var ratio = virtualWidth / (double)screenWidth;
             return (int)(realX * ratio) + minX;
         }
         /// <summary>
@@ -169,10 +169,10 @@ namespace Aeon.Emulator.Mouse
         /// <returns>Virtual vertical cursor position.</returns>
         private int GetScaledY(int realY)
         {
-            int screenHeight = vm.VideoMode.Height;
-            int virtualHeight = maxY - minY + 1;
-            double ratio = (double)virtualHeight / (double)screenHeight;
-            return (int)(realY * ratio) + minY;
+            int screenHeight = this.vm.VideoMode.OriginalHeight;
+            int virtualHeight = this.maxY - this.minY + 1;
+            var ratio = virtualHeight / (double)screenHeight;
+            return (int)(realY * ratio) + this.minY;
         }
         /// <summary>
         /// Returns the actual horizontal cursor position.
@@ -181,10 +181,10 @@ namespace Aeon.Emulator.Mouse
         /// <returns>Actual horizontal cursor position.</returns>
         private int GetRealX(int scaledX)
         {
-            int screenWidth = vm.VideoMode.Width;
-            int virtualWidth = maxX - minX + 1;
-            double ratio = (double)screenWidth / (double)virtualWidth;
-            return (int)((scaledX - minX) * ratio);
+            int screenWidth = this.vm.VideoMode.Width;
+            int virtualWidth = this.maxX - this.minX + 1;
+            var ratio = screenWidth / (double)virtualWidth;
+            return (int)((scaledX - this.minX) * ratio);
         }
         /// <summary>
         /// Returns the actual vertical cursor position.
@@ -193,10 +193,10 @@ namespace Aeon.Emulator.Mouse
         /// <returns>Actual vertical cursor position.</returns>
         private int GetRealY(int scaledY)
         {
-            int screenHeight = vm.VideoMode.Height;
-            int virtualHeight = maxY - minY + 1;
-            double ratio = (double)screenHeight / (double)virtualHeight;
-            return (int)((scaledY - minY) * ratio);
+            int screenHeight = this.vm.VideoMode.Height;
+            int virtualHeight = this.maxY - this.minY + 1;
+            var ratio = (double)screenHeight / virtualHeight;
+            return (int)((scaledY - this.minY) * ratio);
         }
 
         /// <summary>
@@ -206,20 +206,13 @@ namespace Aeon.Emulator.Mouse
         /// <returns>Converted CallbackMask value.</returns>
         private static CallbackMask GetCallbackReasonPress(MouseButtons button)
         {
-            switch (button)
+            return button switch
             {
-                case MouseButtons.Left:
-                    return CallbackMask.LeftButtonDown;
-
-                case MouseButtons.Right:
-                    return CallbackMask.RightButtonDown;
-
-                case MouseButtons.Middle:
-                    return CallbackMask.MiddleButtonDown;
-
-                default:
-                    return CallbackMask.Disabled;
-            }
+                MouseButtons.Left => CallbackMask.LeftButtonDown,
+                MouseButtons.Right => CallbackMask.RightButtonDown,
+                MouseButtons.Middle => CallbackMask.MiddleButtonDown,
+                _ => CallbackMask.Disabled,
+            };
         }
         /// <summary>
         /// Converts a MouseButtons value to a corresponding CallbackMask for a button release.
@@ -228,20 +221,13 @@ namespace Aeon.Emulator.Mouse
         /// <returns>Converted CallbackMask value.</returns>
         private static CallbackMask GetCallbackReasonRelease(MouseButtons button)
         {
-            switch (button)
+            return button switch
             {
-                case MouseButtons.Left:
-                    return CallbackMask.LeftButtonUp;
-
-                case MouseButtons.Right:
-                    return CallbackMask.RightButtonUp;
-
-                case MouseButtons.Middle:
-                    return CallbackMask.MiddleButtonUp;
-
-                default:
-                    return CallbackMask.Disabled;
-            }
+                MouseButtons.Left => CallbackMask.LeftButtonUp,
+                MouseButtons.Right => CallbackMask.RightButtonUp,
+                MouseButtons.Middle => CallbackMask.MiddleButtonUp,
+                _ => CallbackMask.Disabled,
+            };
         }
 
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { 0x33, new InterruptHandlerInfo(CallbackInterrupt, Registers.AX | Registers.BX | Registers.CX | Registers.DX | Registers.BP | Registers.SI | Registers.DI | Registers.DS | Registers.ES, false, true) };
