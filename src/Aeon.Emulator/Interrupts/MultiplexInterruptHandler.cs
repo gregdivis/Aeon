@@ -18,9 +18,9 @@ namespace Aeon.Emulator.Interrupts
         {
             int id = this.processor.AH;
 
-            foreach(var handler in this.handlers)
+            foreach (var handler in this.handlers)
             {
-                if(handler.Identifier == id)
+                if (handler.Identifier == id)
                 {
                     handler.HandleInterrupt();
                     return;

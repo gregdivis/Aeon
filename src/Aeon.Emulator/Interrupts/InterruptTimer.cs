@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Security;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Interrupts
 {
@@ -16,17 +15,16 @@ namespace Aeon.Emulator.Interrupts
         /// </summary>
         public static readonly long StopwatchTicksPerMillisecond = Stopwatch.Frequency / 1000;
 
-        private static readonly double stopwatchTickDuration = 1000.0 / (double)Stopwatch.Frequency;
+        private static readonly double stopwatchTickDuration = 1000.0 / Stopwatch.Frequency;
         private static readonly double pitToStopwatchMultiplier = pitTickDuration / stopwatchTickDuration;
-        private static readonly double TimeSpanToStopwatchMultiplier = (double)StopwatchTicksPerMillisecond / (double)TimeSpan.TicksPerMillisecond;
+        private static readonly double TimeSpanToStopwatchMultiplier = StopwatchTicksPerMillisecond / (double)TimeSpan.TicksPerMillisecond;
 
         private int initialValue = 65536;
         private int inLatch;
         private int outLatch;
         private bool wroteLowByte;
         private bool readLowByte;
-        private int stopwatchTickPeriod = (int)(65536 * pitToStopwatchMultiplier);
-        private Stopwatch pitStopwatch = new Stopwatch();
+        private readonly Stopwatch pitStopwatch = new Stopwatch();
         private const double pitTickDuration = 8.3809651519468982047972644529744e-4;
 
         internal InterruptTimer()
@@ -36,27 +34,27 @@ namespace Aeon.Emulator.Interrupts
         /// <summary>
         /// Gets the current value of the system performance counter.
         /// </summary>
-        public static long GlobalTimerTicks
-        {
-            get
-            {
-                SafeNativeMethods.QueryPerformanceCounter(out long value);
-                return value;
-            }
-        }
+        public static long GlobalTimerTicks => Stopwatch.GetTimestamp();
 
         /// <summary>
         /// Gets the period of the interrupt timer.
         /// </summary>
-        public TimeSpan Period => TimeSpan.FromMilliseconds(stopwatchTickPeriod * stopwatchTickDuration);
+        public TimeSpan Period => TimeSpan.FromMilliseconds(TickPeriod * stopwatchTickDuration);
         /// <summary>
         /// Gets the period of the interrupt timer in stopwatch ticks.
         /// </summary>
-        public int TickPeriod => stopwatchTickPeriod;
+        public int TickPeriod { get; private set; } = (int)(65536 * pitToStopwatchMultiplier);
         /// <summary>
         /// Gets a value indicating whether the interrupt timer has completed a cycle.
         /// </summary>
-        public bool IsIntervalComplete => pitStopwatch.ElapsedTicks >= stopwatchTickPeriod;
+        public bool IsIntervalComplete
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return this.pitStopwatch.ElapsedTicks >= this.TickPeriod;
+            }
+        }
 
         /// <summary>
         /// Returns a value indicating whether the real time clock is in the specified state.
@@ -86,24 +84,21 @@ namespace Aeon.Emulator.Interrupts
         /// <summary>
         /// Resets the timer to begin a new interval.
         /// </summary>
-        public void Reset()
-        {
-            pitStopwatch.Reset();
-            pitStopwatch.Start();
-        }
+        public void Reset() => this.pitStopwatch.Restart();
+
         IEnumerable<int> IInputPort.InputPorts => new int[] { 0x40 };
         byte IInputPort.ReadByte(int port)
         {
             if (!readLowByte)
             {
-                readLowByte = true;
-                outLatch = (int)(pitStopwatch.ElapsedTicks / InterruptTimer.pitToStopwatchMultiplier);
-                return (byte)(outLatch & 0xFF);
+                this.readLowByte = true;
+                this.outLatch = (int)(this.pitStopwatch.ElapsedTicks / pitToStopwatchMultiplier);
+                return (byte)(this.outLatch & 0xFF);
             }
             else
             {
-                readLowByte = false;
-                return (byte)((outLatch >> 8) & 0xFF);
+                this.readLowByte = false;
+                return (byte)((this.outLatch >> 8) & 0xFF);
             }
         }
         ushort IInputPort.ReadWord(int port) => (ushort)(pitStopwatch.ElapsedTicks / pitToStopwatchMultiplier);
@@ -112,19 +107,19 @@ namespace Aeon.Emulator.Interrupts
         {
             if (port == 0x040)
             {
-                if (!wroteLowByte)
+                if (!this.wroteLowByte)
                 {
-                    inLatch = value;
-                    wroteLowByte = true;
+                    this.inLatch = value;
+                    this.wroteLowByte = true;
                 }
                 else
                 {
-                    int newValue = inLatch | (value << 8);
-                    wroteLowByte = false;
+                    int newValue = this.inLatch | (value << 8);
+                    this.wroteLowByte = false;
                     if (newValue != 0)
-                        SetInitialValue(newValue);
+                        this.SetInitialValue(newValue);
                     else
-                        SetInitialValue(65536);
+                        this.SetInitialValue(65536);
                 }
             }
             else
@@ -135,11 +130,11 @@ namespace Aeon.Emulator.Interrupts
         }
         void IOutputPort.WriteWord(int port, ushort value)
         {
-            wroteLowByte = false;
+            this.wroteLowByte = false;
             if (value != 0)
-                SetInitialValue(value);
+                this.SetInitialValue(value);
             else
-                SetInitialValue(65536);
+                this.SetInitialValue(65536);
         }
         void IVirtualDevice.Pause()
         {
@@ -160,15 +155,8 @@ namespace Aeon.Emulator.Interrupts
         /// <param name="value">New initial value for the timer from 1 to 65536.</param>
         private void SetInitialValue(int value)
         {
-            initialValue = value;
-            stopwatchTickPeriod = (int)(initialValue * pitToStopwatchMultiplier);
-        }
-
-        [SuppressUnmanagedCodeSecurity]
-        internal static class SafeNativeMethods
-        {
-            [DllImport("kernel32.dll")]
-            public static extern bool QueryPerformanceCounter(out long value);
+            this.initialValue = value;
+            this.TickPeriod = (int)(this.initialValue * pitToStopwatchMultiplier);
         }
     }
 }

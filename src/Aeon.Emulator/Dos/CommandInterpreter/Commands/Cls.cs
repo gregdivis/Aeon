@@ -20,10 +20,7 @@
         /// <returns>Result of the command.</returns>
         public override CommandResult Run(VirtualMachine vm)
         {
-            var video = vm.Video;
-            if (video != null)
-                video.TextConsole.Clear();
-
+            vm.Video?.TextConsole.Clear();
             return CommandResult.Continue;
         }
     }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 
 namespace Aeon.Emulator.Mouse
 {
@@ -131,46 +130,7 @@ namespace Aeon.Emulator.Mouse
 
             return result;
         }
-        public void SaveCurrentState(BinaryWriter writer)
-        {
-            writeButtonInfo(this.leftPress);
-            writeButtonInfo(this.rightPress);
-            writeButtonInfo(this.middlePress);
-            writeButtonInfo(this.leftRelease);
-            writeButtonInfo(this.rightRelease);
-            writeButtonInfo(this.middleRelease);
 
-            void writeButtonInfo(ButtonInfo b)
-            {
-                writer.Write(b.Count);
-                writer.Write(b.X);
-                writer.Write(b.Y);
-            }
-        }
-        public void RestoreState(BinaryReader reader)
-        {
-            this.leftPress = readButtonInfo();
-            this.rightPress = readButtonInfo();
-            this.middlePress = readButtonInfo();
-            this.leftRelease = readButtonInfo();
-            this.rightRelease = readButtonInfo();
-            this.middleRelease = readButtonInfo();
-
-            ButtonInfo readButtonInfo() =>
-                new ButtonInfo
-                {
-                    Count = reader.ReadUInt32(),
-                    X = reader.ReadInt32(),
-                    Y = reader.ReadInt32()
-                };
-        }
-
-        /// <summary>
-        /// Increments the counter and assigns a new position to a ButtonInfo struct.
-        /// </summary>
-        /// <param name="info">Reference to struct to update.</param>
-        /// <param name="x">New X-coordinate of the cursor.</param>
-        /// <param name="y">New Y-courdinate of the cursor.</param>
         private static void UpdateButtonInfo(ref ButtonInfo info, int x, int y)
         {
             info.Count++;

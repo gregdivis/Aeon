@@ -176,7 +176,9 @@ namespace Aeon.Emulator.Instructions
                         vm.Processor.Flags.Carry = true;
                     }
                     else
+                    {
                         vm.Processor.Flags.Carry = false;
+                    }
                 }
             }
             else if (mode == 1)

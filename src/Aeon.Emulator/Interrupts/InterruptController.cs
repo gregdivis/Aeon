@@ -27,8 +27,6 @@ namespace Aeon.Emulator
 
         internal InterruptController()
         {
-            this.BaseInterruptVector1 = 0x08;
-            this.BaseInterruptVector2 = 0x70;
         }
 
         IEnumerable<int> IInputPort.InputPorts => new[] { CommandPort1, MaskPort1, CommandPort2, MaskPort2 };
@@ -36,11 +34,11 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets the base interrupt vector for IRQ 0-7.
         /// </summary>
-        public int BaseInterruptVector1 { get; private set; }
+        public int BaseInterruptVector1 { get; private set; } = 0x08;
         /// <summary>
         /// Gets the base interrupt vector for IRQ 8-15.
         /// </summary>
-        public int BaseInterruptVector2 { get; private set; }
+        public int BaseInterruptVector2 { get; private set; } = 0x70;
 
         /// <summary>
         /// Signals a hardware interrupt request.
@@ -53,13 +51,13 @@ namespace Aeon.Emulator
 
             int bit = 1 << irq;
 
-            readerWriter.EnterWriteLock();
+            this.readerWriter.EnterWriteLock();
 
             // Only allow the request if not already being serviced.
-            if ((inServiceRegister & bit) == 0)
-                requestRegister |= bit;
+            if ((this.inServiceRegister & bit) == 0)
+                this.requestRegister |= bit;
 
-            readerWriter.ExitWriteLock();
+            this.readerWriter.ExitWriteLock();
         }
         /// <summary>
         /// Acknowledges a pending interrupt request from the processor thread.
@@ -67,17 +65,17 @@ namespace Aeon.Emulator
         /// <returns>Software interrupt number requested, or -1 if none.</returns>
         public int AcknowledgeRequest()
         {
-            readerWriter.EnterWriteLock();
+            this.readerWriter.EnterWriteLock();
 
             try
             {
                 for (int i = 0; i <= 7; i++)
                 {
                     int bit = 1 << i;
-                    if ((requestRegister & bit) == bit && ((~maskRegister) & bit) == bit)
+                    if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit)
                     {
-                        requestRegister &= ~bit;
-                        inServiceRegister |= bit;
+                        this.requestRegister &= ~bit;
+                        this.inServiceRegister |= bit;
                         return this.BaseInterruptVector1 + i;
                     }
                 }
@@ -85,10 +83,10 @@ namespace Aeon.Emulator
                 for (int i = 8; i <= 15; i++)
                 {
                     int bit = 1 << i;
-                    if ((requestRegister & bit) == bit && ((~maskRegister) & bit) == bit)
+                    if ((this.requestRegister & bit) == bit && ((~this.maskRegister) & bit) == bit)
                     {
-                        requestRegister &= ~bit;
-                        inServiceRegister |= bit;
+                        this.requestRegister &= ~bit;
+                        this.inServiceRegister |= bit;
                         return this.BaseInterruptVector2 + i;
                     }
                 }
@@ -97,23 +95,23 @@ namespace Aeon.Emulator
             }
             finally
             {
-                readerWriter.ExitWriteLock();
+                this.readerWriter.ExitWriteLock();
             }
         }
-        byte IInputPort.ReadByte(int port) => ReadByte(port);
-        ushort IInputPort.ReadWord(int port) => ReadByte(port);
-        void IOutputPort.WriteByte(int port, byte value) => WriteByte(port, value);
+        byte IInputPort.ReadByte(int port) => this.ReadByte(port);
+        ushort IInputPort.ReadWord(int port) => this.ReadByte(port);
+        void IOutputPort.WriteByte(int port, byte value) => this.WriteByte(port, value);
         void IOutputPort.WriteWord(int port, ushort value)
         {
             if (port == 0x20)
             {
-                WriteByte(0x20, (byte)value);
-                WriteByte(0x21, (byte)(value >> 8));
+                this.WriteByte(0x20, (byte)value);
+                this.WriteByte(0x21, (byte)(value >> 8));
             }
             else if (port == 0xA0)
             {
-                WriteByte(0xA0, (byte)value);
-                WriteByte(0xA1, (byte)(value >> 8));
+                this.WriteByte(0xA0, (byte)value);
+                this.WriteByte(0xA1, (byte)(value >> 8));
             }
         }
         void IVirtualDevice.Pause()
@@ -135,9 +133,9 @@ namespace Aeon.Emulator
             for (int i = 0; i < 8; i++)
             {
                 int bit = 1 << i;
-                if ((inServiceRegister & bit) == bit)
+                if ((this.inServiceRegister & bit) == bit)
                 {
-                    inServiceRegister &= ~bit;
+                    this.inServiceRegister &= ~bit;
                     return;
                 }
             }
@@ -150,9 +148,9 @@ namespace Aeon.Emulator
             for (int i = 8; i < 16; i++)
             {
                 int bit = 1 << i;
-                if ((inServiceRegister & bit) == bit)
+                if ((this.inServiceRegister & bit) == bit)
                 {
-                    inServiceRegister &= ~bit;
+                    this.inServiceRegister &= ~bit;
                     return;
                 }
             }
@@ -164,46 +162,46 @@ namespace Aeon.Emulator
         /// <returns>Value read from the port.</returns>
         private byte ReadByte(int port)
         {
-            readerWriter.EnterReadLock();
+            this.readerWriter.EnterReadLock();
 
             try
             {
                 switch (port)
                 {
                     case CommandPort1:
-                        switch (currentCommand1)
+                        switch (this.currentCommand1)
                         {
                             case Command.ReadISR:
-                                return (byte)inServiceRegister;
+                                return (byte)this.inServiceRegister;
 
                             case Command.ReadIRR:
-                                return (byte)requestRegister;
+                                return (byte)this.requestRegister;
                         }
                         break;
 
                     case MaskPort1:
-                        return (byte)maskRegister;
+                        return (byte)this.maskRegister;
 
                     case CommandPort2:
                         switch (currentCommand2)
                         {
                             case Command.ReadISR:
-                                return (byte)(inServiceRegister >> 8);
+                                return (byte)(this.inServiceRegister >> 8);
 
                             case Command.ReadIRR:
-                                return (byte)(requestRegister >> 8);
+                                return (byte)(this.requestRegister >> 8);
                         }
                         break;
 
                     case MaskPort2:
-                        return (byte)(maskRegister >> 8);
+                        return (byte)(this.maskRegister >> 8);
                 }
 
                 return 0;
             }
             finally
             {
-                readerWriter.ExitReadLock();
+                this.readerWriter.ExitReadLock();
             }
         }
         /// <summary>
@@ -213,23 +211,18 @@ namespace Aeon.Emulator
         /// <param name="value">Byte to write to the port.</param>
         private void WriteByte(int port, byte value)
         {
-            readerWriter.EnterWriteLock();
-
-            if (value == 0x67)
-            {
-            }
-
+            this.readerWriter.EnterWriteLock();
             try
             {
-                int registerValue = maskRegister;
+                int registerValue = this.maskRegister;
 
                 switch (port)
                 {
                     case CommandPort1:
                         if (value == (int)Command.EndOfInterrupt)
-                            EndCurrentInterrupt1();
+                            this.EndCurrentInterrupt1();
                         else if (value == (int)Command.ReadIRR || value == (int)Command.ReadISR)
-                            currentCommand1 = (Command)value;
+                            this.currentCommand1 = (Command)value;
                         else if ((value & 0x10) != 0) // ICW1
                         {
                             if (value == InitializeICW1 || value == InitializeICW4)
@@ -240,7 +233,9 @@ namespace Aeon.Emulator
                                 this.state1 = State.Initialization_NeedVector;
                             }
                             else
+                            {
                                 throw new NotImplementedException();
+                            }
                         }
                         else if ((value & 0x18) == 0) // OCW2
                         {
@@ -250,27 +245,9 @@ namespace Aeon.Emulator
                                 throw new NotImplementedException();
                         }
                         else
+                        {
                             throw new NotImplementedException();
-
-                        //currentCommand1 = (Command)value;
-                        //switch(currentCommand1)
-                        //{
-                        //case Command.Initialize:
-                        //case Command.InitializeICW4:
-                        //    Initialize1();
-                        //    break;
-
-                        //case Command.EndOfInterrupt:
-                        //    EndCurrentInterrupt1();
-                        //    break;
-
-                        //case Command.ReadIRR:
-                        //case Command.ReadISR:
-                        //    break;
-
-                        //default:
-                        //    throw new NotImplementedException();
-                        //}
+                        }
                         break;
 
                     case MaskPort1:
@@ -294,14 +271,14 @@ namespace Aeon.Emulator
                             case State.Ready:
                                 registerValue &= 0xFF00;
                                 registerValue |= value;
-                                maskRegister = registerValue;
+                                this.maskRegister = registerValue;
                                 break;
                         }
                         break;
 
                     case CommandPort2:
-                        currentCommand2 = (Command)value;
-                        switch (currentCommand2)
+                        this.currentCommand2 = (Command)value;
+                        switch (this.currentCommand2)
                         {
                             case Command.Initialize:
                             case Command.InitializeICW4:
@@ -309,7 +286,7 @@ namespace Aeon.Emulator
                                 break;
 
                             case Command.EndOfInterrupt:
-                                EndCurrentInterrupt2();
+                                this.EndCurrentInterrupt2();
                                 break;
                         }
                         break;
@@ -335,7 +312,7 @@ namespace Aeon.Emulator
                             case State.Ready:
                                 registerValue &= 0x00FF;
                                 registerValue |= (value << 8);
-                                maskRegister = registerValue;
+                                this.maskRegister = registerValue;
                                 break;
                         }
                         break;
@@ -343,7 +320,7 @@ namespace Aeon.Emulator
             }
             finally
             {
-                readerWriter.ExitWriteLock();
+                this.readerWriter.ExitWriteLock();
             }
         }
 

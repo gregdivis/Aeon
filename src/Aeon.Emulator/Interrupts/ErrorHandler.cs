@@ -11,16 +11,16 @@ namespace Aeon.Emulator.Interrupts
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x00, 0x04, 0x06 };
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
-            switch(interrupt)
+            switch (interrupt)
             {
-            case 0x00:
-                throw new InvalidOperationException("Unhandled divide-by-zero.");
+                case 0x00:
+                    throw new InvalidOperationException("Unhandled divide-by-zero.");
 
-            case 0x04:
-                throw new InvalidOperationException("Unhandled numeric overflow.");
+                case 0x04:
+                    throw new InvalidOperationException("Unhandled numeric overflow.");
 
-            case 0x06:
-                throw new InvalidOperationException("Unhandled undefined opcode.");
+                case 0x06:
+                    throw new InvalidOperationException("Unhandled undefined opcode.");
             }
         }
         void IVirtualDevice.Pause()

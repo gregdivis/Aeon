@@ -125,7 +125,7 @@ namespace Aeon.Emulator.CommandInterpreter.Commands
         private static bool FileExists(string path, VirtualMachine vm)
         {
             var fileInfo = vm.FileSystem.GetFileInfo(path);
-            return fileInfo.Result != null && (fileInfo.Result.Attributes & VirtualFileAttributes.Directory) == 0;
+            return fileInfo.Result != null && !fileInfo.Result.Attributes.HasFlag(VirtualFileAttributes.Directory);
         }
     }
 }

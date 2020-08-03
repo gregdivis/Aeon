@@ -477,11 +477,13 @@ namespace Aeon.Emulator
 
             if (this.Processor.PrefixCount > 0)
             {
-                this.Processor.EIP = this.Processor.StartEIP - (uint)this.Processor.PrefixCount;
+                this.Processor.EIP = this.Processor.StartEIP - this.Processor.PrefixCount;
                 this.Processor.InstructionEpilog();
             }
             else
+            {
                 this.Processor.EIP = this.Processor.StartEIP;
+            }
 
             exception.OnRaised(this);
 
@@ -500,15 +502,17 @@ namespace Aeon.Emulator
                         throw new NotImplementedException();
 
                     if (is32Bit)
-                        PushToStack32((uint)(int)exception.ErrorCode);
+                        this.PushToStack32((uint)(int)exception.ErrorCode);
                     else
-                        PushToStack((ushort)(int)exception.ErrorCode);
+                        this.PushToStack((ushort)(int)exception.ErrorCode);
                 }
 
                 return true;
             }
             else
+            {
                 return false;
+            }
         }
         /// <summary>
         /// Releases resources used during emulation.

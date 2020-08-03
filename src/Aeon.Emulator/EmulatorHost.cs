@@ -130,13 +130,13 @@ namespace Aeon.Emulator
         /// </summary>
         public int EmulationSpeed
         {
-            get => emulationSpeed;
+            get => this.emulationSpeed;
             set
             {
                 if (value < MinimumSpeed)
                     throw new ArgumentOutOfRangeException();
 
-                emulationSpeed = value;
+                this.emulationSpeed = value;
             }
         }
         /// <summary>
@@ -148,7 +148,7 @@ namespace Aeon.Emulator
         /// Loads an executable program image into the emulator.
         /// </summary>
         /// <param name="fileName">Name of executable file to load.</param>
-        public void LoadProgram(string fileName) => LoadProgram(fileName, null);
+        public void LoadProgram(string fileName) => this.LoadProgram(fileName, null);
         /// <summary>
         /// Loads an executable program image into the emulator.
         /// </summary>
@@ -161,10 +161,10 @@ namespace Aeon.Emulator
             if (commandLineArguments != null && commandLineArguments.Length > 127)
                 throw new ArgumentException("Command line length must not exceed 127 characters.");
 
-            VirtualMachine.EndInitialization();
+            this.VirtualMachine.EndInitialization();
 
             var image = ProgramImage.Load(fileName, VirtualMachine);
-            VirtualMachine.LoadImage(image, commandLineArguments);
+            this.VirtualMachine.LoadImage(image, commandLineArguments);
 
             // Sierra adventure games assume a virtual width of 320 for the mouse for some reason.
             string upperFileName = fileName.ToUpper();
@@ -188,12 +188,12 @@ namespace Aeon.Emulator
             if (this.State == EmulatorState.Ready)
             {
                 this.processorThread = new Thread(this.ProcessorThreadMain);
-                processorThread.IsBackground = true;
-                processorThread.Start();
+                this.processorThread.IsBackground = true;
+                this.processorThread.Start();
             }
             else if (this.State == EmulatorState.Paused)
             {
-                resumeEvent.Set();
+                this.resumeEvent.Set();
             }
         }
         /// <summary>
@@ -463,18 +463,19 @@ namespace Aeon.Emulator
 
                 bool breakPause = false;
                 var vm = this.VirtualMachine;
-                vm.InterruptTimer.Reset();
+                var interruptTimer = vm.InterruptTimer;
+                interruptTimer.Reset();
 
                 while (true)
                 {
                     speedTimer.Restart();
                     for (int i = 0; i < Iterations; i++)
                     {
-                        if (vm.InterruptTimer.IsIntervalComplete)
+                        if (interruptTimer.IsIntervalComplete)
                         {
                             // Raise the hardware timer interrupt.
                             vm.InterruptController.RaiseHardwareInterrupt(0);
-                            vm.InterruptTimer.Reset();
+                            interruptTimer.Reset();
                         }
 
                         if (this.log == null)

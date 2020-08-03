@@ -42,26 +42,15 @@ namespace Aeon.Emulator.Video
         /// <returns>Current value of the register.</returns>
         public byte ReadRegister(SequencerRegister address)
         {
-            switch (address)
+            return address switch
             {
-                case SequencerRegister.Reset:
-                    return this.Reset;
-
-                case SequencerRegister.ClockingMode:
-                    return this.ClockingMode;
-
-                case SequencerRegister.MapMask:
-                    return this.MapMask;
-
-                case SequencerRegister.CharacterMapSelect:
-                    return this.CharacterMapSelect;
-
-                case SequencerRegister.SequencerMemoryMode:
-                    return (byte)this.SequencerMemoryMode;
-
-                default:
-                    return 0;
-            }
+                SequencerRegister.Reset => this.Reset,
+                SequencerRegister.ClockingMode => this.ClockingMode,
+                SequencerRegister.MapMask => this.MapMask,
+                SequencerRegister.CharacterMapSelect => this.CharacterMapSelect,
+                SequencerRegister.SequencerMemoryMode => (byte)this.SequencerMemoryMode,
+                _ => 0
+            };
         }
         /// <summary>
         /// Writes to a sequencer register.

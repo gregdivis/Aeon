@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
 namespace Aeon.Emulator.CommandInterpreter.Commands
@@ -54,7 +52,7 @@ namespace Aeon.Emulator.CommandInterpreter.Commands
                 var files = data.Result;
 
                 vm.Console.WriteLine();
-                vm.Console.WriteLine(" Directory of {0}", path);
+                vm.Console.WriteLine($" Directory of {path}");
                 vm.Console.WriteLine();
 
                 int count = 0;
@@ -62,20 +60,20 @@ namespace Aeon.Emulator.CommandInterpreter.Commands
 
                 foreach (var file in files)
                 {
-                    string fileName = System.IO.Path.GetFileNameWithoutExtension(file.Name);
-                    string fileExtension = System.IO.Path.GetExtension(file.Name).TrimStart('.');
-                    string date = file.ModifyDate.ToString("MM/dd/yy  hh:mmt").ToLowerInvariant();
+                    var fileName = System.IO.Path.GetFileNameWithoutExtension(file.Name);
+                    var fileExtension = System.IO.Path.GetExtension(file.Name).TrimStart('.');
+                    var date = file.ModifyDate.ToString("MM/dd/yy  hh:mmt").ToLowerInvariant();
 
-                    if ((file.Attributes & VirtualFileAttributes.Directory) != 0)
-                        vm.Console.WriteLine("{0,-8} {1,-3} <DIR>         {2}", fileName, fileExtension, date);
+                    if (file.Attributes.HasFlag(VirtualFileAttributes.Directory))
+                        vm.Console.WriteLine($"{fileName,-8} {fileExtension,-3} <DIR>         {date}");
                     else
-                        vm.Console.WriteLine("{0,-8} {1,-3} {2,13:#,#} {3}", fileName, fileExtension, file.Length, date);
+                        vm.Console.WriteLine($"{fileName,-8} {fileExtension,-3} {file.Length,13:#,#} {date}");
 
                     count++;
                     size += file.Length;
                 }
 
-                vm.Console.WriteLine("{0,9:#,#} file(s) {1,14:#,#} bytes", count, size);
+                vm.Console.WriteLine($"{count,9:#,#} file(s) {size,14:#,#} bytes");
             }
             else
             {

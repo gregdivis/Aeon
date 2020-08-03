@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Text;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
@@ -42,17 +43,18 @@ namespace Aeon.Emulator.CommandInterpreter.Commands
             if (path != null)
             {
                 var fileInfo = vm.FileSystem.GetFileInfo(path).Result;
-                if (fileInfo != null && (fileInfo.Attributes & VirtualFileAttributes.Directory) == 0)
+                if (fileInfo != null && !fileInfo.Attributes.HasFlag(VirtualFileAttributes.Directory))
                 {
                     using (var stream = vm.FileSystem.OpenFile(path, System.IO.FileMode.Open, System.IO.FileAccess.Read).Result)
                     {
-                        byte[] buffer = new byte[64];
-                        int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        Span<byte> buffer = stackalloc byte[64];
+                        Span<char> charBuffer = stackalloc char[64];
+                        int bytesRead = stream.Read(buffer);
                         while (bytesRead > 0)
                         {
-                            string s = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                            vm.Console.Write(s);
-                            bytesRead = stream.Read(buffer, 0, buffer.Length);
+                            int charCount = Encoding.ASCII.GetChars(buffer.Slice(0, bytesRead), charBuffer);
+                            vm.Console.Write(charBuffer.Slice(0, charCount));
+                            bytesRead = stream.Read(buffer);
                         }
                     }
 

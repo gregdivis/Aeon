@@ -28,11 +28,6 @@ namespace Aeon.Emulator.Mouse
         private int maxY = 199;
         private readonly ButtonPressTracker buttonTracker = new ButtonPressTracker();
 
-        public MouseHandler()
-        {
-            this.UseDefaultVirtualWidth = true;
-        }
-
         /// <summary>
         /// Gets the current position of the mouse cursor.
         /// </summary>
@@ -40,7 +35,7 @@ namespace Aeon.Emulator.Mouse
         /// <summary>
         /// Gets or sets a value indicating whether the default virtual width should be used.
         /// </summary>
-        public bool UseDefaultVirtualWidth { get; set; }
+        public bool UseDefaultVirtualWidth { get; set; } = true;
 
         /// <summary>
         /// Notifies the mouse handler that the mouse was moved and relative coordinates are specified.

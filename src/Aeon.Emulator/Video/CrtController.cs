@@ -1,5 +1,4 @@
-﻿
-namespace Aeon.Emulator.Video
+﻿namespace Aeon.Emulator.Video
 {
     /// <summary>
     /// Emulates the VGA CRT Controller registers.
@@ -113,86 +112,35 @@ namespace Aeon.Emulator.Video
         /// <returns>Current value of the register.</returns>
         public byte ReadRegister(CrtControllerRegister address)
         {
-            switch (address)
+            return address switch
             {
-                case CrtControllerRegister.HorizontalTotal:
-                    return this.HorizontalTotal;
-
-                case CrtControllerRegister.EndHorizontalDisplay:
-                    return this.EndHorizontalDisplay;
-
-                case CrtControllerRegister.StartHorizontalBlanking:
-                    return this.StartHorizontalBlanking;
-
-                case CrtControllerRegister.EndHorizontalBlanking:
-                    return this.EndHorizontalBlanking;
-
-                case CrtControllerRegister.StartHorizontalRetrace:
-                    return this.StartHorizontalRetrace;
-
-                case CrtControllerRegister.EndHorizontalRetrace:
-                    return this.EndHorizontalRetrace;
-
-                case CrtControllerRegister.VerticalTotal:
-                    return this.VerticalTotal;
-
-                case CrtControllerRegister.Overflow:
-                    return this.Overflow;
-
-                case CrtControllerRegister.PresetRowScan:
-                    return this.PresetRowScan;
-
-                case CrtControllerRegister.MaximumScanLine:
-                    return this.MaximumScanLine;
-
-                case CrtControllerRegister.CursorStart:
-                    return this.CursorStart;
-
-                case CrtControllerRegister.CursorEnd:
-                    return this.CursorEnd;
-
-                case CrtControllerRegister.StartAddressHigh:
-                    return (byte)(this.StartAddress >> 8);
-
-                case CrtControllerRegister.StartAddressLow:
-                    return (byte)this.StartAddress;
-
-                case CrtControllerRegister.CursorLocationHigh:
-                    return (byte)(this.CursorLocation >> 8);
-
-                case CrtControllerRegister.CursorLocationLow:
-                    return (byte)this.CursorLocation;
-
-                case CrtControllerRegister.VerticalRetraceStart:
-                    return this.VerticalRetraceStart;
-
-                case CrtControllerRegister.VerticalRetraceEnd:
-                    return this.VerticalRetraceEnd;
-
-                case CrtControllerRegister.VerticalDisplayEnd:
-                    return this.VerticalDisplayEnd;
-
-                case CrtControllerRegister.Offset:
-                    return this.Offset;
-
-                case CrtControllerRegister.UnderlineLocation:
-                    return this.UnderlineLocation;
-
-                case CrtControllerRegister.StartVerticalBlanking:
-                    return this.StartVerticalBlanking;
-
-                case CrtControllerRegister.EndVerticalBlanking:
-                    return this.EndVerticalBlanking;
-
-                case CrtControllerRegister.CrtModeControl:
-                    return this.CrtModeControl;
-
-                case CrtControllerRegister.LineCompare:
-                    return this.LineCompare;
-
-                default:
-                    return 0;
-            }
+                CrtControllerRegister.HorizontalTotal => this.HorizontalTotal,
+                CrtControllerRegister.EndHorizontalDisplay => this.EndHorizontalDisplay,
+                CrtControllerRegister.StartHorizontalBlanking => this.StartHorizontalBlanking,
+                CrtControllerRegister.EndHorizontalBlanking => this.EndHorizontalBlanking,
+                CrtControllerRegister.StartHorizontalRetrace => this.StartHorizontalRetrace,
+                CrtControllerRegister.EndHorizontalRetrace => this.EndHorizontalRetrace,
+                CrtControllerRegister.VerticalTotal => this.VerticalTotal,
+                CrtControllerRegister.Overflow => this.Overflow,
+                CrtControllerRegister.PresetRowScan => this.PresetRowScan,
+                CrtControllerRegister.MaximumScanLine => this.MaximumScanLine,
+                CrtControllerRegister.CursorStart => this.CursorStart,
+                CrtControllerRegister.CursorEnd => this.CursorEnd,
+                CrtControllerRegister.StartAddressHigh => (byte)(this.StartAddress >> 8),
+                CrtControllerRegister.StartAddressLow => (byte)this.StartAddress,
+                CrtControllerRegister.CursorLocationHigh => (byte)(this.CursorLocation >> 8),
+                CrtControllerRegister.CursorLocationLow => (byte)this.CursorLocation,
+                CrtControllerRegister.VerticalRetraceStart => this.VerticalRetraceStart,
+                CrtControllerRegister.VerticalRetraceEnd => this.VerticalRetraceEnd,
+                CrtControllerRegister.VerticalDisplayEnd => this.VerticalDisplayEnd,
+                CrtControllerRegister.Offset => this.Offset,
+                CrtControllerRegister.UnderlineLocation => this.UnderlineLocation,
+                CrtControllerRegister.StartVerticalBlanking => this.StartVerticalBlanking,
+                CrtControllerRegister.EndVerticalBlanking => this.EndVerticalBlanking,
+                CrtControllerRegister.CrtModeControl => this.CrtModeControl,
+                CrtControllerRegister.LineCompare => this.LineCompare,
+                _ => 0
+            };
         }
         /// <summary>
         /// Writes to a CRT controller register.
