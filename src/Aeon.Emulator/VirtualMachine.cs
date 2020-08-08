@@ -14,8 +14,11 @@ namespace Aeon.Emulator
     /// <summary>
     /// Emulates the functions of an x86 system.
     /// </summary>
-    public class VirtualMachine : IDisposable, IMachineCodeSource
+    public sealed class VirtualMachine : IDisposable, IMachineCodeSource
     {
+        private static bool instructionSetInitialized;
+        private static readonly object globalInitLock = new object();
+
         /// <summary>
         /// The emulated physical memory of the virtual machine.
         /// </summary>
@@ -57,6 +60,15 @@ namespace Aeon.Emulator
         {
             if (physicalMemorySize < 1 || physicalMemorySize > 2048)
                 throw new ArgumentOutOfRangeException(nameof(physicalMemorySize));
+
+            lock (globalInitLock)
+            {
+                if (!instructionSetInitialized)
+                {
+                    InstructionSet.Initialize();
+                    instructionSetInitialized = true;
+                }
+            }
 
             this.PhysicalMemory = new PhysicalMemory(physicalMemorySize * 1024 * 1024);
             this.Keyboard = new Keyboard.KeyboardDevice();
@@ -324,16 +336,12 @@ namespace Aeon.Emulator
         /// <summary>
         /// Emulates the next instruction.
         /// </summary>
-        public void Emulate() => InstructionSet.Emulate(this);
+        public void Emulate() => InstructionSet.Emulate(this, 1);
         /// <summary>
         /// Emulates multiple instructions.
         /// </summary>
         /// <param name="count">Number of instructions to emulate.</param>
-        public virtual void Emulate(int count)
-        {
-            for (; count > 0; count--)
-                Emulate();
-        }
+        public void Emulate(int count) => InstructionSet.Emulate(this, (uint)count);
         /// <summary>
         /// Emulates the next instruction with logging enabled.
         /// </summary>
@@ -558,61 +566,6 @@ namespace Aeon.Emulator
 
             return 16;
         }
-
-        /// <summary>
-        /// Releases resources used during emulation.
-        /// </summary>
-        /// <param name="disposing">True indicates that this method was invoked from Dispose; false if it was invoked from the finalizer.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposed && disposing)
-            {
-                foreach (var device in allDevices)
-                    device?.Dispose();
-
-                allDevices.Clear();
-                this.PhysicalMemory.Dispose();
-
-                disposed = true;
-            }
-        }
-        /// <summary>
-        /// Raises the VideoModeChanged event.
-        /// </summary>
-        /// <param name="e">Empty EventArgs instance.</param>
-        protected internal virtual void OnVideoModeChanged(EventArgs e)
-        {
-            this.VideoModeChanged?.Invoke(this, e);
-
-            var mode = this.VideoMode;
-            if (mode != null)
-                this.IsCursorVisible = mode.HasCursor;
-        }
-        /// <summary>
-        /// Raises the MouseMoveByEmulator event.
-        /// </summary>
-        /// <param name="e">MouseMoveEventArgs instance with information about the mouse movement.</param>
-        protected internal virtual void OnMouseMoveByEmulator(MouseMoveEventArgs e) => this.MouseMoveByEmulator?.Invoke(this, e);
-        /// <summary>
-        /// Raises the MouseMove event.
-        /// </summary>
-        /// <param name="e">MouseMoveEventArgs instance with information about the mouse movement.</param>
-        protected internal virtual void OnMouseMove(MouseMoveEventArgs e) => this.MouseMove?.Invoke(this, e);
-        /// <summary>
-        /// Raises the MouseVisibilityChanged event.
-        /// </summary>
-        /// <param name="e">Empty EventArgs instance.</param>
-        protected virtual void OnMouseVisibilityChanged(EventArgs e) => this.MouseVisibilityChanged?.Invoke(this, e);
-        /// <summary>
-        /// Raises the CursorVisibilityChanged event.
-        /// </summary>
-        /// <param name="e">Empty EventArgs instance.</param>
-        protected virtual void OnCursorVisibilityChanged(EventArgs e) => this.CursorVisibilityChanged?.Invoke(this, e);
-        /// <summary>
-        /// Raises the CurrentProcessChanged event.
-        /// </summary>
-        /// <param name="e">Empty EventArgs instance.</param>
-        protected internal virtual void OnCurrentProcessChanged(EventArgs e) => this.CurrentProcessChanged?.Invoke(this, e);
 
         internal void CallInterruptHandler(byte interrupt)
         {
@@ -1017,5 +970,56 @@ namespace Aeon.Emulator
                     return *(ushort*)ptr;
             }
         }
+        /// <summary>
+        /// Raises the VideoModeChanged event.
+        /// </summary>
+        /// <param name="e">Empty EventArgs instance.</param>
+        internal void OnVideoModeChanged(EventArgs e)
+        {
+            this.VideoModeChanged?.Invoke(this, e);
+
+            var mode = this.VideoMode;
+            if (mode != null)
+                this.IsCursorVisible = mode.HasCursor;
+        }
+        /// <summary>
+        /// Raises the MouseMoveByEmulator event.
+        /// </summary>
+        /// <param name="e">MouseMoveEventArgs instance with information about the mouse movement.</param>
+        internal void OnMouseMoveByEmulator(MouseMoveEventArgs e) => this.MouseMoveByEmulator?.Invoke(this, e);
+        /// <summary>
+        /// Raises the MouseMove event.
+        /// </summary>
+        /// <param name="e">MouseMoveEventArgs instance with information about the mouse movement.</param>
+        internal void OnMouseMove(MouseMoveEventArgs e) => this.MouseMove?.Invoke(this, e);
+        /// <summary>
+        /// Raises the CurrentProcessChanged event.
+        /// </summary>
+        /// <param name="e">Empty EventArgs instance.</param>
+        internal void OnCurrentProcessChanged(EventArgs e) => this.CurrentProcessChanged?.Invoke(this, e);
+
+        private void Dispose(bool disposing)
+        {
+            if (!disposed && disposing)
+            {
+                foreach (var device in allDevices)
+                    device?.Dispose();
+
+                allDevices.Clear();
+                this.PhysicalMemory.Dispose();
+
+                disposed = true;
+            }
+        }
+        /// <summary>
+        /// Raises the MouseVisibilityChanged event.
+        /// </summary>
+        /// <param name="e">Empty EventArgs instance.</param>
+        private void OnMouseVisibilityChanged(EventArgs e) => this.MouseVisibilityChanged?.Invoke(this, e);
+        /// <summary>
+        /// Raises the CursorVisibilityChanged event.
+        /// </summary>
+        /// <param name="e">Empty EventArgs instance.</param>
+        private void OnCursorVisibilityChanged(EventArgs e) => this.CursorVisibilityChanged?.Invoke(this, e);
     }
 }

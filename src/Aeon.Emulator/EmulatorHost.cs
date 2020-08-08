@@ -36,11 +36,11 @@ namespace Aeon.Emulator
         /// Initializes a new instance of the EmulatorHost class.
         /// </summary>
         public EmulatorHost()
-            : this(FastVirtualMachine.Create(), null)
+            : this(new VirtualMachine(), null)
         {
         }
         public EmulatorHost(int physicalMemory)
-            : this(FastVirtualMachine.Create(physicalMemory), null)
+            : this(new VirtualMachine(physicalMemory), null)
         {
         }
         /// <summary>
@@ -48,7 +48,7 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="instructionLog">Log which will be used to record instructions.</param>
         public EmulatorHost(InstructionLog instructionLog)
-            : this(FastVirtualMachine.Create(), instructionLog)
+            : this(new VirtualMachine(), instructionLog)
         {
         }
         /// <summary>
