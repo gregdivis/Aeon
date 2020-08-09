@@ -5,9 +5,10 @@ namespace Aeon.Emulator
     /// <summary>
     /// Provides a simple allocation-only native memory heap.
     /// </summary>
-    internal sealed class NativeHeap : IDisposable
+    internal sealed class NativeHeap
     {
-        private readonly NativeMemory memory;
+        private readonly UnsafeBuffer<byte> memory;
+        private readonly IntPtr pointer;
         private int nextOffset;
 
         /// <summary>
@@ -19,14 +20,18 @@ namespace Aeon.Emulator
             if (size <= 0)
                 throw new ArgumentOutOfRangeException(nameof(size));
 
-            this.memory = new NativeMemory(size);
-            this.memory.Clear();
+            this.Size = size;
+            this.memory = new UnsafeBuffer<byte>(size);
+            unsafe
+            {
+                this.pointer = new IntPtr(memory.ToPointer());
+            }
         }
 
         /// <summary>
         /// Gets the size of the heap in bytes.
         /// </summary>
-        public int Size => this.memory.ReservedBytes;
+        public int Size { get; }
         /// <summary>
         /// Gets the number of bytes available for allocation in the heap.
         /// </summary>
@@ -53,12 +58,7 @@ namespace Aeon.Emulator
                 throw new ArgumentException("Not enough memory.");
 
             this.nextOffset = offset + size;
-            return IntPtr.Add(this.memory.Pointer, offset);
+            return IntPtr.Add(this.pointer, offset);
         }
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing,
-        /// releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose() => this.memory.Dispose();
     }
 }

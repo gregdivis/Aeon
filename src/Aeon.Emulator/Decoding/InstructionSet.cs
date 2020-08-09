@@ -100,12 +100,10 @@ namespace Aeon.Emulator.Decoding
                         }
                     }
 
-                    uint rmCode = Intrinsics.ExtractBits(ip[1], 3, 3, 0x38);
-
                     instSet = RmPtrs[sizeModeIndex][byte1];
                     if (instSet != null)
                     {
-                        inst = instSet[rmCode];
+                        inst = instSet[Intrinsics.ExtractBits(ip[1], 3, 3, 0x38)];
                         if (inst == null)
                             ThrowGetOpcodeException(ip);
 
@@ -121,7 +119,7 @@ namespace Aeon.Emulator.Decoding
                         instSet = instSetSet[ip[1]];
                         if (instSet != null)
                         {
-                            inst = instSet[rmCode];
+                            inst = instSet[Intrinsics.ExtractBits(ip[2], 3, 3, 0x38)];
                             if (inst != null)
                             {
                                 *eip = startEIP + 2;

@@ -1006,7 +1006,6 @@ namespace Aeon.Emulator
                     device?.Dispose();
 
                 allDevices.Clear();
-                this.PhysicalMemory.Dispose();
 
                 disposed = true;
             }

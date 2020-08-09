@@ -12,7 +12,7 @@ namespace Aeon.Emulator
     /// <summary>
     /// Contains the RAM of an emulated system.
     /// </summary>
-    public sealed class PhysicalMemory : IDisposable, IMemorySource
+    public sealed class PhysicalMemory : IMemorySource
     {
         /// <summary>
         /// Size of the page address cache in bytes.
@@ -49,8 +49,8 @@ namespace Aeon.Emulator
 
         private ushort nextHandlerOffset = 4096;
         private uint addressMask = 0x000FFFFFu;
-        private readonly NativeMemory nativeMemory;
-        private readonly NativeMemory pageCacheNativeMemory;
+        private readonly UnsafeBuffer<byte> nativeMemory;
+        private readonly UnsafeBuffer<uint> pageCacheNativeMemory;
         private readonly MetaAllocator metaAllocator = new MetaAllocator();
 
         /// <summary>
@@ -97,12 +97,13 @@ namespace Aeon.Emulator
             if (memorySize < ConvMemorySize)
                 throw new ArgumentException("Memory size must be at least 1 MB.");
 
-            this.nativeMemory = new NativeMemory(memorySize, (int)ConvMemorySize);
-            this.pageCacheNativeMemory = new NativeMemory(PageAddressCacheSize * sizeof(uint));
+            this.MemorySize = memorySize;
+            this.nativeMemory = new UnsafeBuffer<byte>(memorySize);
+            this.pageCacheNativeMemory = new UnsafeBuffer<uint>(PageAddressCacheSize);
             unsafe
             {
-                this.RawView = (byte*)this.nativeMemory.Pointer.ToPointer();
-                this.pageCache = (uint*)pageCacheNativeMemory.Pointer.ToPointer();
+                this.RawView = this.nativeMemory.ToPointer();
+                this.pageCache = pageCacheNativeMemory.ToPointer();
             }
 
             // Reserve room for the real-mode interrupt table.
@@ -127,7 +128,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets the amount of emulated RAM in bytes.
         /// </summary>
-        public int MemorySize => this.nativeMemory.ReservedBytes;
+        public int MemorySize { get; }
         /// <summary>
         /// Gets the location and size of base memory in the system.
         /// </summary>
@@ -184,21 +185,7 @@ namespace Aeon.Emulator
         internal bool EnableA20
         {
             get => this.addressMask == uint.MaxValue;
-            set
-            {
-                if (value)
-                {
-                    // To keep memory usage down, only commit extended memory if needed.
-                    if (this.nativeMemory.CommittedBytes < this.nativeMemory.ReservedBytes)
-                        this.nativeMemory.Commit();
-
-                    this.addressMask = uint.MaxValue;
-                }
-                else
-                {
-                    this.addressMask = 0x000FFFFFu;
-                }
-            }
+            set => this.addressMask = value ? uint.MaxValue : 0x000FFFFFu;
         }
         /// <summary>
         /// Gets or sets a value indicating whether paging is enabled.
@@ -748,14 +735,6 @@ namespace Aeon.Emulator
             {
                 return null;
             }
-        }
-        /// <summary>
-        /// Releases memory allocated for the virtual machine.
-        /// </summary>
-        public void Dispose()
-        {
-            this.nativeMemory.Dispose();
-            this.pageCacheNativeMemory.Dispose();
         }
 
         /// <summary>
