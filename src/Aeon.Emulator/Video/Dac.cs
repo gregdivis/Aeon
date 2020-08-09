@@ -8,19 +8,20 @@ namespace Aeon.Emulator.Video
     internal sealed class Dac
     {
         private readonly unsafe uint* palette;
+        private readonly UnsafeBuffer<uint> paletteBuffer = new UnsafeBuffer<uint>(256);
         private int readChannel;
         private int writeChannel;
         private byte readIndex;
         private byte writeIndex;
 
         /// <summary>
-        /// Initializes a new instance of the Dac class.
+        /// Initializes a new instance of the <see cref="Dac"/> class.
         /// </summary>
-        public Dac(NativeHeap heap)
+        public Dac()
         {
             unsafe
             {
-                this.palette = (uint*)heap.Allocate(256 * sizeof(uint), 4);
+                this.palette = this.paletteBuffer.ToPointer();
             }
 
             this.Reset();

@@ -12,18 +12,22 @@ namespace Aeon.Emulator.Video
         public unsafe readonly byte* ExpandedSetReset;
         public unsafe readonly bool* ExpandedEnableSetReset;
 
+        private readonly UnsafeBuffer<byte> colorCompareBuffer = new UnsafeBuffer<byte>(4);
+        private readonly UnsafeBuffer<byte> colorDontCareBuffer = new UnsafeBuffer<byte>(4);
+        private readonly UnsafeBuffer<byte> setResetBuffer = new UnsafeBuffer<byte>(4);
+        private readonly UnsafeBuffer<bool> enableSetResetBuffer = new UnsafeBuffer<bool>(4);
+
         /// <summary>
-        /// Initializes a new instance of the Graphics class.
+        /// Initializes a new instance of the <see cref="Graphics"/> class.
         /// </summary>
-        /// <param name="heap">Heap used to allocate unmanaged memory.</param>
-        public Graphics(NativeHeap heap)
+        public Graphics()
         {
             unsafe
             {
-                this.ExpandedColorCompare = (byte*)heap.Allocate(4, 1).ToPointer();
-                this.ExpandedColorDontCare = (byte*)heap.Allocate(4, 1).ToPointer();
-                this.ExpandedSetReset = (byte*)heap.Allocate(4, 1).ToPointer();
-                this.ExpandedEnableSetReset = (bool*)heap.Allocate(4, 1).ToPointer();
+                this.ExpandedColorCompare = this.colorCompareBuffer.ToPointer();
+                this.ExpandedColorDontCare = this.colorDontCareBuffer.ToPointer();
+                this.ExpandedSetReset = this.setResetBuffer.ToPointer();
+                this.ExpandedEnableSetReset = this.enableSetResetBuffer.ToPointer();
             }
         }
 

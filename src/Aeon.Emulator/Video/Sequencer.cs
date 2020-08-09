@@ -8,7 +8,7 @@ namespace Aeon.Emulator.Video
     internal sealed class Sequencer : VideoComponent
     {
         /// <summary>
-        /// Initializes a new instance of the Sequencer class.
+        /// Initializes a new instance of the <see cref="Sequencer"/> class.
         /// </summary>
         public Sequencer()
         {

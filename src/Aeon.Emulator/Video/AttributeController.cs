@@ -6,7 +6,7 @@
     internal sealed class AttributeController
     {
         /// <summary>
-        /// Initializes a new instance of the AttributeController class.
+        /// Initializes a new instance of the <see cref="AttributeController"/> class.
         /// </summary>
         public AttributeController()
         {

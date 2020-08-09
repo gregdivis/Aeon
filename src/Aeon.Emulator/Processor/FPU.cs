@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -22,6 +23,8 @@ namespace Aeon.Emulator
         /// The FPU top pointer.
         /// </summary>
         private uint top;
+        private readonly UnsafeBuffer<double> regBuffer = new UnsafeBuffer<double>(8);
+        private readonly UnsafeBuffer<byte> isUsedBuffer = new UnsafeBuffer<byte>(8);
 
         /// <summary>
         /// Initializes a new instance of the FPU class.
@@ -30,22 +33,11 @@ namespace Aeon.Emulator
         {
             unsafe
             {
-                this.reg = (double*)Marshal.AllocCoTaskMem(sizeof(double) * 8).ToPointer();
-                this.isUsed = (byte*)Marshal.AllocCoTaskMem(8).ToPointer();
+                this.reg = this.regBuffer.ToPointer();
+                this.isUsed = this.isUsedBuffer.ToPointer();
             }
 
             this.Reset();
-        }
-        ~FPU()
-        {
-            unsafe
-            {
-                if (this.isUsed != null)
-                    Marshal.FreeCoTaskMem(new IntPtr(this.isUsed));
-
-                if (this.reg != null)
-                    Marshal.FreeCoTaskMem(new IntPtr(this.reg));
-            }
         }
 
         /// <summary>
@@ -221,11 +213,11 @@ namespace Aeon.Emulator
         {
             unsafe
             {
-                for (int i = 0; i < 8; i++)
-                {
-                    this.reg[i] = 0.0;
-                    this.isUsed[i] = 0;
-                }
+                var regVector = MemoryMarshal.Cast<double, Vector<double>>(new Span<double>(this.reg, 8));
+                for (int i = 0; i < regVector.Length; i++)
+                    regVector[i] = default;
+
+                *(ulong*)this.isUsed = 0;
             }
 
             this.StatusFlags = FPUStatus.Clear;

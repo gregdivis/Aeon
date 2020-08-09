@@ -5,7 +5,7 @@ namespace Aeon.Emulator.Video
     /// <summary>
     /// Provides information about an emulated video mode.
     /// </summary>
-    public abstract class VideoMode : IDisposable
+    public abstract class VideoMode
     {
         /// <summary>
         /// The size of a video RAM plane in bytes.
@@ -134,15 +134,6 @@ namespace Aeon.Emulator.Video
         /// Gets the current font for the video mode.
         /// </summary>
         public byte[] Font { get; } = new byte[4096];
-
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-        protected virtual void Dispose(bool disposing)
-        {
-        }
 
         /// <summary>
         /// Gets a value indicating whether the display mode has a cursor.

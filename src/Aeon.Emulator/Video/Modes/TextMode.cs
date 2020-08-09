@@ -9,8 +9,9 @@ namespace Aeon.Emulator.Video.Modes
     {
         private const uint BaseAddress = 0x18000;
 
+        private readonly UnsafeBuffer<nint> planesBuffer = new UnsafeBuffer<nint>(4);
         private readonly unsafe byte* videoRam;
-        private readonly unsafe byte*[] planes = new byte*[4];
+        private readonly unsafe byte** planes;
         private readonly Graphics graphics;
         private readonly Sequencer sequencer;
 
@@ -21,10 +22,12 @@ namespace Aeon.Emulator.Video.Modes
             {
                 this.videoRam = (byte*)video.VideoRam.ToPointer();
                 byte* vram = this.videoRam;
-                planes[0] = vram + PlaneSize * 0;
-                planes[1] = vram + PlaneSize * 1;
-                planes[2] = vram + PlaneSize * 2;
-                planes[3] = vram + PlaneSize * 3;
+                this.planes = (byte**)this.planesBuffer.ToPointer();
+
+                this.planes[0] = vram + PlaneSize * 0;
+                this.planes[1] = vram + PlaneSize * 1;
+                this.planes[2] = vram + PlaneSize * 2;
+                this.planes[3] = vram + PlaneSize * 3;
             }
 
             this.graphics = video.Graphics;

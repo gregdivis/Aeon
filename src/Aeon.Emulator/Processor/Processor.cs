@@ -14,23 +14,30 @@ namespace Aeon.Emulator
         private readonly unsafe short** rmOffsets1;
         private readonly unsafe short** rmOffsets2;
 
+        private readonly UnsafeBuffer<uint> gprBuffer = new UnsafeBuffer<uint>(RegisterCount);
+        private readonly UnsafeBuffer<byte> instructionBuffer = new UnsafeBuffer<byte>(16);
+        private readonly UnsafeBuffer<nint> wordRegisterPointersBuffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> byteRegisterPointersBuffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> segmentRegisterPointersBuffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> defaultSegments16Buffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> segmentBasesBuffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod0Buffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod12Buffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> baseOverrideBuffer = new UnsafeBuffer<nint>(8);
+        private readonly UnsafeBuffer<nint> rmOffsets1Buffer = new UnsafeBuffer<nint>(17);
+
         internal Processor()
         {
             unsafe
             {
-                gprBlock = (byte*)(Marshal.AllocCoTaskMem((sizeof(uint) * RegisterCount) + InstructionCacheSize));
-                for (int i = 0; i < (sizeof(uint) * RegisterCount) + InstructionCacheSize; i++)
-                    gprBlock[i] = 0;
-
-                wordRegisterPointers = (void**)Marshal.AllocCoTaskMem(sizeof(void*) * 8).ToPointer();
-                byteRegisterPointers = (byte**)Marshal.AllocCoTaskMem(sizeof(byte*) * 8).ToPointer();
-                segmentRegisterPointers = (ushort**)Marshal.AllocCoTaskMem(sizeof(ushort*) * 8).ToPointer();
-                defaultSegments16 = (uint**)Marshal.AllocCoTaskMem(sizeof(uint*) * 8).ToPointer();
-                segmentBases = (uint*)Marshal.AllocCoTaskMem(sizeof(uint) * 8).ToPointer();
-                defaultSibSegments32Mod0 = (uint**)Marshal.AllocCoTaskMem(sizeof(uint*) * 8).ToPointer();
-                defaultSibSegments32Mod12 = (uint**)Marshal.AllocCoTaskMem(sizeof(uint*) * 8).ToPointer();
-                for (int i = 0; i < 8; i++)
-                    segmentBases[i] = 0;
+                gprBlock = (byte*)gprBuffer.ToPointer();
+                wordRegisterPointers = (void**)wordRegisterPointersBuffer.ToPointer();
+                byteRegisterPointers = (byte**)byteRegisterPointersBuffer.ToPointer();
+                segmentRegisterPointers = (ushort**)segmentRegisterPointersBuffer.ToPointer();
+                defaultSegments16 = (uint**)defaultSegments16Buffer.ToPointer();
+                segmentBases = (uint*)segmentBasesBuffer.ToPointer();
+                defaultSibSegments32Mod0 = (uint**)defaultSibSegments32Mod0Buffer.ToPointer();
+                defaultSibSegments32Mod12 = (uint**)defaultSibSegments32Mod12Buffer.ToPointer();
 
                 InitializeRegisterOffsets();
                 PAX = wordRegisterPointers[0];
@@ -57,14 +64,13 @@ namespace Aeon.Emulator
                 PFS = segmentRegisterPointers[4];
                 PGS = segmentRegisterPointers[5];
 
-                baseOverrides = (uint**)Marshal.AllocCoTaskMem(sizeof(uint*) * 8).ToPointer();
+                baseOverrides = (uint**)baseOverrideBuffer.ToPointer();
                 InitializeSegmentOverridePointers();
                 InitializeDefaultSegmentPointers();
                 debugRegisterBase = (uint*)(gprBlock + 60); // DR0
-                this.CachedInstruction = gprBlock + (RegisterCount * sizeof(uint));
+                this.CachedInstruction = instructionBuffer.ToPointer();
 
-                rmOffsets1 = (short**)Marshal.AllocCoTaskMem(sizeof(short*) * 17).ToPointer();
-                new Span<IntPtr>(rmOffsets1, 17).Clear();
+                rmOffsets1 = (short**)rmOffsets1Buffer.ToPointer();
                 rmOffsets1[0] = (short*)this.PBX;
                 rmOffsets1[1] = (short*)this.PBX;
                 rmOffsets1[2] = (short*)this.PBP;
@@ -82,22 +88,6 @@ namespace Aeon.Emulator
                 rmOffsets2[5] = (short*)&rmOffsets1[16];
                 rmOffsets2[6] = (short*)&rmOffsets1[16];
                 rmOffsets2[7] = (short*)&rmOffsets1[16];
-            }
-        }
-        ~Processor()
-        {
-            unsafe
-            {
-                Marshal.FreeCoTaskMem(new IntPtr(rmOffsets1));
-                Marshal.FreeCoTaskMem(new IntPtr(segmentBases));
-                Marshal.FreeCoTaskMem(new IntPtr(baseOverrides));
-                Marshal.FreeCoTaskMem(new IntPtr(wordRegisterPointers));
-                Marshal.FreeCoTaskMem(new IntPtr(byteRegisterPointers));
-                Marshal.FreeCoTaskMem(new IntPtr(segmentRegisterPointers));
-                Marshal.FreeCoTaskMem(new IntPtr(defaultSegments16));
-                Marshal.FreeCoTaskMem(new IntPtr(defaultSibSegments32Mod0));
-                Marshal.FreeCoTaskMem(new IntPtr(defaultSibSegments32Mod12));
-                Marshal.FreeCoTaskMem(new IntPtr(gprBlock));
             }
         }
 

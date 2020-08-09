@@ -10,20 +10,44 @@ namespace Aeon.Emulator.Video
     /// </summary>
     internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort
     {
+        /// <summary>
+        /// Total number of bytes allocated for video RAM.
+        /// </summary>
+        public const int TotalVramBytes = 1024 * 1024;
+        /// <summary>
+        /// Segment of the VGA static functionality table.
+        /// </summary>
+        public const ushort StaticFunctionalityTableSegment = 0x0100;
+
+        private static readonly long RefreshRate = (long)((1000.0 / 60.0) * InterruptTimer.StopwatchTicksPerMillisecond);
+        private static readonly long VerticalBlankingTime = RefreshRate / 40;
+        private static readonly long HorizontalPeriod = (long)((1000.0 / 60.0) / 480.0 * InterruptTimer.StopwatchTicksPerMillisecond);
+        private static readonly long HorizontalBlankingTime = HorizontalPeriod / 2;
+
+        private readonly UnsafeBuffer<byte> videoRamBuffer = new UnsafeBuffer<byte>(TotalVramBytes);
+        private GraphicsRegister graphicsRegister;
+        private SequencerRegister sequencerRegister;
+        private AttributeControllerRegister attributeRegister;
+        private CrtControllerRegister crtRegister;
+        private bool attributeDataMode;
+        private bool defaultPaletteLoading = true;
+        private int verticalTextResolution = 16;
+        private readonly Vesa.VbeHandler vbe;
+
         public VideoHandler(VirtualMachine vm)
         {
             this.VirtualMachine = vm;
-            this.nativeMemory = new NativeMemory(TotalVramBytes);
-            this.VideoRam = this.nativeMemory.Pointer;
+            unsafe
+            {
+                this.VideoRam = new IntPtr(this.videoRamBuffer.ToPointer());
+            }
+
             this.vbe = new Vesa.VbeHandler(this);
-            this.Dac = new Dac(this.videoHeap);
-            this.Graphics = new Graphics(this.videoHeap);
-            this.Sequencer = new Sequencer();
 
             InitializeStaticFunctionalityTable();
 
-            TextConsole = new TextConsole(this, vm.PhysicalMemory.Bios);
-            SetDisplayMode(VideoMode10.ColorText80x25x4);
+            this.TextConsole = new TextConsole(this, vm.PhysicalMemory.Bios);
+            this.SetDisplayMode(VideoMode10.ColorText80x25x4);
         }
 
         /// <summary>
@@ -37,7 +61,7 @@ namespace Aeon.Emulator.Video
         /// <summary>
         /// Gets the VGA DAC.
         /// </summary>
-        public Dac Dac { get; }
+        public Dac Dac { get; } = new Dac();
         /// <summary>
         /// Gets the VGA attribute controller.
         /// </summary>
@@ -45,11 +69,11 @@ namespace Aeon.Emulator.Video
         /// <summary>
         /// Gets the VGA graphics controller.
         /// </summary>
-        public Graphics Graphics { get; }
+        public Graphics Graphics { get; } = new Graphics();
         /// <summary>
         /// Gets the VGA sequencer.
         /// </summary>
-        public Sequencer Sequencer { get; }
+        public Sequencer Sequencer { get; } = new Sequencer();
         /// <summary>
         /// Gets the VGA CRT controller.
         /// </summary>
@@ -522,13 +546,9 @@ namespace Aeon.Emulator.Video
 
             VirtualMachine.OnVideoModeChanged(EventArgs.Empty);
         }
-        /// <summary>
-        /// Releases resources used by the VideoHandler instance.
-        /// </summary>
-        public void Dispose()
+
+        void IDisposable.Dispose()
         {
-            this.nativeMemory.Dispose();
-            this.videoHeap.Dispose();
         }
 
         /// <summary>
@@ -744,30 +764,5 @@ namespace Aeon.Emulator.Video
 
             return (byte)value;
         }
-
-        private GraphicsRegister graphicsRegister;
-        private SequencerRegister sequencerRegister;
-        private AttributeControllerRegister attributeRegister;
-        private CrtControllerRegister crtRegister;
-        private readonly NativeMemory nativeMemory;
-        private readonly NativeHeap videoHeap = new NativeHeap(4096);
-        private bool attributeDataMode;
-        private bool defaultPaletteLoading = true;
-        private int verticalTextResolution = 16;
-        private readonly Vesa.VbeHandler vbe;
-
-        private static readonly long RefreshRate = (long)((1000.0 / 60.0) * InterruptTimer.StopwatchTicksPerMillisecond);
-        private static readonly long VerticalBlankingTime = RefreshRate / 40;
-        private static readonly long HorizontalPeriod = (long)((1000.0 / 60.0) / 480.0 * InterruptTimer.StopwatchTicksPerMillisecond);
-        private static readonly long HorizontalBlankingTime = HorizontalPeriod / 2;
-
-        /// <summary>
-        /// Total number of bytes allocated for video RAM.
-        /// </summary>
-        public const int TotalVramBytes = 1024 * 1024;
-        /// <summary>
-        /// Segment of the VGA static functionality table.
-        /// </summary>
-        public const ushort StaticFunctionalityTableSegment = 0x0100;
     }
 }

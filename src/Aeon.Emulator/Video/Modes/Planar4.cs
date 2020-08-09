@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Video.Modes
 {
@@ -9,20 +8,22 @@ namespace Aeon.Emulator.Video.Modes
     /// </summary>
     internal abstract class Planar4 : VideoMode
     {
+        private readonly UnsafeBuffer<nint> planesBuffer = new UnsafeBuffer<nint>(4);
+        private readonly UnsafeBuffer<byte> latchesBuffer = new UnsafeBuffer<byte>(4);
+        private readonly UnsafeBuffer<byte> expandedBuffer = new UnsafeBuffer<byte>(8);
         private readonly unsafe byte** planes;
         private readonly unsafe byte* latches;
         private readonly Graphics graphics;
         private readonly Sequencer sequencer;
-        private readonly byte[] expandedForeground = new byte[4];
-        private readonly byte[] expandedBackground = new byte[4];
-        private bool disposed;
+        private readonly unsafe byte* expandedForeground;
+        private readonly unsafe byte* expandedBackground;
 
         public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, VideoHandler video)
             : base(width, height, bpp, true, fontHeight, modeType, video)
         {
             unsafe
             {
-                this.planes = (byte**)Marshal.AllocCoTaskMem(sizeof(byte*) * 4);
+                this.planes = (byte**)this.planesBuffer.ToPointer();
                 byte* vram = (byte*)video.VideoRam.ToPointer();
                 this.planes[0] = vram + PlaneSize * 0;
                 this.planes[1] = vram + PlaneSize * 1;
@@ -34,26 +35,10 @@ namespace Aeon.Emulator.Video.Modes
             this.sequencer = video.Sequencer;
             unsafe
             {
-                this.latches = (byte*)Marshal.AllocCoTaskMem(4);
+                this.latches = this.latchesBuffer.ToPointer();
+                this.expandedForeground = this.latchesBuffer.ToPointer();
+                this.expandedBackground = this.expandedForeground + 4;
             }
-        }
-
-        ~Planar4() => this.Dispose(false);
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!this.disposed)
-            {
-                unsafe
-                {
-                    Marshal.FreeCoTaskMem(new IntPtr(this.latches));
-                    Marshal.FreeCoTaskMem(new IntPtr(this.planes));
-                }
-
-                this.disposed = true;
-            }
-
-            base.Dispose(disposing);
         }
 
         internal override byte GetVramByte(uint offset)
@@ -153,24 +138,24 @@ namespace Aeon.Emulator.Video.Modes
         }
         internal override void WriteCharacter(int x, int y, int index, byte foreground, byte background)
         {
-            VideoComponent.ExpandRegister(foreground, expandedForeground);
-            VideoComponent.ExpandRegister(background, expandedBackground);
-
-            int stride = this.Stride;
-            int startPos = y * stride * 16 + x;
-            byte[] font = this.Font;
-
-            for (int row = 0; row < 16; row++)
+            unsafe
             {
-                uint fgMask = font[index * 16 + row];
-                uint bgMask = ~fgMask;
-                uint value1 = (expandedForeground[0] & fgMask);
-                uint value2 = (expandedForeground[1] & fgMask);
-                uint value3 = (expandedForeground[2] & fgMask);
-                uint value4 = (expandedForeground[3] & fgMask);
+                VideoComponent.ExpandRegister(foreground, new Span<byte>(expandedForeground, 4));
+                VideoComponent.ExpandRegister(background, new Span<byte>(expandedBackground, 4));
 
-                unsafe
+                int stride = this.Stride;
+                int startPos = y * stride * 16 + x;
+                byte[] font = this.Font;
+
+                for (int row = 0; row < 16; row++)
                 {
+                    uint fgMask = font[index * 16 + row];
+                    uint bgMask = ~fgMask;
+                    uint value1 = expandedForeground[0] & fgMask;
+                    uint value2 = expandedForeground[1] & fgMask;
+                    uint value3 = expandedForeground[2] & fgMask;
+                    uint value4 = expandedForeground[3] & fgMask;
+
                     if ((background & 0x08) == 0)
                     {
                         planes[0][startPos + row * stride] = (byte)value1;
@@ -238,9 +223,9 @@ namespace Aeon.Emulator.Video.Modes
         {
             unsafe
             {
-            byte source;
-            int rotateCount = graphics.DataRotate & 0x07;
-            int logicalOp = (graphics.DataRotate >> 3) & 0x03;
+                byte source;
+                int rotateCount = graphics.DataRotate & 0x07;
+                int logicalOp = (graphics.DataRotate >> 3) & 0x03;
 
                 for (int p = 0; p < 4; p++)
                 {

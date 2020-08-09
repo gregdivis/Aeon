@@ -6,7 +6,7 @@
     internal sealed class CrtController
     {
         /// <summary>
-        /// Initializes a new instance of the CrtController class.
+        /// Initializes a new instance of the <see cref="CrtController"/> class.
         /// </summary>
         public CrtController()
         {
