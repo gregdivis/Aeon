@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -16,7 +18,36 @@ namespace AeonSourceGenerator
             if (!(context.SyntaxReceiver is SyntaxReceiver receiver))
                 return;
 
-            var instructions = GetInstructions(context, receiver.CandidateMethods);
+            var buffer = new MemoryStream();
+            using (var writer = new StreamWriter(buffer, Encoding.UTF8, 16, true))
+            {
+                WriteHeader(writer);
+                WriteFooter(writer);
+            }
+
+            Debugger.Break();
+
+            buffer.Position = 0;
+
+            context.AddSource("Instructions", SourceText.From(buffer));
+
+                //var instructions = GetInstructions(context, receiver.CandidateMethods);
+        }
+
+        private static void WriteHeader(TextWriter writer)
+        {
+            writer.WriteLine("using System;");
+            writer.WriteLine();
+
+            writer.WriteLine("namespace Aeon.Emulator.Decoding");
+            writer.WriteLine('{');
+            writer.WriteLine("partial class InstructionDecoders");
+            writer.WriteLine('{');
+        }
+        private static void WriteFooter(TextWriter writer)
+        {
+            writer.WriteLine('}');
+            writer.WriteLine('}');
         }
 
         private static void WriteMethod(StringBuilder builder, InstructionInfo info)

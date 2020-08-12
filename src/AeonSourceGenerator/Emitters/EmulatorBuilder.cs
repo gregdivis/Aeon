@@ -229,24 +229,24 @@ namespace AeonSourceGenerator.Emitters
         {
             var emitters = new List<Emitter>(3);
 
-            foreach (int index in info.Operands.SortedIndices)
-            {
-                bool returnValue = !(index == 0 && isParam1ByRef) && !(index == 1 && isParam2ByRef);
-                var state = new EmitStateInfo(wordSize, returnValue ? EmitReturnType.Value : EmitReturnType.Address, addressSize32 ? 32 : 16, index);
+            //foreach (int index in info.Operands.SortedIndices)
+            //{
+            //    bool returnValue = !(index == 0 && isParam1ByRef) && !(index == 1 && isParam2ByRef);
+            //    var state = new EmitStateInfo(wordSize, returnValue ? EmitReturnType.Value : EmitReturnType.Address, addressSize32 ? 32 : 16, index);
 
-                var operand = info.Operands[index];
-                if (!this.newEmitters.TryGetValue(operand, out var newEmitter))
-                {
-                    if (!LoadKnownRegister.IsKnownRegister(operand))
-                        throw new InvalidOperationException();
+            //    var operand = info.Operands[index];
+            //    if (!this.newEmitters.TryGetValue(operand, out var newEmitter))
+            //    {
+            //        if (!LoadKnownRegister.IsKnownRegister(operand))
+            //            throw new InvalidOperationException();
 
-                    newEmitter = s => new LoadKnownRegister(s, operand);
-                }
+            //        newEmitter = s => new LoadKnownRegister(s, operand);
+            //    }
 
-                var emitter = newEmitter(state);
-                emitter.Initialize(sb);
-                emitters.Add(emitter);
-            }
+            //    var emitter = newEmitter(state);
+            //    emitter.Initialize(sb);
+            //    emitters.Add(emitter);
+            //}
 
             return emitters;
         }
