@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Aeon.Emulator.CommandInterpreter;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Memory;
@@ -64,6 +65,15 @@ namespace Aeon.Emulator.Dos
                 this.fileControl.CloseAllFiles(this.memoryAllocator.CurrentProcessId);
             memoryAllocator.EndCurrentProcess(residentParagraphs);
             UpdateSDA();
+        }
+        public CommandProcessor GetCommandProcessor()
+        {
+            var p = this.CurrentProcess;
+            if (p.Interpreter != null)
+                return p.Interpreter;
+
+            p.Interpreter = new CommandProcessor(this.vm);
+            return p.Interpreter;
         }
         public ConventionalMemoryInfo GetAllocations() => memoryAllocator.GetAllocations();
         public void HandleInterrupt(int interrupt)

@@ -1,4 +1,6 @@
-﻿using Aeon.Emulator.Dos.Programs;
+﻿using System;
+using Aeon.Emulator.CommandInterpreter;
+using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
 namespace Aeon.Emulator.Dos
@@ -75,6 +77,10 @@ namespace Aeon.Emulator.Dos
         /// Gets or sets a buffer containing the processor state before the process is started.
         /// </summary>
         internal byte[] InitialProcessorState { get; set; }
+        /// <summary>
+        /// Gets or sets the command interpreter if this is a COMMAND.COM process;
+        /// </summary>
+        internal CommandProcessor Interpreter { get; set; }
 
         /// <summary>
         /// Returns a short description of the process.

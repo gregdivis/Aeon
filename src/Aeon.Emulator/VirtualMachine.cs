@@ -8,6 +8,7 @@ using Aeon.Emulator.Memory;
 using Aeon.Emulator.RuntimeExceptions;
 using Aeon.Emulator.Interrupts;
 using System.Runtime.CompilerServices;
+using Aeon.Emulator.CommandInterpreter;
 
 namespace Aeon.Emulator
 {

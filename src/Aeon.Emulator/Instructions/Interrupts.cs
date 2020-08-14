@@ -1,4 +1,5 @@
 ﻿using System;
+using Aeon.Emulator.CommandInterpreter;
 using Aeon.Emulator.RuntimeExceptions;
 
 namespace Aeon.Emulator.Instructions
@@ -198,19 +199,12 @@ namespace Aeon.Emulator.Instructions
 
         private static bool ParseCommand(VirtualMachine vm, string input)
         {
-            if (!string.IsNullOrEmpty(input))
+            if (!string.IsNullOrWhiteSpace(input))
             {
-                var command = CommandInterpreter.Parser.Parse(input);
-                if (command == null || !command.IsParsed)
-                {
-                    vm.Console.WriteLine("Bad command or file name.");
-                }
-                else
-                {
-                    var result = command.Run(vm);
-                    if (result == CommandInterpreter.CommandResult.Exit)
-                        return true;
-                }
+                var command = vm.Dos.GetCommandProcessor();
+                var result = command.Run(input);
+                if (result == CommandResult.Exit)
+                    return true;
             }
 
             return false;
