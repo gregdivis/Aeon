@@ -566,11 +566,21 @@ namespace Aeon.Emulator.Video
         /// </summary>
         private void ChangeVerticalEnd()
         {
+            // this is a hack
             int newEnd = this.CrtController.VerticalDisplayEnd | ((this.CrtController.Overflow & (1 << 1)) << 7) | ((this.CrtController.Overflow & (1 << 6)) << 3);
             if (this.CurrentMode is Modes.Unchained256)
+            {
                 newEnd /= 2;
+            }
             else
-                newEnd *= 2;
+            {
+                newEnd = newEnd switch
+                {
+                    223 => 480,
+                    184 => 440,
+                    _ => newEnd * 2
+                };
+            }
 
             this.CurrentMode.Height = newEnd;
             VirtualMachine.OnVideoModeChanged(EventArgs.Empty);
