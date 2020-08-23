@@ -6,8 +6,11 @@
         {
         }
 
-        public bool NoEcho { get; internal init; }
+        public bool NoEcho { get; internal set; }
+        public string RawStatement { get; internal set; }
 
         internal abstract CommandResult Run(CommandProcessor processor);
+
+        public override string ToString() => this.RawStatement;
     }
 }

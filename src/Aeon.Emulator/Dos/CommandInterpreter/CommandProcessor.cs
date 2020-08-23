@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
@@ -9,14 +11,79 @@ namespace Aeon.Emulator.CommandInterpreter
     internal sealed class CommandProcessor
     {
         private readonly VirtualMachine vm;
+        private readonly Stack<BatchInstance> batchInstances = new Stack<BatchInstance>();
+        private bool echoCommand = true;
 
         public CommandProcessor(VirtualMachine vm)
         {
             this.vm = vm;
         }
 
-        public CommandResult Run(string statement)
+        public bool HasBatch => this.batchInstances.Count > 0;
+
+        private BatchInstance CurrentBatch => this.batchInstances.TryPeek(out var b) ? b : null;
+
+        public CommandResult RunNextBatchStatement()
         {
+        Start:
+            var b = this.CurrentBatch;
+            if (b == null)
+                return CommandResult.Continue;
+
+            if (b.CurrentLine >= b.Batch.Statements.Length)
+            {
+                this.batchInstances.Pop();
+                goto Start;
+            }
+
+            var statement = b.Batch.Statements[b.CurrentLine];
+            if (this.echoCommand && !statement.NoEcho)
+                vm.Console.WriteLine(statement.ToString());
+
+            b.CurrentLine++;
+            return statement.Run(this);
+        }
+
+        public bool BeginBatch(ReadOnlySpan<char> batchFileName, ReadOnlySpan<char> args)
+        {
+            if (!this.LoadBatchFile(batchFileName, args, out var batchInstance))
+                return false;
+
+            this.batchInstances.Clear();
+            this.batchInstances.Push(batchInstance);
+            return true;
+        }
+
+        private bool LoadBatchFile(ReadOnlySpan<char> batchFileName, ReadOnlySpan<char> args, out BatchInstance batchInstance)
+        {
+            batchInstance = null;
+
+            var batchFilePath = VirtualPath.TryParse(batchFileName);
+            if (batchFilePath == null)
+                return false;
+
+            BatchFile batch;
+            var result = vm.FileSystem.OpenFile(batchFilePath, FileMode.Open, FileAccess.Read);
+            try
+            {
+                if (result.Result == null)
+                    return false;
+
+                batch = BatchFile.Load(result.Result);
+            }
+            finally
+            {
+                result.Result?.Dispose();
+            }
+
+            batchInstance = new BatchInstance(batch, args.ToString());
+            return true;
+        }
+
+        public CommandResult Run(ReadOnlySpan<char> statement)
+        {
+            bool inBatch = this.HasBatch;
+
             var command = StatementParser.Parse(statement);
             if (command == null)
             {
@@ -24,17 +91,38 @@ namespace Aeon.Emulator.CommandInterpreter
                 return CommandResult.Continue;
             }
 
-            return command.Run(this);
+            var result = command.Run(this);
+            if (!inBatch && this.HasBatch)
+            {
+                // if entering a batch script from interactive mode, repeat the command execution state
+                this.vm.Processor.EIP -= 3;
+            }
+
+            return result;
         }
 
 #pragma warning disable IDE0060 // Remove unused parameter
         internal CommandResult RunCommand(CallCommand callCommand)
         {
-            throw new NotImplementedException();
+            var batchFileName = callCommand.Target;
+            if (!batchFileName.EndsWith(".BAT", StringComparison.OrdinalIgnoreCase))
+                batchFileName += ".BAT";
+
+            if (!this.LoadBatchFile(batchFileName, callCommand.Arguments, out var batchInstance))
+            {
+                this.vm.Console.WriteLine($"Batch file {batchFileName} not found.");
+                return CommandResult.Continue;
+            }
+
+            this.batchInstances.Push(batchInstance);
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(PrintEnvironmentCommand printEnvironmentCommand)
         {
-            throw new NotImplementedException();
+            foreach (var var in this.vm.EnvironmentVariables)
+                this.vm.Console.WriteLine($"{var.Key}={var.Value}");
+
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(TypeCommand typeCommand)
         {
@@ -109,17 +197,19 @@ namespace Aeon.Emulator.CommandInterpreter
         }
         internal CommandResult RunCommand(SetCommand setCommand)
         {
-            throw new NotImplementedException();
+            this.vm.EnvironmentVariables[setCommand.Variable] = setCommand.Value ?? string.Empty;
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(PrintCurrentDirectoryCommand printCurrentDirectoryCommand)
         {
-            throw new NotImplementedException();
+            this.vm.Console.WriteLine(this.vm.FileSystem.WorkingDirectory.ToString());
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(LaunchCommand launchCommand)
         {
             var fs = this.vm.FileSystem;
 
-            var target = VirtualPath.TryParse(launchCommand.Target);
+            var target = VirtualPath.TryParse(this.ReplaceVariables(launchCommand.Target));
             if (target != null)
             {
                 var targetPath = target.ToString();
@@ -136,26 +226,48 @@ namespace Aeon.Emulator.CommandInterpreter
                         {
                             newPath = targetPath + ".EXE";
                             if (fs.FileExists(newPath))
+                            {
                                 targetPath = newPath;
+                            }
                             else
-                                targetPath = null;
+                            {
+                                newPath = targetPath + ".BAT";
+                                if (fs.FileExists(newPath))
+                                    targetPath = newPath;
+                                else
+                                    targetPath = null;
+                            }
                         }
                     }
                     else
                     {
                         var extension = Path.GetExtension(targetPath);
-                        if (!fs.FileExists(targetPath) || (!extension.Equals(".EXE", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".COM", StringComparison.OrdinalIgnoreCase)))
+                        if (!fs.FileExists(targetPath) || (!extension.Equals(".EXE", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".COM", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".BAT", StringComparison.OrdinalIgnoreCase)))
                             targetPath = null;
                     }
                 }
 
                 if (!string.IsNullOrEmpty(targetPath))
                 {
-                    var program = ProgramImage.Load(targetPath, vm);
-                    if (program != null)
+                    if (targetPath.EndsWith(".BAT", StringComparison.OrdinalIgnoreCase))
                     {
-                        vm.LoadImage(program, launchCommand.Arguments);
-                        return CommandResult.Launch;
+                        if (!this.BeginBatch(targetPath, this.ReplaceVariables(launchCommand.Arguments)))
+                            vm.Console.WriteLine("Invalid batch script.");
+
+                        return CommandResult.Continue;
+                    }
+                    else
+                    {
+                        var program = ProgramImage.Load(targetPath, vm);
+                        if (program != null)
+                        {
+                            // decrement EIP here so that when launched process returns, interpreter runs again
+                            if (this.HasBatch)
+                                this.vm.Processor.EIP -= 3;
+
+                            this.vm.LoadImage(program, this.ReplaceVariables(launchCommand.Arguments));
+                            return CommandResult.Launch;
+                        }
                     }
                 }
                 else
@@ -170,11 +282,30 @@ namespace Aeon.Emulator.CommandInterpreter
         }
         internal CommandResult RunCommand(InvalidCommand invalidCommand)
         {
-            throw new NotImplementedException();
+            this.vm.Console.WriteLine(invalidCommand.Error);
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(GotoCommand gotoCommand)
         {
-            throw new NotImplementedException();
+            var b = this.CurrentBatch;
+            if (b != null)
+            {
+                int line = 0;
+                foreach (var statement in b.Batch.Statements)
+                {
+                    if (statement is LabelStatement label && label.Name == gotoCommand.Label)
+                    {
+                        b.CurrentLine = line;
+                        return CommandResult.Continue;
+                    }
+
+                    line++;
+                }
+
+                this.vm.Console.WriteLine("Cannot find batch label specified - " + gotoCommand.Label);
+            }
+
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(ClsCommand clsCommand)
         {
@@ -183,12 +314,19 @@ namespace Aeon.Emulator.CommandInterpreter
         }
         internal CommandResult RunCommand(EchoCommand echoCommand)
         {
-            this.vm.Console.WriteLine(echoCommand.Text);
+            if (string.Equals(echoCommand.Text, "OFF", StringComparison.OrdinalIgnoreCase))
+                this.echoCommand = false;
+            else
+                this.vm.Console.WriteLine(this.ReplaceVariables(echoCommand.Text));
+
             return CommandResult.Continue;
         }
         internal CommandResult RunCommand(IfErrorLevelCommand ifErrorLevelCommand)
         {
-            throw new NotImplementedException();
+            if (ifErrorLevelCommand.ErrorLevel == this.vm.Dos.ErrorLevel)
+                return ifErrorLevelCommand.Command.Run(this);
+
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(DirectoryCommand directoryCommand)
         {
@@ -252,12 +390,60 @@ namespace Aeon.Emulator.CommandInterpreter
         }
         internal CommandResult RunCommand(IfFileExistsCommand ifFileExistsCommand)
         {
-            throw new NotImplementedException();
+            if (vm.FileSystem.FileExists(ifFileExistsCommand.FileName))
+                return ifFileExistsCommand.Command.Run(this);
+
+            return CommandResult.Continue;
         }
         internal CommandResult RunCommand(IfEqualsCommand ifEqualsCommand)
         {
-            throw new NotImplementedException();
+            var value1 = this.ReplaceVariables(ifEqualsCommand.Value1) ?? string.Empty;
+            var value2 = this.ReplaceVariables(ifEqualsCommand.Value2) ?? string.Empty;
+
+            if ((value1 == value2) ^ ifEqualsCommand.Not)
+                return ifEqualsCommand.Command.Run(this);
+
+            return CommandResult.Continue;
         }
 #pragma warning restore IDE0060 // Remove unused parameter
+
+        private string ReplaceVariables(string s)
+        {
+            if (string.IsNullOrEmpty(s) || !s.Contains('%'))
+                return s;
+
+            var result = Regex.Replace(
+                s,
+                @"%(?<1>\d+)",
+                m =>
+                {
+                    var b = this.CurrentBatch;
+                    if (b != null && int.TryParse(m.Groups[1].Value, out int argIndex))
+                    {
+                        argIndex--;
+                        if (argIndex >= 0 && argIndex < b.Arguments.Length)
+                            return b.Arguments[argIndex];
+                    }
+
+                    return string.Empty;
+                },
+                RegexOptions.Singleline | RegexOptions.ExplicitCapture
+            );
+
+            result = Regex.Replace(
+                result,
+                @"%(?<1>[^\s%]+)%",
+                m =>
+                {
+                    if (vm.EnvironmentVariables.TryGetValue(m.Groups[1].Value, out var var))
+                        return var;
+
+                    return string.Empty;
+                },
+                RegexOptions.Singleline | RegexOptions.ExplicitCapture
+            );
+
+            return result.Replace("%%", "%");
+        }
     }
 }

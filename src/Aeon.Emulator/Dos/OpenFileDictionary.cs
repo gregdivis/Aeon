@@ -79,39 +79,42 @@ namespace Aeon.Emulator.Dos
         {
             stream.FileInfo = fileInfo;
 
-            unsafe
+            if (fileInfo != null)
             {
-                if (stream.SFTIndex == -1)
+                unsafe
                 {
-                    if (this.sftFileCount >= this.maxFiles)
-                        throw new InvalidOperationException("Maximum number of open files exceeded.");
+                    if (stream.SFTIndex == -1)
+                    {
+                        if (this.sftFileCount >= this.maxFiles)
+                            throw new InvalidOperationException("Maximum number of open files exceeded.");
 
-                    stream.SFTIndex = this.sftFileCount;
-                    var entry = &this.entries[this.sftFileCount];
+                        stream.SFTIndex = this.sftFileCount;
+                        var entry = &this.entries[this.sftFileCount];
 
-                    this.sftFileCount++;
+                        this.sftFileCount++;
 
-                    entry->RefCount = 1;
-                    entry->FileOpenMode = 0;
-                    entry->FileAttribute = fileInfo.DosAttributes;
-                    entry->DeviceInfo = 0;
-                    entry->StartingCluster = 0;
-                    entry->FileTime = fileInfo.DosModifyTime;
-                    entry->FileDate = fileInfo.DosModifyDate;
-                    entry->FileSize = fileInfo.DosLength;
-                    entry->CurrentOffset = 0;
-                    entry->RelativeClusterLastAccess = 0;
-                    entry->DirectoryEntrySector = 0;
-                    entry->DirectoryEntry = 0;
+                        entry->RefCount = 1;
+                        entry->FileOpenMode = 0;
+                        entry->FileAttribute = fileInfo.DosAttributes;
+                        entry->DeviceInfo = 0;
+                        entry->StartingCluster = 0;
+                        entry->FileTime = fileInfo.DosModifyTime;
+                        entry->FileDate = fileInfo.DosModifyDate;
+                        entry->FileSize = fileInfo.DosLength;
+                        entry->CurrentOffset = 0;
+                        entry->RelativeClusterLastAccess = 0;
+                        entry->DirectoryEntrySector = 0;
+                        entry->DirectoryEntry = 0;
 
-                    var fcbName = GetFCBName(fileInfo.Name);
-                    for (int i = 0; i < 11; i++)
-                        entry->FileName[i] = (byte)fcbName[i];
-                }
-                else
-                {
-                    var entry = &this.entries[stream.SFTIndex];
-                    entry->RefCount++;
+                        var fcbName = GetFCBName(fileInfo.Name);
+                        for (int i = 0; i < 11; i++)
+                            entry->FileName[i] = (byte)fcbName[i];
+                    }
+                    else
+                    {
+                        var entry = &this.entries[stream.SFTIndex];
+                        entry->RefCount++;
+                    }
                 }
             }
 

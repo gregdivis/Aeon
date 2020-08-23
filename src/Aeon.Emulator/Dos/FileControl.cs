@@ -23,7 +23,7 @@ namespace Aeon.Emulator.Dos
         public FileControl(VirtualMachine vm)
         {
             this.vm = vm;
-            AddDefaultHandles();
+            this.AddDefaultHandles();
         }
 
         /// <summary>
@@ -571,7 +571,7 @@ namespace Aeon.Emulator.Dos
             {
                 s.AddReference();
                 vm.Processor.AX = GetNextFileHandle();
-                fileHandles.Add(vm.Processor.AX, s, null);
+                fileHandles.Add(vm.Processor.AX, s, s.FileInfo);
                 vm.Processor.Flags.Carry = false;
             }
             else

@@ -10,80 +10,64 @@ namespace Aeon.Emulator.CommandInterpreter
     {
         public static CommandStatement Parse(ReadOnlySpan<char> s)
         {
-            var trimmed = s.Trim();
-
-            if (trimmed.IsEmpty)
-                return null;
-
-            bool noEcho = false;
-            if (trimmed[0] == '@')
+            var result = ParseInternal(s, out var noEcho);
+            if (result != null)
             {
-                noEcho = true;
-                trimmed = trimmed.Slice(1).Trim();
+                result.NoEcho = noEcho;
+                result.RawStatement = s.ToString();
             }
 
-            // :label
-            if (trimmed[0] == ':')
-                return ParseLabel(trimmed.Slice(1).Trim());
+            return result;
+        }
+        public static CommandStatement Parse(string s)
+        {
+            var result = ParseInternal(s, out var noEcho);
+            if (result != null)
+            {
+                result.NoEcho = noEcho;
+                result.RawStatement = s;
+            }
 
-            // c:
-            if (trimmed.Length == 2 && char.IsLetter(trimmed[0]) && trimmed[1] == ':')
-                return new SetCurrentDriveCommand(new DriveLetter(trimmed[0])) { NoEcho = noEcho };
+            return result;
+        }
+        public static string[] ParseArguments(ReadOnlySpan<char> source)
+        {
+            var t = source.TrimStart();
+            if (t.IsEmpty)
+                return Array.Empty<string>();
 
-            // cd
-            if (trimmed.Equals("cd", StringComparison.OrdinalIgnoreCase))
-                return new PrintCurrentDirectoryCommand { NoEcho = noEcho };
+            var args = new List<string>();
 
-            // cd dir, cd\dir, cd..
-            if (trimmed.StartsWith("cd", StringComparison.OrdinalIgnoreCase) && trimmed.Length > 2 && (char.IsWhiteSpace(trimmed[2]) || trimmed[2] == '\\' || trimmed[2] == '.'))
-                return new SetCurrentDirectoryCommand(trimmed.Slice(2).Trim().ToString()) { NoEcho = noEcho };
+            while (!t.IsEmpty)
+            {
+                if (t[0] == '"')
+                {
+                    int endQuoteIndex = t.Slice(1).IndexOf('"');
+                    if (endQuoteIndex == -1)
+                        return new[] { t.Slice(1).ToString() };
 
-            Split(s.TrimStart().Slice(noEcho ? 1 : 0), out var commandName, out var args);
+                    args.Add(t[1..endQuoteIndex].ToString());
+                    t = t.Slice(endQuoteIndex + 1);
+                }
+                else
+                {
+                    Split(t, out var arg, out var remainder);
+                    args.Add(arg.ToString());
+                    t = remainder;
+                }
 
-            // call other.bat
-            if (commandName.Equals("call", StringComparison.OrdinalIgnoreCase))
-                return new CallCommand(args.Trim().ToString()) { NoEcho = noEcho };
+                t = t.TrimStart();
+            }
 
-            // cls
-            if (commandName.Equals("cls", StringComparison.OrdinalIgnoreCase))
-                return new ClsCommand { NoEcho = noEcho };
-
-            // dir
-            if (commandName.Equals("dir", StringComparison.OrdinalIgnoreCase))
-                return ParseDir(args.Trim());
-
-            // echo
-            if (commandName.Equals("echo", StringComparison.OrdinalIgnoreCase))
-                return new EchoCommand(args.ToString()) { NoEcho = noEcho };
-
-            // exit
-            if (commandName.Equals("exit", StringComparison.OrdinalIgnoreCase))
-                return new ExitCommand { NoEcho = noEcho };
-
-            // goto
-            if (commandName.Equals("goto", StringComparison.OrdinalIgnoreCase))
-                return ParseGoto(args.Trim());
-
-            // if
-            if (commandName.Equals("if", StringComparison.OrdinalIgnoreCase))
-                return ParseIf(args.TrimStart());
-
-            // rem
-            if (commandName.Equals("rem", StringComparison.OrdinalIgnoreCase))
-                return new RemCommand(args.ToString()) { NoEcho = noEcho };
-
-            // set
-            if (commandName.Equals("set", StringComparison.OrdinalIgnoreCase))
-                return ParseSet(args.Trim());
-
-            // type
-            if (commandName.Equals("type", StringComparison.OrdinalIgnoreCase))
-                return ParseType(args.Trim());
-
-            return new LaunchCommand(commandName.ToString(), args.Trim().ToString()) { NoEcho = noEcho };
+            return args.ToArray();
+        }
+        public static bool IsBatchFile(ReadOnlySpan<char> source)
+        {
+            Split(source.TrimStart(), out var first, out _);
+            return first.EndsWith(".BAT", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void Split(ReadOnlySpan<char> source, out ReadOnlySpan<char> first, out ReadOnlySpan<char> remainder)
+        internal static void Split(ReadOnlySpan<char> source, out ReadOnlySpan<char> first, out ReadOnlySpan<char> remainder)
         {
             for (int i = 0; i < source.Length; i++)
             {
@@ -99,6 +83,84 @@ namespace Aeon.Emulator.CommandInterpreter
             remainder = default;
         }
 
+        private static CommandStatement ParseInternal(ReadOnlySpan<char> s, out bool noEcho)
+        {
+            noEcho = false;
+
+            var trimmed = s.Trim();
+
+            if (trimmed.IsEmpty)
+                return null;
+
+            if (trimmed[0] == '@')
+            {
+                noEcho = true;
+                trimmed = trimmed.Slice(1).Trim();
+            }
+
+            // :label
+            if (trimmed[0] == ':')
+                return ParseLabel(trimmed.Slice(1).Trim());
+
+            // c:
+            if (trimmed.Length == 2 && char.IsLetter(trimmed[0]) && trimmed[1] == ':')
+                return new SetCurrentDriveCommand(new DriveLetter(trimmed[0]));
+
+            // cd
+            if (trimmed.Equals("cd", StringComparison.OrdinalIgnoreCase))
+                return new PrintCurrentDirectoryCommand();
+
+            // cd dir, cd\dir, cd..
+            if (trimmed.StartsWith("cd", StringComparison.OrdinalIgnoreCase) && trimmed.Length > 2 && (char.IsWhiteSpace(trimmed[2]) || trimmed[2] == '\\' || trimmed[2] == '.'))
+                return new SetCurrentDirectoryCommand(trimmed.Slice(2).Trim().ToString());
+
+            Split(s.TrimStart().Slice(noEcho ? 1 : 0), out var commandName, out var args);
+
+            // call other.bat
+            if (commandName.Equals("call", StringComparison.OrdinalIgnoreCase))
+            {
+                Split(args.TrimStart(), out var batchName, out var batchArgs);
+                return new CallCommand(batchName.Trim().ToString(), batchArgs.Trim().ToString());
+            }
+
+            // cls
+            if (commandName.Equals("cls", StringComparison.OrdinalIgnoreCase))
+                return new ClsCommand();
+
+            // dir
+            if (commandName.Equals("dir", StringComparison.OrdinalIgnoreCase))
+                return ParseDir(args.Trim());
+
+            // echo
+            if (commandName.Equals("echo", StringComparison.OrdinalIgnoreCase))
+                return new EchoCommand(args.ToString());
+
+            // exit
+            if (commandName.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                return new ExitCommand();
+
+            // goto
+            if (commandName.Equals("goto", StringComparison.OrdinalIgnoreCase))
+                return ParseGoto(args.Trim());
+
+            // if
+            if (commandName.Equals("if", StringComparison.OrdinalIgnoreCase))
+                return ParseIf(args.TrimStart());
+
+            // rem
+            if (commandName.Equals("rem", StringComparison.OrdinalIgnoreCase))
+                return new RemCommand(args.ToString());
+
+            // set
+            if (commandName.Equals("set", StringComparison.OrdinalIgnoreCase))
+                return ParseSet(args.Trim());
+
+            // type
+            if (commandName.Equals("type", StringComparison.OrdinalIgnoreCase))
+                return ParseType(args.Trim());
+
+            return new LaunchCommand(commandName.ToString(), args.Trim().ToString());
+        }
         private static CommandStatement ParseLabel(ReadOnlySpan<char> args)
         {
             if (args.IsEmpty)
@@ -106,7 +168,6 @@ namespace Aeon.Emulator.CommandInterpreter
 
             return new LabelStatement(args.ToString());
         }
-
         private static CommandStatement ParseDir(ReadOnlySpan<char> args)
         {
             var parts = Regex.Split(args.ToString(), @"\s");
@@ -199,7 +260,6 @@ namespace Aeon.Emulator.CommandInterpreter
 
             return new DirectoryCommand(path, options, filter, sortBy);
         }
-
         private static CommandStatement ParseGoto(ReadOnlySpan<char> args)
         {
             if (args.IsEmpty)
@@ -207,7 +267,6 @@ namespace Aeon.Emulator.CommandInterpreter
 
             return new GotoCommand(args.ToString());
         }
-
         private static CommandStatement ParseIf(ReadOnlySpan<char> args)
         {
             bool not = false;
@@ -216,7 +275,15 @@ namespace Aeon.Emulator.CommandInterpreter
             if (next.Equals("not", StringComparison.OrdinalIgnoreCase))
             {
                 not = true;
+                var r = remainder.TrimStart();
+                if (!r.IsEmpty && r[0] == '"')
+                    return ParseIfEquals(not, r);
+
                 Split(remainder.TrimStart(), out next, out remainder);
+            }
+            else if (args[0] == '"')
+            {
+                return ParseIfEquals(not, args);
             }
 
             if (next.Equals("errorlevel", StringComparison.OrdinalIgnoreCase))
@@ -237,13 +304,28 @@ namespace Aeon.Emulator.CommandInterpreter
                 return new IfFileExistsCommand(not, next.ToString(), Parse(remainder.TrimStart()));
             }
 
-            var match = Regex.Match(remainder.ToString(), @"(?<1>[^=]+)==\s*(?<2>\S+)", RegexOptions.ExplicitCapture);
-            if (!match.Success)
+            return new InvalidCommand("Invalid expression.");
+        }
+        private static CommandStatement ParseIfEquals(bool not, ReadOnlySpan<char> args)
+        {
+            if (!TryParseString(args, out var value1))
                 return new InvalidCommand("Invalid expression.");
 
-            return new IfEqualsCommand(not, match.Groups[1].Value.Trim(), match.Groups[2].Value.Trim(), Parse(remainder.Slice(match.Length)));
-        }
+            var remainder = args.Slice(value1.Length + 2).TrimStart();
+            if (!remainder.StartsWith("=="))
+                return new InvalidCommand("Invalid expression.");
 
+            remainder = remainder[2..].TrimStart();
+
+            if (!TryParseString(remainder, out var value2))
+                return new InvalidCommand("Invalid expression.");
+
+            var command = Parse(remainder.Slice(value2.Length + 2).TrimStart());
+            if (command == null)
+                return new InvalidCommand("Expected command.");
+
+            return new IfEqualsCommand(not, value1.ToString(), value2.ToString(), command);
+        }
         private static CommandStatement ParseSet(ReadOnlySpan<char> args)
         {
             if (args.IsEmpty)
@@ -252,13 +334,30 @@ namespace Aeon.Emulator.CommandInterpreter
             var parts = args.ToString().Split('=', 2);
             return new SetCommand(parts[0].Trim(), parts.Length > 1 ? parts[1].Trim() : string.Empty);
         }
-
         private static CommandStatement ParseType(ReadOnlySpan<char> args)
         {
             if (args.IsEmpty)
                 return new InvalidCommand("Missing file name.");
 
             return new TypeCommand(args.ToString());
+        }
+        private static bool TryParseString(ReadOnlySpan<char> s, out ReadOnlySpan<char> value)
+        {
+            value = default;
+
+            if (s.IsEmpty || s[0] != '"')
+                return false;
+
+            for (int i = 1; i < s.Length; i++)
+            {
+                if (s[i] == '"')
+                {
+                    value = s[1..i];
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

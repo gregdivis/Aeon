@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using Aeon.Emulator.CommandInterpreter;
+using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.RuntimeExceptions;
 
 namespace Aeon.Emulator.Instructions
@@ -157,16 +159,36 @@ namespace Aeon.Emulator.Instructions
         [Opcode("0F57 ib", Name = "cmd")]
         public static void RunCommandInterpreter(VirtualMachine vm, byte mode)
         {
+            var commandProcessor = vm.Dos.GetCommandProcessor();
+            if (commandProcessor.HasBatch)
+            {
+                var result = commandProcessor.RunNextBatchStatement();
+                if (result == CommandResult.Exit)
+                    vm.Processor.Flags.Carry = true;
+                else if(result == CommandResult.Continue && commandProcessor.HasBatch)
+                    vm.Processor.EIP -= 3;
+
+                return;
+            }
+
             if (mode == 0)
             {
+                // mode 0 = process args if any specified
                 var args = vm.CurrentProcess.CommandLineArguments;
                 int index = args.IndexOf("/c", StringComparison.OrdinalIgnoreCase);
                 if (index >= 0)
                 {
-                    args = args.Substring(index + 2).Trim();
-
-                    ParseCommand(vm, args);
-                    vm.Processor.Flags.Carry = true;
+                    var actualArgs = args.AsSpan().Slice(2).Trim();
+                    if (StatementParser.IsBatchFile(actualArgs))
+                    {
+                        StatementParser.Split(actualArgs, out var batchFileName, out var batchArgs);
+                        vm.Processor.Flags.Carry = !commandProcessor.BeginBatch(batchFileName, batchArgs.TrimStart());
+                    }
+                    else
+                    {
+                        ParseCommand(vm, actualArgs);
+                        vm.Processor.Flags.Carry = true;
+                    }
                 }
                 else
                 {
@@ -184,10 +206,12 @@ namespace Aeon.Emulator.Instructions
             }
             else if (mode == 1)
             {
+                // mode 1 = write command prompt
                 vm.Console.Write(vm.FileSystem.WorkingDirectory.ToString() + ">");
             }
             else
             {
+                // mode 2 = process input from mode 1
                 int stringLength = vm.PhysicalMemory.GetByte(vm.Processor.DS, (ushort)vm.Processor.DX + 1u);
                 var input = vm.PhysicalMemory.GetString(vm.Processor.DS, (ushort)vm.Processor.DX + 2u, stringLength);
 
@@ -197,9 +221,9 @@ namespace Aeon.Emulator.Instructions
             }
         }
 
-        private static bool ParseCommand(VirtualMachine vm, string input)
+        private static bool ParseCommand(VirtualMachine vm, ReadOnlySpan<char> input)
         {
-            if (!string.IsNullOrWhiteSpace(input))
+            if (!input.IsEmpty && !input.IsWhiteSpace())
             {
                 var command = vm.Dos.GetCommandProcessor();
                 var result = command.Run(input);

@@ -10,8 +10,6 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
     [Serializable]
     public sealed class VirtualPath : IEquatable<VirtualPath>
     {
-        private static string[] EmptyPathElements = new string[0];
-
         /// <summary>
         /// A path which specifies the current directory.
         /// </summary>
@@ -38,8 +36,8 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// </summary>
         public VirtualPath()
         {
-            pathElements = EmptyPathElements;
-            pathType = VirtualPathType.Relative;
+            this.pathElements = Array.Empty<string>();
+            this.pathType = VirtualPathType.Relative;
             this.cachedPath = new Lazy<string>(() => string.Join("\\", this.pathElements), true);
             this.cachedFullPath = new Lazy<string>(this.BuildFullPath, true);
         }
@@ -47,8 +45,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// Initializes a new instance of the <see cref="VirtualPath"/> class.
         /// </summary>
         /// <param name="path">String representation of an absolute or relative path.</param>
-        public VirtualPath(string path)
-            : this()
+        public VirtualPath(string path) : this()
         {
             if (path == null)
                 throw new ArgumentNullException(nameof(path));
@@ -70,7 +67,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         private VirtualPath(string[] elements, VirtualPathType type, DriveLetter? drive)
             : this()
         {
-            this.pathElements = elements.Length > 0 ? elements : EmptyPathElements;
+            this.pathElements = elements.Length > 0 ? elements : Array.Empty<string>();
             this.pathType = type;
             this.driveLetter = drive;
         }
@@ -130,7 +127,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             get
             {
                 if (pathElements.Length > 0)
-                    return pathElements[pathElements.Length - 1];
+                    return pathElements[^1];
                 else
                     return string.Empty;
             }
@@ -160,7 +157,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>True if paths are the same; otherwise false.</returns>
         public bool Equals(VirtualPath other)
         {
-            if ((object)other == null)
+            if (other is null)
                 return false;
 
             if (ReferenceEquals(this, other))
@@ -450,7 +447,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// </summary>
         /// <param name="path">Path string to parse.</param>
         /// <returns>VirtualPath instance if successful; otherwise null.</returns>
-        public static VirtualPath TryParse(string path)
+        public static VirtualPath TryParse(ReadOnlySpan<char> path)
         {
             if (path == null)
                 throw new ArgumentNullException(nameof(path));
@@ -467,11 +464,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             return driveLetter.ToString() + path;
         }
 
-        private static VirtualPath Parse(string path, out Exception error)
+        private static VirtualPath Parse(ReadOnlySpan<char> path, out Exception error)
         {
             error = null;
 
-            if (path == string.Empty)
+            if (path.IsEmpty)
             {
                 return RelativeCurrent;
             }
@@ -481,7 +478,8 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                 VirtualPathType pathType;
                 DriveLetter? driveLetter = null;
 
-                path = path.Replace('/', '\\');
+                if (path.Contains('/'))
+                    path = path.ToString().Replace('/', '\\');
 
                 if (path.Length >= 2 && path[1] == ':')
                 {
@@ -492,7 +490,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                     }
 
                     driveLetter = new DriveLetter(path[0]);
-                    path = path.Substring(2);
+                    path = path.Slice(2);
                 }
 
                 if (path.Length > 0 && (path[0] == '\\' || path[0] == '/'))
@@ -500,7 +498,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                 else
                     pathType = VirtualPathType.Relative;
 
-                var elements = path.Split(new char[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+                var elements = path.ToString().Split(new char[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
                 pathElements = Simplify(elements, 0);
 
                 return new VirtualPath(pathElements, pathType, driveLetter);

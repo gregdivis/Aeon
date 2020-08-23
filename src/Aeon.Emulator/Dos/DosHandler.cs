@@ -41,9 +41,10 @@ namespace Aeon.Emulator.Dos
         }
 
         public IEnumerable<InterruptHandlerInfo> HandledInterrupts => new InterruptHandlerInfo[] { 0x21, 0x27, 0x20 };
-        public Stream StdOut => fileControl.StdOut;
-        public Stream StdIn => fileControl.StdIn;
-        public DosProcess CurrentProcess => memoryAllocator.CurrentProcess;
+        public Stream StdOut => this.fileControl.StdOut;
+        public Stream StdIn => this.fileControl.StdIn;
+        public DosProcess CurrentProcess => this.memoryAllocator.CurrentProcess;
+        public byte ErrorLevel => this.memoryAllocator.ErrorLevel;
 
         public void LoadImage(ProgramImage image, ushort environmentSegment = 0, string commandLineArgs = null, string stdOut = null)
         {
@@ -131,7 +132,7 @@ namespace Aeon.Emulator.Dos
 
                 case Functions.TerminateProgram:
                     terminationType = 0x00;
-                    EndCurrentProcess(0);
+                    this.EndCurrentProcess(0);
                     if (this.CurrentProcess == null)
                     {
                         vm.OnCurrentProcessChanged(EventArgs.Empty);
@@ -142,7 +143,7 @@ namespace Aeon.Emulator.Dos
 
                 case Functions.TerminateAndStayResident:
                     terminationType = 0x03;
-                    EndCurrentProcess((ushort)vm.Processor.DX);
+                    this.EndCurrentProcess((ushort)this.vm.Processor.DX);
                     if (this.CurrentProcess == null)
                     {
                         vm.OnCurrentProcessChanged(EventArgs.Empty);
@@ -153,7 +154,7 @@ namespace Aeon.Emulator.Dos
 
                 case Functions.GetReturnCode:
                     vm.Processor.AL = memoryAllocator.ErrorLevel;
-                    vm.Processor.AH = terminationType;
+                    vm.Processor.AH = this.terminationType;
                     break;
 
                 case Functions.OpenFile:

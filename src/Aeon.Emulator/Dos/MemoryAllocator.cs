@@ -363,8 +363,7 @@ namespace Aeon.Emulator.Dos
             var sizes = new Dictionary<string, int>();
             foreach (var block in usedBlocks)
             {
-                int size;
-                if (!sizes.TryGetValue(block.ImageName, out size))
+                if (!sizes.TryGetValue(block.ImageName, out int size))
                     sizes[block.ImageName] = block.Length * 16;
                 else
                     sizes[block.ImageName] = size + block.Length * 16;
