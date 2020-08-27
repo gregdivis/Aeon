@@ -16,6 +16,8 @@
             }
         }
 
+        public override int MouseWidth => this.PixelWidth * 2;
+
         internal override byte GetVramByte(uint offset)
         {
             unsafe

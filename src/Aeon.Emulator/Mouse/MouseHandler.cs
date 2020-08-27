@@ -26,16 +26,14 @@ namespace Aeon.Emulator.Mouse
         private int maxX = 639;
         private int minY;
         private int maxY = 199;
+        private int mickeyRatioX = 8;
+        private int mickeyRatioY = 16;
         private readonly ButtonPressTracker buttonTracker = new ButtonPressTracker();
 
         /// <summary>
         /// Gets the current position of the mouse cursor.
         /// </summary>
         public Video.Point Position => new Video.Point(currentState.X, currentState.Y);
-        /// <summary>
-        /// Gets or sets a value indicating whether the default virtual width should be used.
-        /// </summary>
-        public bool UseDefaultVirtualWidth { get; set; } = true;
 
         /// <summary>
         /// Notifies the mouse handler that the mouse was moved and relative coordinates are specified.
@@ -44,16 +42,16 @@ namespace Aeon.Emulator.Mouse
         /// <param name="deltaY">Relative vertical movement.</param>
         public void MouseMoveRelative(int deltaX, int deltaY)
         {
-            motionCounterX += deltaX;
-            motionCounterY += deltaY;
+            this.motionCounterX += deltaX;
+            this.motionCounterY += deltaY;
 
-            callbackMotionCounterX += deltaX;
-            callbackMotionCounterY += deltaY;
+            this.callbackMotionCounterX += deltaX;
+            this.callbackMotionCounterY += deltaY;
 
-            currentState.X += deltaX;
-            currentState.Y += deltaY;
+            this.currentState.X += deltaX;
+            this.currentState.Y += deltaY;
 
-            MouseMoved();
+            this.MouseMoved();
         }
         /// <summary>
         /// Notifies the mouse handler that the mouse was moved and absolute coordinates are specified.
@@ -62,16 +60,16 @@ namespace Aeon.Emulator.Mouse
         /// <param name="newY">New vertical position.</param>
         public void MouseMoveAbsolute(uint newX, uint newY)
         {
-            motionCounterX += (int)newX - currentState.X;
-            motionCounterY += (int)newY - currentState.Y;
+            this.motionCounterX += (int)newX - this.currentState.X;
+            this.motionCounterY += (int)newY - this.currentState.Y;
 
-            callbackMotionCounterX += (int)newX - currentState.X;
-            callbackMotionCounterY += (int)newY - currentState.Y;
+            this.callbackMotionCounterX += (int)newX - this.currentState.X;
+            this.callbackMotionCounterY += (int)newY - this.currentState.Y;
 
-            currentState.X = (int)newX;
-            currentState.Y = (int)newY;
+            this.currentState.X = (int)newX;
+            this.currentState.Y = (int)newY;
 
-            MouseMoved();
+            this.MouseMoved();
         }
         /// <summary>
         /// Notifies the mouse handler the a mouse button was pressed.
@@ -79,15 +77,15 @@ namespace Aeon.Emulator.Mouse
         /// <param name="buttons">Button which was pressed.</param>
         public void MouseButtonDown(MouseButtons buttons)
         {
-            buttonTracker.ButtonPress(buttons, currentState.X, currentState.Y);
+            this.buttonTracker.ButtonPress(buttons, this.currentState.X, this.currentState.Y);
 
-            currentState.PressedButtons |= buttons;
+            this.currentState.PressedButtons |= buttons;
             var mask = GetCallbackReasonPress(buttons);
 
-            if ((mask & callbackMask) != 0)
+            if ((mask & this.callbackMask) != 0)
             {
-                reason = mask;
-                vm.RaiseInterrupt(CallbackInterrupt);
+                this.reason = mask;
+                this.vm.RaiseInterrupt(CallbackInterrupt);
             }
         }
         /// <summary>
@@ -96,15 +94,15 @@ namespace Aeon.Emulator.Mouse
         /// <param name="buttons">Button which was released.</param>
         public void MouseButtonUp(MouseButtons buttons)
         {
-            buttonTracker.ButtonRelease(buttons, currentState.X, currentState.Y);
+            this.buttonTracker.ButtonRelease(buttons, this.currentState.X, this.currentState.Y);
 
-            currentState.PressedButtons &= ~buttons;
+            this.currentState.PressedButtons &= ~buttons;
             var mask = GetCallbackReasonRelease(buttons);
 
-            if ((mask & callbackMask) != 0)
+            if ((mask & this.callbackMask) != 0)
             {
-                reason = mask;
-                vm.RaiseInterrupt(CallbackInterrupt);
+                this.reason = mask;
+                this.vm.RaiseInterrupt(CallbackInterrupt);
             }
         }
 
@@ -113,37 +111,38 @@ namespace Aeon.Emulator.Mouse
         /// </summary>
         private void RaiseCallback()
         {
-            int scaledX = GetScaledX(currentState.X);
-            int scaledY = GetScaledY(currentState.Y);
+            int scaledX = GetScaledX(this.currentState.X);
+            int scaledY = GetScaledY(this.currentState.Y);
 
-            vm.Processor.AX = (short)reason;
-            vm.Processor.BX = (short)currentState.PressedButtons;
-            vm.Processor.CX = (short)scaledX;
-            vm.Processor.DX = (short)scaledY;
-            vm.Processor.SI = (ushort)callbackMotionCounterX;
-            vm.Processor.DI = (ushort)callbackMotionCounterY;
-            callbackState = currentState;
-            reason = CallbackMask.Disabled;
+            var p = this.vm.Processor;
+            p.AX = (short)reason;
+            p.BX = (short)currentState.PressedButtons;
+            p.CX = (short)scaledX;
+            p.DX = (short)scaledY;
+            p.SI = (ushort)callbackMotionCounterX;
+            p.DI = (ushort)callbackMotionCounterY;
+            this.callbackState = currentState;
+            this.reason = CallbackMask.Disabled;
 
-            Instructions.Call.FarAbsoluteCall(vm, (uint)((callbackSegment << 16) | callbackOffset));
+            Instructions.Call.FarAbsoluteCall(vm, (uint)((this.callbackSegment << 16) | this.callbackOffset));
         }
         /// <summary>
         /// Performs common handling of a move event.
         /// </summary>
         private void MouseMoved()
         {
-            currentState.X = Math.Max(currentState.X, 0);
-            currentState.X = Math.Min(currentState.X, vm.VideoMode.Width - 1);
-            currentState.Y = Math.Max(currentState.Y, 0);
-            currentState.Y = Math.Min(currentState.Y, vm.VideoMode.Height - 1);
+            this.currentState.X = Math.Max(this.currentState.X, 0);
+            this.currentState.X = Math.Min(this.currentState.X, this.vm.VideoMode.Width - 1);
+            this.currentState.Y = Math.Max(this.currentState.Y, 0);
+            this.currentState.Y = Math.Min(this.currentState.Y, this.vm.VideoMode.Height - 1);
 
-            if ((callbackMask & CallbackMask.Move) != 0)
+            if (callbackMask.HasFlag(CallbackMask.Move))
             {
-                reason = CallbackMask.Move;
-                vm.RaiseInterrupt(CallbackInterrupt);
+                this.reason = CallbackMask.Move;
+                this.vm.RaiseInterrupt(CallbackInterrupt);
             }
 
-            vm.OnMouseMove(new MouseMoveEventArgs(currentState.X, currentState.Y));
+            this.vm.OnMouseMove(new MouseMoveEventArgs(this.currentState.X, this.currentState.Y));
         }
         /// <summary>
         /// Returns the virtual horizontal cursor position.
@@ -225,6 +224,17 @@ namespace Aeon.Emulator.Mouse
             };
         }
 
+        private void HandleVideoModeChanged(object sender, EventArgs e) => this.SetDefaultMax();
+        private void SetDefaultMax()
+        {
+            var mode = this.vm.VideoMode;
+            if (mode != null)
+            {
+                this.maxX = mode.MouseWidth - 1;
+                this.maxY = mode.PixelHeight - 1;
+            }
+        }
+
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { 0x33, new InterruptHandlerInfo(CallbackInterrupt, Registers.AX | Registers.BX | Registers.CX | Registers.DX | Registers.BP | Registers.SI | Registers.DI | Registers.DS | Registers.ES, false, true) };
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
@@ -234,29 +244,35 @@ namespace Aeon.Emulator.Mouse
                 return;
             }
 
-            switch ((ushort)vm.Processor.AX)
+            var p = this.vm.Processor;
+
+            switch ((ushort)p.AX)
             {
                 case Functions.Reset:
-                    vm.Processor.AX = -1; // Indicates mouse installed.
-                    vm.Processor.BX = 3; // Three-button mouse.
-                    showCount = 0;  // Mouse cursor invisible.
-                    vm.IsMouseVisible = false;
-                    minX = 0;
-                    minY = 0;
-                    maxY = this.UseDefaultVirtualWidth ? 479 : 199;
-                    maxX = this.UseDefaultVirtualWidth ? 639 : 319;
-                    callbackMotionCounterX = 0;
-                    callbackMotionCounterY = 0;
+                    p.AX = -1; // Indicates mouse installed.
+                    p.BX = 3; // Three-button mouse.
+                    this.showCount = 0;  // Mouse cursor invisible.
+                    this.vm.IsMouseVisible = false;
+                    this.minX = 0;
+                    this.minY = 0;
+                    this.SetDefaultMax();
+                    this.callbackMotionCounterX = 0;
+                    this.callbackMotionCounterY = 0;
+                    this.mickeyRatioX = 8;
+                    this.mickeyRatioX = 16;
+                    this.callbackMask = CallbackMask.Disabled;
+                    this.callbackSegment = 0;
+                    this.callbackOffset = 0;
                     break;
 
                 case Functions.SoftwareReset:
-                    vm.Processor.AX = -1; // Indicates mouse installed.
-                    vm.Processor.BX = 3; // Three-button mouse.
+                    p.AX = -1; // Indicates mouse installed.
+                    p.BX = 3; // Three-button mouse.
                     break;
 
                 case Functions.EnableMouseDriver:
                     // Always return success.
-                    vm.Processor.AX = 0x20;
+                    p.AX = 0x20;
                     break;
 
                 case Functions.ShowCursor:
@@ -272,17 +288,17 @@ namespace Aeon.Emulator.Mouse
                     break;
 
                 case Functions.GetPositionAndStatus:
-                    vm.Processor.CX = (short)GetScaledX(currentState.X);
-                    vm.Processor.DX = (short)GetScaledY(currentState.Y);
-                    vm.Processor.BX = (short)currentState.PressedButtons;
+                    p.CX = (short)GetScaledX(currentState.X);
+                    p.DX = (short)GetScaledY(currentState.Y);
+                    p.BX = (short)currentState.PressedButtons;
                     break;
 
                 case Functions.SetCursorPosition:
                     // Bad things can happen if we don't filter out the useless messages.
-                    if (currentState.X != GetRealX(vm.Processor.CX) || currentState.Y != GetRealY(vm.Processor.DX))
+                    if (currentState.X != GetRealX(p.CX) || currentState.Y != GetRealY(p.DX))
                     {
-                        currentState.X = GetRealX(vm.Processor.CX);
-                        currentState.Y = GetRealY(vm.Processor.DX);
+                        currentState.X = GetRealX(p.CX);
+                        currentState.Y = GetRealY(p.DX);
                         var args = new MouseMoveEventArgs(currentState.X, currentState.Y);
                         vm.OnMouseMove(args);
                         vm.OnMouseMoveByEmulator(args);
@@ -290,46 +306,46 @@ namespace Aeon.Emulator.Mouse
                     break;
 
                 case Functions.SetHorizontalRange:
-                    minX = vm.Processor.CX;
-                    maxX = vm.Processor.DX;
+                    minX = p.CX;
+                    maxX = p.DX;
                     break;
 
                 case Functions.SetVerticalRange:
-                    minY = vm.Processor.CX;
-                    maxY = vm.Processor.DX;
+                    minY = p.CX;
+                    maxY = p.DX;
                     break;
 
                 case Functions.GetMotionCounters:
-                    vm.Processor.CX = (short)motionCounterX;
-                    vm.Processor.DX = (short)motionCounterY;
+                    p.CX = (short)motionCounterX;
+                    p.DX = (short)motionCounterY;
                     motionCounterX = 0;
                     motionCounterY = 0;
                     break;
 
                 case Functions.SetCallbackParameters:
-                    callbackMask = (CallbackMask)vm.Processor.CX;
-                    callbackSegment = vm.Processor.ES;
-                    callbackOffset = (ushort)vm.Processor.DX;
+                    callbackMask = (CallbackMask)p.CX;
+                    callbackSegment = p.ES;
+                    callbackOffset = (ushort)p.DX;
                     break;
 
                 case Functions.GetButtonPressData:
-                    var pressInfo = buttonTracker.GetButtonPressInfo(vm.Processor.BX);
-                    vm.Processor.BX = (short)(pressInfo.Count & 0x7FFFu);
-                    vm.Processor.CX = (short)GetScaledX(pressInfo.X);
-                    vm.Processor.DX = (short)GetScaledY(pressInfo.Y);
+                    var pressInfo = buttonTracker.GetButtonPressInfo(p.BX);
+                    p.BX = (short)(pressInfo.Count & 0x7FFFu);
+                    p.CX = (short)GetScaledX(pressInfo.X);
+                    p.DX = (short)GetScaledY(pressInfo.Y);
                     break;
 
                 case Functions.GetButtonReleaseData:
-                    var releaseInfo = buttonTracker.GetButtonReleaseInfo(vm.Processor.BX);
-                    vm.Processor.BX = (short)(releaseInfo.Count & 0x7FFFu);
-                    vm.Processor.CX = (short)GetScaledX(releaseInfo.X);
-                    vm.Processor.DX = (short)GetScaledY(releaseInfo.Y);
+                    var releaseInfo = buttonTracker.GetButtonReleaseInfo(p.BX);
+                    p.BX = (short)(releaseInfo.Count & 0x7FFFu);
+                    p.CX = (short)GetScaledX(releaseInfo.X);
+                    p.DX = (short)GetScaledY(releaseInfo.Y);
                     break;
 
                 case Functions.ExchangeCallbacks:
-                    var newMask = (CallbackMask)vm.Processor.CX;
-                    var newSegment = vm.Processor.ES;
-                    var newOffset = (ushort)vm.Processor.DX;
+                    var newMask = (CallbackMask)p.CX;
+                    var newSegment = p.ES;
+                    var newOffset = (ushort)p.DX;
 
                     vm.Processor.CX = (short)callbackMask;
                     vm.WriteSegmentRegister(SegmentIndex.ES, callbackSegment);
@@ -341,11 +357,12 @@ namespace Aeon.Emulator.Mouse
                     break;
 
                 case Functions.SetMickeyPixelRatio:
-                    // Ignore this for now.
+                    this.mickeyRatioX = (ushort)p.CX;
+                    this.mickeyRatioY = (ushort)p.DX;
                     break;
 
                 case Functions.GetDriverStateStorageSize:
-                    vm.Processor.AX = 0x200;
+                    p.AX = 0x200;
                     break;
 
                 case Functions.SaveDriverState:
@@ -354,7 +371,7 @@ namespace Aeon.Emulator.Mouse
                     break;
 
                 default:
-                    System.Diagnostics.Debug.WriteLine($"Mouse function {vm.Processor.AX:X2}h not implemented.");
+                    System.Diagnostics.Debug.WriteLine($"Mouse function {p.AX:X2}h not implemented.");
                     break;
             }
         }
@@ -365,8 +382,11 @@ namespace Aeon.Emulator.Mouse
         void IVirtualDevice.Resume()
         {
         }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
-
+        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
+        {
+            this.vm = vm;
+            this.vm.VideoModeChanged += this.HandleVideoModeChanged;
+        }
         void IDisposable.Dispose()
         {
         }
