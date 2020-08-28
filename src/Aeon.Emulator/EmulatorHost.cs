@@ -165,14 +165,6 @@ namespace Aeon.Emulator
 
             var image = ProgramImage.Load(fileName, VirtualMachine);
             this.VirtualMachine.LoadImage(image, commandLineArguments);
-
-            // Sierra adventure games assume a virtual width of 320 for the mouse for some reason.
-            string upperFileName = fileName.ToUpper();
-            if (upperFileName.Contains("SIERRA.EXE") || upperFileName.Contains("SCIDHUV.EXE"))
-                VirtualMachine.Mouse.UseDefaultVirtualWidth = false;
-            else
-                VirtualMachine.Mouse.UseDefaultVirtualWidth = true;
-
             this.State = EmulatorState.Ready;
         }
         /// <summary>

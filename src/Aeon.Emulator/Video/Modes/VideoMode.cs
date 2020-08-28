@@ -134,6 +134,10 @@ namespace Aeon.Emulator.Video
         /// Gets the current font for the video mode.
         /// </summary>
         public byte[] Font { get; } = new byte[4096];
+        /// <summary>
+        /// Gets the video mode's width in mouse virtual screen units.
+        /// </summary>
+        public virtual int MouseWidth => this.PixelWidth;
 
         /// <summary>
         /// Gets a value indicating whether the display mode has a cursor.
