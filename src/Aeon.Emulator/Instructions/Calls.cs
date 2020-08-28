@@ -203,7 +203,7 @@ namespace Aeon.Emulator.Instructions
             uint eip = dest & 0xFFFFu;
             ushort cs = (ushort)(dest >> 16);
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 uint cpl = vm.Processor.CS & 3u;
                 uint rpl = cs & 3u;
@@ -223,7 +223,7 @@ namespace Aeon.Emulator.Instructions
             uint eip = (uint)dest;
             ushort cs = (ushort)(dest >> 32);
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 uint cpl = vm.Processor.CS & 3u;
                 uint rpl = cs & 3u;

@@ -277,7 +277,9 @@ namespace Aeon.Emulator
                     while (p.InPrefix)
                         vm.Emulate();
 
-                    this.CheckHardwareInterrupts();
+                    // check flags again in case prefixed instruction changed them
+                    if (p.Flags.InterruptEnable & !p.TemporaryInterruptMask)
+                        this.CheckHardwareInterrupts();
                 }
 
                 vm.Emulate(count);
