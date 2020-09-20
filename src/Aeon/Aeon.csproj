@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <RootNamespace>Aeon.Emulator.Launcher</RootNamespace>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -14,7 +14,7 @@
     <ApplicationIcon>Aeon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="YamlDotNet" Version="8.1.0" />
+    <PackageReference Include="YamlDotNet" Version="8.1.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />

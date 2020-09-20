@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Reflection.Emit;
+﻿using System.IO;
 
 namespace AeonSourceGenerator.Emitters
 {
@@ -14,10 +12,10 @@ namespace AeonSourceGenerator.Emitters
         public override void Initialize(TextWriter writer)
         {
             // Reg is the middle 3 bits of the ModR/M byte.
-            writer.WriteLine($"var arg{this.ParameterIndex}Reg = (*ip & 0x38) >> 3;");
+            writer.WriteLine($"\t\t\tvar arg{this.ParameterIndex}Reg = (*ip & 0x38) >> 3;");
             if (this.ByRef)
             {
-                writer.Write($"ushort arg{this.ParameterIndex}");
+                writer.Write($"\t\t\tushort arg{this.ParameterIndex}");
                 if (this.WriteOnly)
                     writer.WriteLine(';');
                 else
@@ -43,7 +41,7 @@ namespace AeonSourceGenerator.Emitters
         public override void Complete(TextWriter writer)
         {
             if (this.ByRef)
-                writer.WriteLine($"vm.WriteSegmentRegister((SegmentIndex)arg{this.ParameterIndex}Reg, arg{this.ParameterIndex});");
+                writer.WriteLine($"\t\t\tvm.WriteSegmentRegister((SegmentIndex)arg{this.ParameterIndex}Reg, arg{this.ParameterIndex});");
         }
     }
 }

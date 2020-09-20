@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <LangVersion>latest</LangVersion>
@@ -8,7 +8,6 @@
     <Product>Aeon</Product>
     <Title>Aeon Disk Image Support</Title>
     <Description>Implements Aeon disk images.</Description>
-    <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />

@@ -1,10 +1,10 @@
-﻿using System;
+﻿using System.Collections.Generic;
 
 namespace AeonSourceGenerator.Emitters
 {
     internal readonly ref struct EmulateMethodCall
     {
-        public EmulateMethodCall(string name, string arg1, ReadOnlySpan<Emitter> argEmitters)
+        public EmulateMethodCall(string name, string arg1, IReadOnlyList<Emitter> argEmitters)
         {
             this.Name = name;
             this.Arg1 = arg1;
@@ -13,6 +13,6 @@ namespace AeonSourceGenerator.Emitters
 
         public string Name { get; }
         public string Arg1 { get; }
-        public ReadOnlySpan<Emitter> ArgEmitters { get; }
+        public IReadOnlyList<Emitter> ArgEmitters { get; }
     }
 }

@@ -19,11 +19,12 @@ namespace AeonSourceGenerator.Emitters
         protected int AddressMode => this.state.AddressMode;
         protected int ParameterIndex => this.state.ParameterIndex;
         protected bool ByRef => this.state.ReturnType == EmitReturnType.Address;
-        protected bool WriteOnly => throw new NotImplementedException();
+        protected bool WriteOnly => this.state.WriteOnly;
         protected EmitterTypeCode MethodArgType => this.state.MethodArgType;
 
         public static void WriteCall(TextWriter writer, EmulateMethodCall method)
         {
+            writer.Write("\t\t\t");
             writer.Write(method.Name);
             writer.Write('(');
             writer.Write(method.Arg1);

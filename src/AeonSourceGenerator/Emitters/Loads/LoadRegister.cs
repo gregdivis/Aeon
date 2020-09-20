@@ -19,7 +19,7 @@ namespace AeonSourceGenerator.Emitters
         public override void Initialize(TextWriter writer)
         {
             // Reg is the middle 3 bits of the ModR/M byte.
-            writer.WriteLine($"var arg{this.ParameterIndex}Reg = (*ip & 0x38) >> 3;");
+            writer.WriteLine($"\t\t\tvar arg{this.ParameterIndex}Reg = (*ip & 0x38) >> 3;");
         }
         public override void WriteParameter(TextWriter writer)
         {

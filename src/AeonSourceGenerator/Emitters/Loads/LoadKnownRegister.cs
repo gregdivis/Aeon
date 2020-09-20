@@ -61,7 +61,7 @@ namespace AeonSourceGenerator.Emitters
             else if (this.ByRef)
                 writer.Write("ref ");
 
-            writer.Write($"({this.GetRuntimeTypeName()}*)p.{info.Name}");
+            writer.Write($"*({this.GetRuntimeTypeName()}*)p.{info.Name}");
         }
 
         private readonly struct RegisterInfo

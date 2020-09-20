@@ -20,7 +20,7 @@ namespace AeonSourceGenerator.Emitters
 
         public override void Initialize(TextWriter writer)
         {
-            writer.WriteLine($"var arg{this.ParameterIndex} = ReadImmediate<{this.GetTypeName()}>(ref ip);");
+            writer.WriteLine($"\t\t\tvar arg{this.ParameterIndex} = ReadImmediate<{this.GetTypeName()}>(ref ip);");
         }
 
         private string GetTypeName()
@@ -41,7 +41,7 @@ namespace AeonSourceGenerator.Emitters
             {
                 return this.ImmediateSize switch
                 {
-                    1 => string.Empty,
+                    1 => "byte",
                     2 => "ushort",
                     4 => "uint",
                     6 => "long",

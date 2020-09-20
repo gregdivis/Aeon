@@ -63,53 +63,35 @@ namespace AeonSourceGenerator.Emitters
                 throw new ArgumentException("Invalid addressing mode.");
         }
 
-        public void WriteCall(TextWriter writer, EmulateMethodCall method)
+        public override void Initialize(TextWriter writer)
         {
-            writer.WriteLine($"if (arg{this.ParameterIndex}.IsPointer)");
-            writeCall($"arg{this.ParameterIndex}.RegisterValue", method);
-            writer.WriteLine("else");
-            writer.WriteLine('{');
-            if (this.WriteOnly)
+            writer.WriteLine("\t\t\tGetModRm(ref ip, out var mod, out var rm);");
+        }
+
+        public override void WriteParameter(TextWriter writer)
+        {
+            if (!this.ByRef)
             {
-                writer.WriteLine($"var temp = vm.PhysicalMemory.{CallGetMemoryInt(this.ValueSize)}(arg{this.ParameterIndex}.Address);");
-                writeCall("temp", method);
-                writer.WriteLine($"vm.PhysicalMemory.{CallSetMemoryInt(this.ValueSize)}(arg{this.ParameterIndex}.Address);");
+                writer.Write($"arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterValue : arg{this.ParameterIndex}Temp");
             }
             else
             {
-                writeCall("var temp", method);
-            }
+                if (this.WriteOnly)
+                    writer.Write("out ");
+                else if (this.ByRef)
+                    writer.Write("ref ");
 
-            writer.WriteLine('}');
-
-            void writeCall(string myArg, EmulateMethodCall m)
-            {
-                writer.Write($"{m.Name}({m.Arg1}");
-                foreach (var emitter in m.ArgEmitters)
-                {
-                    writer.Write(", ");
-
-                    if (emitter == this)
-                    {
-                        if (this.WriteOnly)
-                            writer.Write("out ");
-                        else
-                            writer.Write("ref ");
-
-                        writer.Write(myArg);
-                    }
-                    else
-                    {
-                        emitter.WriteParameter(writer);
-                    }
-                }
-
-                writer.WriteLine(");");
+                writer.Write($"*(arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterPointer : &arg{this.ParameterIndex}Temp)");
             }
         }
-        public override void WriteParameter(TextWriter writer)
+
+        public override void Complete(TextWriter writer)
         {
-            writer.Write($"arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterValue : vm.{CallGetMemoryInt(this.ValueSize)}(arg{this.ParameterIndex}.Address)");
+            if (this.ByRef)
+            {
+                writer.WriteLine($"\t\t\tif (!arg{this.ParameterIndex}.IsPointer)");
+                writer.WriteLine($"\t\t\t\tvm.PhysicalMemory.{CallSetMemoryInt(this.ValueSize)}(arg{this.ParameterIndex}.Address, arg{this.ParameterIndex}Temp);");
+            }
         }
     }
 }

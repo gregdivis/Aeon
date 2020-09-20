@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,50 +24,14 @@ namespace Aeon.Emulator.Decoding
             return value;
         }
 
-        public static unsafe void Move(VirtualMachine vm)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe void GetModRm(ref byte* ip, out byte mod, out byte rm)
         {
-            var p = vm.Processor;
-            byte* ip = p.CachedIP;
-            int rm = *ip & 0x7;
-            int mod = (*ip & 0xC0) >> 6;
-
-            var arg2 = *(ushort*)p.GetRegisterWordPointer((*ip & 0x38) >> 3);
-
-            var arg1 = GetRegRmw16<ushort>(ref ip, p, mod, rm, false, false);
-            ushort arg1Temp = default;
-            //ref ushort arg1Ref = ref arg1.IsPointer ? ref arg1.RegisterValue : ref arg1Temp;
-
-            //Instructions.Mov.MoveWord(vm, out arg1Ref, arg2);
-            Instructions.Mov.MoveWord(vm, out *(arg1.IsPointer ? arg1.RegisterPointer : &arg1Temp), arg2);
-
-            if (!arg1.IsPointer)
-                vm.PhysicalMemory.SetUInt16(arg1.Address, arg1Temp);
-
-            vm.Processor.InstructionEpilog();
-        }
-
-        public static unsafe void Add(VirtualMachine vm)
-        {
-            var p = vm.Processor;
-            byte* ip = p.CachedIP;
-            int rm = *ip & 0x7;
-            int mod = (*ip & 0xC0) >> 6;
-
-            var arg2 = *(ushort*)p.GetRegisterWordPointer((*ip & 0x38) >> 3);
-
-            var arg1 = GetRegRmw16<ushort>(ref ip, p, mod, rm, false, false);
-            if (arg1.IsPointer)
-            {
-                Instructions.Arithmetic.Add.WordAdd(p, ref arg1.RegisterValue, arg2);
-            }
+            rm = (byte)(*ip & 0x07u);
+            if (Bmi1.IsSupported)
+                mod = (byte)Bmi1.BitFieldExtract(*ip, 0x0206);
             else
-            {
-                var temp = vm.PhysicalMemory.GetUInt16(arg1.Address);
-                Instructions.Arithmetic.Add.WordAdd(p, ref temp, arg2);
-                vm.PhysicalMemory.SetUInt16(arg1.Address, temp);
-            }
-
-            vm.Processor.InstructionEpilog();
+                mod = (byte)((*ip & 0xC0u) >> 6);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -118,6 +83,87 @@ namespace Aeon.Emulator.Decoding
             {
                 return p.GetRM16Offset(rm, (ushort)displacement);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe RmwValue<T> GetRegRmw32<T>(ref byte* ip, Processor p, int mod, int rm, bool offsetOnly, bool memoryOnly)
+            where T : unmanaged
+        {
+            if (mod != 3)
+                return new RmwValue<T>(GetModRMAddress32(ref ip, p, mod, rm, offsetOnly));
+            else
+                return !memoryOnly ? new RmwValue<T>(p.GetRegisterWordPointer(rm)) : throw new Mod3Exception();
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe uint GetModRMAddress32(ref byte* ip, Processor p, int mod, int rm, bool offsetOnly)
+        {
+            uint baseAddress;
+
+            if (rm == 4)
+            {
+                byte sib = ReadImmediate<byte>(ref ip);
+
+                if (mod == 0)
+                {
+                    int scale = (sib >> 6) & 0x3;
+                    int index = (sib >> 3) & 0x7;
+                    int baseIndex = sib & 0x7;
+
+                    baseAddress = baseIndex == 5 ? ReadImmediate<uint>(ref ip) : *(uint*)p.GetRegisterWordPointer(baseIndex);
+
+                    if (index != 4)
+                        baseAddress += (*(uint*)p.GetRegisterWordPointer(index)) << scale;
+
+                    if (!offsetOnly)
+                    {
+                        uint* basePtr = p.baseOverrides[(int)p.SegmentOverride];
+                        if (basePtr == null)
+                            basePtr = p.defaultSibSegments32Mod0[baseIndex];
+
+                        baseAddress += *basePtr;
+                    }
+                }
+                else
+                {
+                    baseAddress = mod == 1 ? (uint)ReadImmediate<sbyte>(ref ip) : ReadImmediate<uint>(ref ip);
+
+                    int index = (sib >> 3) & 0x7;
+                    int baseIndex = sib & 0x7;
+
+                    if (index != 4)
+                    {
+                        int scale = (sib >> 6) & 0x3;
+                        baseAddress += (*(uint*)p.GetRegisterWordPointer(index)) << scale;
+                    }
+
+                    baseAddress += *(uint*)p.GetRegisterWordPointer(baseIndex);
+
+                    if (!offsetOnly)
+                    {
+                        uint* basePtr = p.baseOverrides[(int)p.SegmentOverride];
+                        if (basePtr == null)
+                            basePtr = p.defaultSibSegments32Mod12[baseIndex];
+
+                        baseAddress += *basePtr;
+                    }
+                }
+            }
+            else
+            {
+                if (mod == 0)
+                {
+                    baseAddress = rm != 5 ? *(uint*)p.GetRegisterWordPointer(rm) : ReadImmediate<uint>(ref ip);
+                }
+                else
+                {
+                    baseAddress = mod == 1 ? (uint)ReadImmediate<sbyte>(ref ip) : ReadImmediate<uint>(ref ip);
+                    baseAddress += *(uint*)p.GetRegisterWordPointer(rm);
+                }
+            }
+
+            return baseAddress;
         }
 
         private readonly ref struct RmwValue<T>

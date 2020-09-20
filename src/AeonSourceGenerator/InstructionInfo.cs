@@ -9,6 +9,22 @@ namespace AeonSourceGenerator
     {
         private static readonly Dictionary<int, OperandFormat> operandFormats = new Dictionary<int, OperandFormat>();
 
+        private InstructionInfo()
+        {
+        }
+        private InstructionInfo(InstructionInfo src)
+        {
+            this.Opcode = src.Opcode;
+            this.Operands = src.Operands;
+            this.ModRmByte = src.ModRmByte;
+            this.ExtendedRmOpcode = src.ExtendedRmOpcode;
+            this.EmulateMethods = src.EmulateMethods;
+            this.Name = src.Name;
+            this.IsPrefix = src.IsPrefix;
+            this.IsMultiByte = src.IsMultiByte;
+            this.ActualMethodNames = src.ActualMethodNames;
+        }
+
         public ushort Opcode { get; private set; }
         public OperandFormat Operands { get; private set; }
         public ModRmInfo ModRmByte { get; private set; }
@@ -35,18 +51,21 @@ namespace AeonSourceGenerator
         {
             int operandSize = operand32 ? 32 : 16;
             int addressSize = address32 ? 32 : 16;
-            return $"Op_{this.Opcode:X4}_O{operandSize}_A{addressSize}";
+            if (this.ModRmByte == ModRmInfo.OnlyRm)
+                return $"Op_{this.Opcode:X4}_R{this.ExtendedRmOpcode}_O{operandSize}_A{addressSize}";
+            else
+                return $"Op_{this.Opcode:X4}_O{operandSize}_A{addressSize}";
         }
 
         public void SetEmulateMethods(int operandSize, int addressSize, IMethodSymbol method)
         {
-            if ((operandSize & 16) != 0)
+            if ((operandSize & 16) == 16 && (addressSize & 16) == 16)
                 this.EmulateMethods[0] = method;
-            if ((operandSize & 32) != 0)
+            if ((operandSize & 32) == 32 && (addressSize & 16) == 16)
                 this.EmulateMethods[1] = method;
-            if ((addressSize & 16) != 0)
+            if ((operandSize & 16) == 16 && (addressSize & 32) == 32)
                 this.EmulateMethods[2] = method;
-            if ((addressSize & 32) != 0)
+            if ((operandSize & 32) == 32 && (addressSize & 32) == 32)
                 this.EmulateMethods[3] = method;
         }
 
@@ -130,7 +149,7 @@ namespace AeonSourceGenerator
 
             for (int r = 0; r < 8; r++)
             {
-                var subInst = this;
+                var subInst = new InstructionInfo(this);
                 subInst.ModRmByte = ModRmInfo.None;
                 if (!subInst.IsMultiByte)
                     subInst.Opcode += (ushort)r;

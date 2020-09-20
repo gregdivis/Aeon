@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -25,9 +26,10 @@ namespace AeonSourceGenerator.Emitters
             this.newEmitters = InitializeLoaders();
         }
 
-        public void GetDelegates(InstructionInfo info, TextWriter sb)
+        public void GetDelegates(InstructionInfo info, TextWriter writer)
         {
             var methodNames = new string[4];
+            info.ActualMethodNames = methodNames;
 
             if (info.Operands.Count == 0)
             {
@@ -40,19 +42,22 @@ namespace AeonSourceGenerator.Emitters
                         var method = info.EmulateMethods[i];
                         var args = method.Parameters;
                         if (args[0].Type.Name == "VirtualMachine")
+                        {
                             methodNames[i] = $"{method.ContainingNamespace}.{method.ContainingType.Name}.{method.Name}";
+                        }
                         else
-                            methodNames[i] = $"InstructionDecoder.Op_{info.Opcode:X4}";
-
-                        BuildWrapperMethod(info.EmulateMethods[i], args[0].Type, sb);
+                        {
+                            methodNames[i] = info.GetDecodeAndEmulateMethodName((i & 1) == 1, (i & 2) == 2);
+                            BuildWrapperMethod(info, i, args[0].Type, writer);
+                        }
                     }
                 }
             }
             else
             {
                 // The instruction has operands, so we need to generate some IL.
-                BuildMethod(info, false, false);
                 methodNames[0] = info.GetDecodeAndEmulateMethodName(false, false);
+                BuildMethod(writer, info, false, false);
 
                 if (info.EmulateMethods[1] != null)
                 {
@@ -63,8 +68,8 @@ namespace AeonSourceGenerator.Emitters
                     }
                     else
                     {
-                        BuildMethod(info, true, false);
                         methodNames[1] = info.GetDecodeAndEmulateMethodName(true, false);
+                        BuildMethod(writer, info, true, false);
                     }
                 }
 
@@ -77,8 +82,8 @@ namespace AeonSourceGenerator.Emitters
                     }
                     else
                     {
-                        BuildMethod(info, false, true);
                         methodNames[2] = info.GetDecodeAndEmulateMethodName(false, true);
+                        BuildMethod(writer, info, false, true);
                     }
                 }
 
@@ -99,13 +104,11 @@ namespace AeonSourceGenerator.Emitters
                     }
                     else
                     {
-                        BuildMethod(info, true, true);
                         methodNames[3] = info.GetDecodeAndEmulateMethodName(true, true);
+                        BuildMethod(writer, info, true, true);
                     }
                 }
             }
-
-            info.ActualMethodNames = methodNames;
         }
 
         private static SortedList<OperandType, Func<EmitStateInfo, Emitter>> InitializeLoaders()
@@ -143,10 +146,13 @@ namespace AeonSourceGenerator.Emitters
             return newEmitters;
         }
 
-        private void BuildWrapperMethod(IMethodSymbol method, ITypeSymbol firstArgType, TextWriter sb)
+        private void BuildWrapperMethod(InstructionInfo info, int methodIndex, ITypeSymbol firstArgType, TextWriter writer)
         {
-            sb.Write($"{method.ContainingNamespace}.{method.ContainingType.Name}.{method.Name}(");
-            sb.Write(
+            var method = info.EmulateMethods[methodIndex];
+            writer.WriteLine($"\t\tpublic static void {info.ActualMethodNames[methodIndex]}(VirtualMachine vm)");
+            writer.WriteLine("\t\t{");
+            writer.Write($"\t\t\t{method.ContainingNamespace}.{method.ContainingType.Name}.{method.Name}(");
+            writer.Write(
                 firstArgType.Name switch
                 {
                     "Processor" => "vm.Processor",
@@ -154,30 +160,30 @@ namespace AeonSourceGenerator.Emitters
                     _ => throw new InvalidOperationException()
                 }
             );
-            sb.WriteLine(");");
+            writer.WriteLine(");");
+            writer.WriteLine("\t\t\tvm.Processor.InstructionEpilog();");
+            writer.WriteLine("\t\t}");
         }
 
-        private void BuildMethod(InstructionInfo info, bool operandSize32, bool addressSize32)
+        private void BuildMethod(TextWriter writer, InstructionInfo info, bool operandSize32, bool addressSize32)
         {
-            IMethodSymbol emulateMethod;
+            int methodIndex = (operandSize32 ? 1 : 0) | (addressSize32 ? 2 : 0);
+            var emulateMethod = info.EmulateMethods[methodIndex];
+
             if (operandSize32)
             {
                 this.wordSize = 4;
                 this.wordType = typeof(uint);
-                emulateMethod = info.EmulateMethods[1 | (addressSize32 ? 2 : 0)];
             }
             else
             {
                 this.wordSize = 2;
                 this.wordType = typeof(ushort);
-                emulateMethod = info.EmulateMethods[0 | (addressSize32 ? 2 : 0)];
             }
 
             this.addressSize32 = addressSize32;
 
-            var sb = new StringWriter();
-
-            var parameters = info.EmulateMethods[0].Parameters;
+            var parameters = emulateMethod.Parameters;
             bool isByRef = parameters[1].RefKind != RefKind.None;
             bool isOut = parameters[1].RefKind == RefKind.Out;
             bool isParam2ByRef = false;
@@ -188,67 +194,84 @@ namespace AeonSourceGenerator.Emitters
             requiresTemp = false;
             tempType = null;
 
-            sb.WriteLine($"public static unsafe void Op_{info.Opcode:X4}(VirtualMachine vm)");
-            sb.WriteLine("{");
-            sb.WriteLine("var p = vm.Processor;");
-            var emitters = CreateOperandEmitters(info, isByRef, isParam2ByRef, sb);
+            writer.WriteLine($"\t\tpublic static unsafe void {info.ActualMethodNames[methodIndex]}(VirtualMachine vm)");
+            writer.WriteLine("\t\t{");
+            writer.WriteLine("\t\t\tvar p = vm.Processor;");
+            writer.WriteLine("\t\t\tvar ip = p.CachedInstruction;");
+            var emitters = CreateOperandEmitters(info, isByRef, isParam2ByRef, emulateMethod, writer);
 
-            sb.WriteLine("p.EIP += p.CachedIP - p.CachedInstrution;");
+            writer.WriteLine("\t\t\tp.EIP += (uint)(ip - p.CachedInstruction);");
 
-            sb.Write($"{emulateMethod.ContainingNamespace}.{emulateMethod.ContainingType.Name}.{emulateMethod.Name}(");
-            for (int i = 0; i < emitters.Count; i++)
+            var firstArg = parameters[0].Type.Name switch
             {
-                if (i > 0)
-                {
-                    sb.Write(", ");
-                    if (i == 1 && isParam2ByRef)
-                        sb.Write("ref ");
-                }
-                else
-                {
-                    if (isOut)
-                        sb.Write("out ");
-                    else if (isByRef)
-                        sb.Write("ref ");
-                }
+                "VirtualMachine" => "vm",
+                "Processor" => "p",
+                "PhysicalMemory" => "vm.PhysicalMemory",
+                _ => throw new NotImplementedException("arg1 " + parameters[0].Type.Name)
+            };
 
-                emitters[i].WriteParameter(sb);
-            }
+            var methodCallInfo = new EmulateMethodCall($"{emulateMethod.ContainingNamespace}.{emulateMethod.ContainingType.Name}.{emulateMethod.Name}", firstArg, emitters);
 
-            sb.WriteLine(");");
+            Emitter.WriteCall(writer, methodCallInfo);
 
             foreach (var emitter in emitters)
-                emitter.Complete(sb);
+                emitter.Complete(writer);
 
             if (!info.IsPrefix)
-                sb.WriteLine("p.InstrutionEpilog();");
+                writer.WriteLine("\t\t\tp.InstructionEpilog();");
 
-            sb.WriteLine("}");
+            writer.WriteLine("\t\t}");
         }
-        private List<Emitter> CreateOperandEmitters(InstructionInfo info, bool isParam1ByRef, bool isParam2ByRef, TextWriter sb)
+        private List<Emitter> CreateOperandEmitters(InstructionInfo info, bool isParam1ByRef, bool isParam2ByRef, IMethodSymbol method, TextWriter sb)
         {
             var emitters = new List<Emitter>(3);
 
-            //foreach (int index in info.Operands.SortedIndices)
-            //{
-            //    bool returnValue = !(index == 0 && isParam1ByRef) && !(index == 1 && isParam2ByRef);
-            //    var state = new EmitStateInfo(wordSize, returnValue ? EmitReturnType.Value : EmitReturnType.Address, addressSize32 ? 32 : 16, index);
+            for (int index = 0; index < info.Operands.Count; index++)
+            {
+                bool returnValue = !(index == 0 && isParam1ByRef) && !(index == 1 && isParam2ByRef);
+                var (typeCode, writeOnly) = GetMethodArgType(method.Parameters[index + 1]);
+                var state = new EmitStateInfo(wordSize, returnValue ? EmitReturnType.Value : EmitReturnType.Address, addressSize32 ? 32 : 16, index, typeCode, writeOnly);
 
-            //    var operand = info.Operands[index];
-            //    if (!this.newEmitters.TryGetValue(operand, out var newEmitter))
-            //    {
-            //        if (!LoadKnownRegister.IsKnownRegister(operand))
-            //            throw new InvalidOperationException();
+                var operand = info.Operands[index];
+                if (!this.newEmitters.TryGetValue(operand, out var newEmitter))
+                {
+                    if (!LoadKnownRegister.IsKnownRegister(operand))
+                        throw new InvalidOperationException();
 
-            //        newEmitter = s => new LoadKnownRegister(s, operand);
-            //    }
+                    newEmitter = s => new LoadKnownRegister(s, operand);
+                }
 
-            //    var emitter = newEmitter(state);
-            //    emitter.Initialize(sb);
-            //    emitters.Add(emitter);
-            //}
+                var emitter = newEmitter(state);
+                emitters.Add(emitter);
+            }
+
+            foreach (int i in info.Operands.SortedIndices)
+                emitters[i].Initialize(sb);
 
             return emitters;
+        }
+
+        private static (EmitterTypeCode typeCode, bool writeOnly) GetMethodArgType(IParameterSymbol arg)
+        {
+            var code = arg.Type.Name switch
+            {
+                "Byte" => EmitterTypeCode.Byte,
+                "SByte" => EmitterTypeCode.SByte,
+                "Int16" => EmitterTypeCode.Short,
+                "UInt16" => EmitterTypeCode.UShort,
+                "Int32" => EmitterTypeCode.Int,
+                "UInt32" => EmitterTypeCode.UInt,
+                "Int64" => EmitterTypeCode.Long,
+                "UInt64" => EmitterTypeCode.ULong,
+                "Float" => EmitterTypeCode.Float,
+                "Double" => EmitterTypeCode.Double,
+                "Real10" => EmitterTypeCode.Real10,
+                "SegmentIndex" => EmitterTypeCode.SegmentIndex,
+                "IntPtr" => EmitterTypeCode.IntPtr,
+                _ => throw new ArgumentException("Unknown type: " + arg.Type.Name)
+            };
+
+            return (code, arg.RefKind == RefKind.Out);
         }
     }
 }
