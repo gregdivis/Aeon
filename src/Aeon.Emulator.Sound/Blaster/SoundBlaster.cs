@@ -11,7 +11,6 @@ namespace Aeon.Emulator.Sound.Blaster
     public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8, IDmaDevice16
     {
         private readonly VirtualMachine vm;
-        private readonly IntPtr hwnd;
         private readonly DmaChannel dmaChannel;
         private readonly List<byte> commandData = new List<byte>();
         private readonly Queue<byte> outputData = new Queue<byte>();
@@ -35,13 +34,9 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <param name="irq">IRQ number for the Sound Blaster.</param>
         /// <param name="dma8">8-bit DMA channel for the Sound Blaster.</param>
         /// <param name="dma16">16-bit DMA channel for the Sound Blaster.</param>
-        public SoundBlaster(VirtualMachine vm, IntPtr hwnd, int irq, int dma8, int dma16)
+        public SoundBlaster(VirtualMachine vm, int irq, int dma8, int dma16)
         {
-            if (hwnd == IntPtr.Zero)
-                throw new ArgumentNullException(nameof(hwnd));
-
             this.vm = vm ?? throw new ArgumentNullException(nameof(vm));
-            this.hwnd = hwnd;
             this.IRQ = irq;
             this.DMA = dma8;
             this.dma16 = dma16;
@@ -61,8 +56,8 @@ namespace Aeon.Emulator.Sound.Blaster
         /// </summary>
         /// <param name="vm">Virtual machine instance associated with the device.</param>
         /// <param name="hwnd">Main application window handle.</param>
-        public SoundBlaster(VirtualMachine vm, IntPtr hwnd)
-            : this(vm, hwnd, 7, 1, 5)
+        public SoundBlaster(VirtualMachine vm)
+            : this(vm, 7, 1, 5)
         {
         }
 
@@ -355,36 +350,34 @@ namespace Aeon.Emulator.Sound.Blaster
             Span<byte> buffer = stackalloc byte[512];
             short[] writeBuffer = new short[65536 * 2];
 
-            using var soundBuffer = DirectSound.GetInstance(hwnd).CreateBuffer(44100, ChannelMode.Stereo, BitsPerSample.Sixteen, TimeSpan.FromSeconds(0.25));
-            soundBuffer.Play(PlaybackMode.LoopContinuously);
+            using var player = Audio.CreatePlayer();
+            int sampleRate = (int)player.Format.SampleRate;
+            player.BeginPlayback();
 
             while (!this.endPlayback)
             {
                 this.dsp.Read(buffer);
                 int length;
                 if (this.dsp.Is16Bit && this.dsp.IsStereo)
-                    length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, 44100, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
+                    length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
                 else if (this.dsp.Is16Bit)
-                    length = LinearUpsampler.Resample16Mono(dsp.SampleRate, 44100, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
+                    length = LinearUpsampler.Resample16Mono(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
                 else if (this.dsp.IsStereo)
-                    length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, 44100, buffer, writeBuffer);
+                    length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, sampleRate, buffer, writeBuffer);
                 else
-                    length = LinearUpsampler.Resample8Mono(dsp.SampleRate, 44100, buffer, writeBuffer);
+                    length = LinearUpsampler.Resample8Mono(dsp.SampleRate, sampleRate, buffer, writeBuffer);
 
-                while (!soundBuffer.Write(writeBuffer, 0, length))
-                {
-                    Thread.Sleep(1);
-                }
+                Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
 
                 if (this.pausePlayback)
                 {
-                    soundBuffer.Stop();
+                    player.StopPlayback();
                     while (this.pausePlayback)
                     {
                         Thread.Sleep(1);
                     }
 
-                    soundBuffer.Play(PlaybackMode.LoopContinuously);
+                    player.BeginPlayback();
                 }
 
                 if (this.pauseDuration > 0)
@@ -392,12 +385,7 @@ namespace Aeon.Emulator.Sound.Blaster
                     Array.Clear(writeBuffer, 0, writeBuffer.Length);
                     int count = this.pauseDuration / (1024 / 2) + 1;
                     for (int i = 0; i < count; i++)
-                    {
-                        while (!soundBuffer.Write(writeBuffer, 0, 1024))
-                        {
-                            Thread.Sleep(1);
-                        }
-                    }
+                        Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, 1024));
 
                     this.pauseDuration = 0;
                     RaiseInterrupt();

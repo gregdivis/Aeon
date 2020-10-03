@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using TinyAudio;
 
 namespace Aeon.Emulator.Sound.PCSpeaker
 {
@@ -17,13 +18,12 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// </summary>
         private const double FrequencyFactor = 1193180;
 
-        private readonly int outputSampleRate = 44100;
+        private readonly int outputSampleRate = 48000;
         private readonly int ticksPerSample;
         private readonly LatchedUInt16 frequencyRegister = new LatchedUInt16();
         private readonly Stopwatch durationTimer = new Stopwatch();
         private readonly ConcurrentQueue<QueuedNote> queuedNotes = new ConcurrentQueue<QueuedNote>();
         private readonly object threadStateLock = new object();
-        private DirectSound directSound;
         private SpeakerControl controlRegister = SpeakerControl.UseTimer;
         private Task generateWaveformTask;
         private readonly CancellationTokenSource cancelGenerateWaveform = new CancellationTokenSource();
@@ -32,12 +32,10 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// <summary>
         /// Initializes a new instance of the InternalSpeaker class.
         /// </summary>
-        /// <param name="hwnd">The parent window handle.</param>
-        public InternalSpeaker(IntPtr hwnd)
+        public InternalSpeaker()
         {
             this.frequencyRegister.ValueChanged += this.FrequencyChanged;
-            this.ticksPerSample = (int)((double)Stopwatch.Frequency / (double)outputSampleRate);
-            this.directSound = DirectSound.GetInstance(hwnd);
+            this.ticksPerSample = (int)(Stopwatch.Frequency / (double)this.outputSampleRate);
         }
 
         IEnumerable<int> IInputPort.InputPorts => new int[] { 0x61 };
@@ -169,15 +167,20 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// </summary>
         private async Task GenerateWaveformAsync()
         {
-            using var soundBuffer = this.directSound.CreateBuffer(this.outputSampleRate, ChannelMode.Monaural, BitsPerSample.Eight, this.outputSampleRate / 8);
+            using var player = Audio.CreatePlayer();
+
+            FillWithSilence(player);
 
             var buffer = new byte[4096];
-            GenerateSilence(buffer);
+            var writeBuffer = buffer;
+            bool expandToStereo = false;
+            if (player.Format.Channels == 2)
+            {
+                writeBuffer = new byte[buffer.Length * 2];
+                expandToStereo = true;
+            }
 
-            // Initialize the buffer with an empty waveform.
-            while (soundBuffer.Write(buffer, 0, buffer.Length)) { }
-
-            soundBuffer.Play(PlaybackMode.LoopContinuously);
+            player.BeginPlayback();
 
             int idleCount = 0;
 
@@ -188,13 +191,15 @@ namespace Aeon.Emulator.Sound.PCSpeaker
                     int samples = GenerateSquareWave(buffer, note.Period);
                     int periods = note.PeriodCount;
 
+                    if (expandToStereo)
+                    {
+                        ChannelAdapter.MonoToStereo(buffer.AsSpan(0, samples), writeBuffer.AsSpan(0, samples * 2));
+                        samples *= 2;
+                    }
+
                     while (periods > 0)
                     {
-                        while (!soundBuffer.Write(buffer, 0, samples))
-                        {
-                            Thread.SpinWait(10);
-                        }
-
+                        Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, samples));
                         periods--;
                     }
 
@@ -203,12 +208,25 @@ namespace Aeon.Emulator.Sound.PCSpeaker
                 }
                 else
                 {
-                    soundBuffer.Write(buffer, 0, buffer.Length / 2);
+                    while (player.WriteData(buffer) > 0)
+                    {
+                    }
+
                     await Task.Delay(5, this.cancelGenerateWaveform.Token);
                     idleCount++;
                 }
 
                 this.cancelGenerateWaveform.Token.ThrowIfCancellationRequested();
+            }
+        }
+
+        private static void FillWithSilence(AudioPlayer player)
+        {
+            var buffer = new float[4096];
+            var span = buffer.AsSpan();
+
+            while (player.WriteData(span) > 0)
+            {
             }
         }
     }

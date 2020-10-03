@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using TinyAudio;
 using Ymf262Emu;
 
 namespace Aeon.Emulator.Sound.FM
@@ -12,11 +13,8 @@ namespace Aeon.Emulator.Sound.FM
     {
         private const byte Timer1Mask = 0xC0;
         private const byte Timer2Mask = 0xA0;
-        private const int DefaultSampleRate = 44100;
 
-        private readonly IntPtr hwnd;
-        private DirectSound directSound;
-        private DirectSoundBuffer soundBuffer;
+        private readonly AudioPlayer audioPlayer = Audio.CreatePlayer();
         private int currentAddress;
         private readonly FmSynthesizer synth;
         private System.Threading.Thread generateThread;
@@ -27,26 +25,10 @@ namespace Aeon.Emulator.Sound.FM
         private byte statusByte;
         private bool initialized;
         private bool paused;
-        private readonly int sampleRate;
 
-        /// <summary>
-        /// Initializes a new instance of the FmSoundCard class.
-        /// </summary>
-        /// <param name="hwnd">Main application window handle.</param>
-        public FmSoundCard(IntPtr hwnd)
-            : this(DefaultSampleRate, hwnd)
+        public FmSoundCard()
         {
-        }
-        /// <summary>
-        /// Initializes a new instance of the FmSoundCard class.
-        /// </summary>
-        /// <param name="sampleRate">Sample rate of generated PCM data.</param>
-        /// <param name="hwnd">Main application window handle.</param>
-        public FmSoundCard(int sampleRate, IntPtr hwnd)
-        {
-            this.sampleRate = sampleRate;
-            this.hwnd = hwnd;
-            this.synth = new FmSynthesizer(sampleRate);
+            this.synth = new FmSynthesizer((int)this.audioPlayer.Format.SampleRate);
             this.generateThread = new System.Threading.Thread(this.GenerateWaveforms)
             {
                 IsBackground = true,
@@ -149,7 +131,7 @@ namespace Aeon.Emulator.Sound.FM
                     this.generateThread.Join();
                 }
 
-                this.soundBuffer.Dispose();
+                this.audioPlayer.Dispose();
                 this.initialized = false;
             }
         }
@@ -160,28 +142,37 @@ namespace Aeon.Emulator.Sound.FM
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void GenerateWaveforms()
         {
-            var buffer = new short[1024];
-            synth.GetData(buffer);
-            soundBuffer.Play(PlaybackMode.LoopContinuously);
+            var buffer = new float[1024];
+            float[] playBuffer;
+
+            bool expandToStereo = this.audioPlayer.Format.Channels == 2;
+            if (expandToStereo)
+                playBuffer = new float[buffer.Length * 2];
+            else
+                playBuffer = buffer;
+
+            this.audioPlayer.BeginPlayback();
+            fillBuffer();
             while (!endThread)
             {
-                while (soundBuffer.Write(buffer, 0, buffer.Length))
-                {
-                    synth.GetData(buffer);
-                }
-
-                System.Threading.Thread.Sleep(5);
+                Audio.WriteFullBuffer(this.audioPlayer, playBuffer);
+                fillBuffer();
             }
 
-            soundBuffer.Stop();
+            this.audioPlayer.StopPlayback();
+
+            void fillBuffer()
+            {
+                this.synth.GetData(buffer);
+                if (expandToStereo)
+                    ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
+            }
         }
         /// <summary>
         /// Performs DirectSound initialization.
         /// </summary>
         private void Initialize()
         {
-            this.directSound = DirectSound.GetInstance(hwnd);
-            this.soundBuffer = directSound.CreateBuffer(sampleRate, ChannelMode.Monaural, BitsPerSample.Sixteen, TimeSpan.FromSeconds(0.25));
             this.generateThread.Start();
             this.initialized = true;
         }

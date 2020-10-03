@@ -88,14 +88,13 @@ namespace Aeon.Emulator.Launcher
             this.emulatorDisplay.EmulatorHost.VirtualMachine.FileSystem.WorkingDirectory = new VirtualPath(config.StartupPath);
 
             var vm = this.emulatorDisplay.EmulatorHost.VirtualMachine;
-            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
 
-            vm.RegisterVirtualDevice(new Sound.PCSpeaker.InternalSpeaker(handle));
-            vm.RegisterVirtualDevice(new Sound.Blaster.SoundBlaster(vm, handle));
-            vm.RegisterVirtualDevice(new Sound.FM.FmSoundCard(handle));
+            vm.RegisterVirtualDevice(new Sound.PCSpeaker.InternalSpeaker());
+            vm.RegisterVirtualDevice(new Sound.Blaster.SoundBlaster(vm));
+            vm.RegisterVirtualDevice(new Sound.FM.FmSoundCard());
             vm.RegisterVirtualDevice(new Sound.GeneralMidi());
 
-            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 20_000_000;
+            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 200_000_000;
             emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? Presentation.MouseInputMode.Absolute : Presentation.MouseInputMode.Relative;
             toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;

@@ -15,8 +15,5 @@ namespace Aeon.Emulator.Sound
         public static extern uint midiOutReset(IntPtr hmo);
 
         public const uint MIDI_MAPPER = 0xFFFFFFFF;
-
-        [DllImport("dsound.dll", CallingConvention = CallingConvention.Winapi)]
-        public static extern uint DirectSoundCreate8(IntPtr lpcGuidDevice, out IntPtr ppDS8, IntPtr pUnkOuter);
     }
 }
