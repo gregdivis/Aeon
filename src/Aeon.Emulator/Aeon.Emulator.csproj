@@ -9,7 +9,4 @@
     <Title>Aeon Core</Title>
     <Version>0.7.0</Version>
   </PropertyGroup>
-  <ItemGroup>
-    <!--<ProjectReference Include="..\AeonSourceGenerator\AeonSourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />-->
-  </ItemGroup>
 </Project>
