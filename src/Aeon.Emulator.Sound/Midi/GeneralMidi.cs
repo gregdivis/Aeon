@@ -8,7 +8,7 @@ namespace Aeon.Emulator.Sound
     /// </summary>
     public sealed class GeneralMidi : IInputPort, IOutputPort
     {
-        private MidiMapper midiMapper;
+        private MidiDevice midiMapper;
         private readonly Queue<byte> dataBytes = new Queue<byte>();
 
         private const int DataPort = 0x330;
@@ -20,14 +20,23 @@ namespace Aeon.Emulator.Sound
         /// <summary>
         /// Initializes a new instance of the GeneralMidi class.
         /// </summary>
-        public GeneralMidi()
+        public GeneralMidi(string mt32RomsPath = null)
         {
+            this.Mt32RomsPath = mt32RomsPath;
         }
 
         /// <summary>
         /// Gets the current state of the General MIDI device.
         /// </summary>
         public GeneralMidiState State { get; private set; }
+        /// <summary>
+        /// Gets or sets the path where MT-32 roms are stored.
+        /// </summary>
+        public string Mt32RomsPath { get; }
+        /// <summary>
+        /// Gets or sets a value indicating whether to emulate an MT-32 device.
+        /// </summary>
+        public bool UseMT32 => !string.IsNullOrWhiteSpace(this.Mt32RomsPath);
 
         /// <summary>
         /// Gets the current value of the MIDI status port.
@@ -72,7 +81,7 @@ namespace Aeon.Emulator.Sound
             {
                 case DataPort:
                     if (this.midiMapper == null)
-                        this.midiMapper = new MidiMapper();
+                        this.midiMapper = this.UseMT32 && !string.IsNullOrWhiteSpace(this.Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath) : new WindowsMidiMapper();
                     this.midiMapper.SendByte(value);
                     break;
 
@@ -102,11 +111,11 @@ namespace Aeon.Emulator.Sound
 
         void IVirtualDevice.Pause()
         {
-            if (this.midiMapper != null)
-                this.midiMapper.Reset();
+            this.midiMapper?.Pause();
         }
         void IVirtualDevice.Resume()
         {
+            this.midiMapper?.Resume();
         }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
@@ -114,11 +123,8 @@ namespace Aeon.Emulator.Sound
 
         public void Dispose()
         {
-            if (this.midiMapper != null)
-            {
-                this.midiMapper.Dispose();
-                this.midiMapper = null;
-            }
+            this.midiMapper?.Dispose();
+            this.midiMapper = null;
         }
 
         [Flags]

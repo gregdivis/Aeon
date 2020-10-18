@@ -6,11 +6,7 @@ namespace Aeon.Emulator.Sound
 {
     internal static class Audio
     {
-        public static AudioPlayer CreatePlayer() => WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25));
-        public static AudioPlayer CreatePlayer(int sampleRate, int bitsPerSample, bool stereo, TimeSpan bufferLength)
-        {
-            return new DirectSoundAudioPlayer(new AudioFormat((uint)sampleRate, stereo ? 2u : 1u, bitsPerSample == 8 ? SampleFormat.UnsignedPcm8 : SampleFormat.SignedPcm16), bufferLength);
-        }
+        public static AudioPlayer CreatePlayer(bool useCallback = false) => WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
 
         public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer)
         {

@@ -45,11 +45,10 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                 throw new ArgumentNullException(nameof(path));
 
             var fullPath = GetFullPath(path);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-            //if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
-            //    return ExtendedErrorCode.PathNotFound;
-            //else if (!File.Exists(fullPath))
-            //    return ExtendedErrorCode.FileNotFound;
+            if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
+                return ExtendedErrorCode.PathNotFound;
+            else if (!File.Exists(fullPath))
+                return ExtendedErrorCode.FileNotFound;
 
             return new FileStream(fullPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         }

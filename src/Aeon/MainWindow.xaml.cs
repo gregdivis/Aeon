@@ -39,9 +39,11 @@ namespace Aeon.Emulator.Launcher
                 emulatorDisplay.Focus();
         }
 
-        private void ApplyConfiguration(Configuration.AeonConfiguration config)
+        private void ApplyConfiguration(AeonConfiguration config)
         {
             this.emulatorDisplay.ResetEmulator(config.PhysicalMemorySize ?? 16);
+
+            var globalConfig = GlobalConfiguration.Load();
 
             foreach (var (letter, info) in config.Drives)
             {
@@ -92,9 +94,9 @@ namespace Aeon.Emulator.Launcher
             vm.RegisterVirtualDevice(new Sound.PCSpeaker.InternalSpeaker());
             vm.RegisterVirtualDevice(new Sound.Blaster.SoundBlaster(vm));
             vm.RegisterVirtualDevice(new Sound.FM.FmSoundCard());
-            vm.RegisterVirtualDevice(new Sound.GeneralMidi());
+            vm.RegisterVirtualDevice(new Sound.GeneralMidi(globalConfig.Mt32Enabled ? globalConfig.Mt32RomsPath : null));
 
-            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 200_000_000;
+            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 20_000_000;
             emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? Presentation.MouseInputMode.Absolute : Presentation.MouseInputMode.Relative;
             toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
@@ -133,9 +135,9 @@ namespace Aeon.Emulator.Launcher
         {
             bool hasConfig = fileName.EndsWith(".AeonConfig", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".AeonPack", StringComparison.OrdinalIgnoreCase);
             if (hasConfig)
-                this.currentConfig = Configuration.AeonConfiguration.Load(fileName);
+                this.currentConfig = AeonConfiguration.Load(fileName);
             else
-                this.currentConfig = Configuration.AeonConfiguration.GetQuickLaunchConfiguration(Path.GetDirectoryName(fileName), Path.GetFileName(fileName));
+                this.currentConfig = AeonConfiguration.GetQuickLaunchConfiguration(Path.GetDirectoryName(fileName), Path.GetFileName(fileName));
 
             this.LaunchCurrentConfig();
         }
@@ -168,7 +170,7 @@ namespace Aeon.Emulator.Launcher
 
             if (dialog.ShowDialog(this))
             {
-                this.currentConfig = Configuration.AeonConfiguration.GetQuickLaunchConfiguration(dialog.Path, null);
+                this.currentConfig = AeonConfiguration.GetQuickLaunchConfiguration(dialog.Path, null);
                 this.LaunchCurrentConfig();
             }
         }
