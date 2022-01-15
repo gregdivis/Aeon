@@ -11,8 +11,8 @@ emulator. If you're just looking to get an old game running, just use DOSBox :)
 See the [Releases](https://github.com/gregdivis/Aeon/releases) page for the latest builds, or
 get the source and build it yourself (see building instructions below).
 
-Aeon doesn't haven an installer, but does require that the .NET Core 3.1 runtime is installed.
-You can download it from Microsoft at [https://dotnet.microsoft.com/download/dotnet-core/3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1).
+Aeon doesn't have an installer, but does require that the .NET 6 runtime is installed.
+You can download it from Microsoft at [https://dotnet.microsoft.com/download/dotnet/6.0](https://dotnet.microsoft.com/download/dotnet/6.0).
 
 # Usage
 The easiest way to get started is just to use the "quick launch program" button in the toolbar, and
@@ -28,7 +28,7 @@ a `.AeonConfig` extension and launching it with the quick launch program button.
 documented yet; samples are forthcoming if anyone is interested.
 
 # Building
-You can build Aeon using Visual Studio 2019. It has a couple NuGet dependencies that should be fetched
+You can build Aeon using Visual Studio 2022. It has a couple NuGet dependencies that should be fetched
 automatically on build.
 
 **Important**: Aeon will be *extremely* slow if you build in Debug configuration, and even in a Release
