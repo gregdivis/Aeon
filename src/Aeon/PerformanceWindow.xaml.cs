@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Threading;
-using Aeon.Presentation;
+using Aeon.Emulator.Launcher.Presentation;
 
 namespace Aeon.Emulator.Launcher
 {
