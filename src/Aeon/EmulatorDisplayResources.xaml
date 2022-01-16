@@ -1,6 +1,6 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:emu="clr-namespace:Aeon.Presentation;assembly=Aeon.Presentation">
+                    xmlns:emu="clr-namespace:Aeon.Emulator.Launcher">
     <Style TargetType="{x:Type emu:EmulatorDisplay}">
         <Style.Triggers>
             <Trigger Property="EmulatorState" Value="Paused">

@@ -7,7 +7,6 @@ using Aeon.DiskImages;
 using Aeon.DiskImages.Archives;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Launcher.Configuration;
-using Aeon.Presentation.Dialogs;
 using Microsoft.Win32;
 
 namespace Aeon.Emulator.Launcher
@@ -97,7 +96,7 @@ namespace Aeon.Emulator.Launcher
             vm.RegisterVirtualDevice(new Sound.GeneralMidi(globalConfig.Mt32Enabled ? globalConfig.Mt32RomsPath : null));
 
             emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 20_000_000;
-            emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? Presentation.MouseInputMode.Absolute : Presentation.MouseInputMode.Relative;
+            emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? MouseInputMode.Absolute : MouseInputMode.Relative;
             toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             if (!string.IsNullOrEmpty(config.Title))
@@ -163,7 +162,7 @@ namespace Aeon.Emulator.Launcher
         }
         private void CommandPrompt_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Presentation.Browsers.FolderBrowserDialog
+            var dialog = new FolderBrowserDialog
             {
                 Title = "Select folder for C:\\ drive..."
             };
@@ -239,7 +238,7 @@ namespace Aeon.Emulator.Launcher
                 this.SetCurrentValue(BackgroundProperty, this.FindResource("backgroundGradient"));
             }
         }
-        private void EmulatorDisplay_EmulationError(object sender, Presentation.EmulationErrorRoutedEventArgs e)
+        private void EmulatorDisplay_EmulationError(object sender, EmulationErrorRoutedEventArgs e)
         {
             var end = new TaskDialogItem("End Program", "Terminates the current emulation session.");
             var debug = new TaskDialogItem("Debug", "View the current emulation session in the Aeon debugger.");
