@@ -3,44 +3,26 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
     internal sealed class Scale2x : Scaler
     {
-        private readonly IntPtr innerBuffer;
-        private bool disposed;
-
-        public Scale2x(int width, int height)
-            : base(width, height, new FastBitmap(width * 2, height * 2))
+        public Scale2x(int width, int height) : base(width, height)
         {
-            this.innerBuffer = Marshal.AllocHGlobal(width * height * 4);
         }
-        ~Scale2x() => this.Dispose(false);
 
         public override int TargetWidth => this.SourceWidth * 2;
         public override int TargetHeight => this.SourceHeight * 2;
-        public override IntPtr VideoModeRenderTarget => this.innerBuffer;
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!this.disposed)
-            {
-                Marshal.FreeHGlobal(this.innerBuffer);
-                this.disposed = true;
-
-                base.Dispose(disposing);
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        protected override void Scale()
+        protected override void Scale(IntPtr source, IntPtr destination)
         {
             unsafe
             {
                 int width = this.SourceWidth;
                 int height = this.SourceHeight;
-                var psrc = (uint*)this.innerBuffer.ToPointer();
-                var pdest = (uint*)this.Output.PixelBuffer.ToPointer();
+                var psrc = (uint*)source.ToPointer();
+                var pdest = (uint*)destination.ToPointer();
 
                 int destPitch = width * 2;
 
@@ -78,14 +60,14 @@ namespace Aeon.Presentation.Rendering
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        protected override void VectorScale()
+        protected override void VectorScale(IntPtr source, IntPtr destinaton)
         {
             unsafe
             {
                 int width = this.SourceWidth;
                 int height = this.SourceHeight;
-                var psrc = (uint*)this.innerBuffer.ToPointer();
-                var pdest = (uint*)this.Output.PixelBuffer.ToPointer();
+                var psrc = (uint*)source.ToPointer();
+                var pdest = (uint*)destinaton.ToPointer();
 
                 int destPitch = width * 2;
 

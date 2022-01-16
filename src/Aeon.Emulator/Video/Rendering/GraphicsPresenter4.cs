@@ -1,12 +1,11 @@
 ﻿using System;
-using Aeon.Emulator.Video;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
     /// <summary>
     /// Renders 4-bit graphics to a bitmap.
     /// </summary>
-    internal sealed class GraphicsPresenter4 : Presenter
+    public sealed class GraphicsPresenter4 : Presenter
     {
         private readonly unsafe byte*[] planes;
 
@@ -15,8 +14,7 @@ namespace Aeon.Presentation.Rendering
         /// </summary>
         /// <param name="dest">Pointer to destination bitmap.</param>
         /// <param name="videoMode">VideoMode instance describing the video mode.</param>
-        public GraphicsPresenter4(IntPtr dest, VideoMode videoMode)
-            : base(dest, videoMode)
+        public GraphicsPresenter4(VideoMode videoMode) : base(videoMode)
         {
             unsafe
             {
@@ -32,7 +30,7 @@ namespace Aeon.Presentation.Rendering
         /// <summary>
         /// Updates the bitmap to match the current state of the video RAM.
         /// </summary>
-        public override void Update()
+        protected override void DrawFrame(IntPtr destination)
         {
             int width = this.VideoMode.Width;
             int height = Math.Min(this.VideoMode.Height, this.VideoMode.LineCompare + 1);
@@ -47,7 +45,7 @@ namespace Aeon.Presentation.Rendering
 
             unsafe
             {
-                uint* destPtr = (uint*)this.Destination.ToPointer();
+                uint* destPtr = (uint*)destination.ToPointer();
                 int destStart = 0;
 
                 for (int split = 0; split < 2; split++)

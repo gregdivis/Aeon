@@ -1,54 +1,32 @@
 ﻿using System;
 using System.Numerics;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
-    internal abstract class Scaler : IDisposable
+    internal abstract class Scaler
     {
-        private bool disposed;
-
-        protected Scaler(int width, int height, FastBitmap output)
+        protected Scaler(int width, int height)
         {
             this.SourceWidth = width;
             this.SourceHeight = height;
-            this.Output = output;
         }
 
         public int SourceWidth { get; }
         public int SourceHeight { get; }
         public abstract int TargetWidth { get; }
         public abstract int TargetHeight { get; }
-        public FastBitmap Output { get; }
-        public abstract IntPtr VideoModeRenderTarget { get; }
         public int WidthRatio => this.TargetWidth / this.SourceWidth;
         public int HeightRatio => this.TargetHeight / this.SourceHeight;
 
-        public void Apply()
+        public void Apply(IntPtr source, IntPtr destination)
         {
             if (Vector.IsHardwareAccelerated)
-                this.VectorScale();
+                this.VectorScale(source, destination);
             else
-                this.Scale();
+                this.Scale(source, destination);
         }
 
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            this.Dispose(true);
-        }
-
-        protected abstract void Scale();
-        protected abstract void VectorScale();
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.disposed)
-            {
-                if (disposing)
-                    this.Output.Dispose();
-
-                this.disposed = true;
-            }
-        }
+        protected abstract void Scale(IntPtr source, IntPtr destination);
+        protected abstract void VectorScale(IntPtr source, IntPtr destination);
     }
 }

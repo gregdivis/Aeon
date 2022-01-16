@@ -6,9 +6,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Aeon.Emulator;
-using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Video;
-using Aeon.Presentation.Rendering;
+using Aeon.Emulator.Video.Rendering;
 
 namespace Aeon.Presentation
 {
@@ -43,9 +42,9 @@ namespace Aeon.Presentation
         private Emulator.Video.Point cursorPosition = new Emulator.Video.Point(0, 1);
         private readonly SimpleCommand resumeCommand;
         private readonly SimpleCommand pauseCommand;
-        private Scaler currentScaler;
         private Presenter currentPresenter;
         private int physicalMemorySize = 16;
+        private FastBitmap renderTarget;
 
         /// <summary>
         /// Initializes a new instance of the EmulatorDisplay class.
@@ -153,7 +152,7 @@ namespace Aeon.Presentation
         /// <summary>
         /// Gets the BitmapSource used for rendering the output display.
         /// </summary>
-        public BitmapSource DisplayBitmap => this.currentScaler?.Output.InteropBitmap;
+        public BitmapSource DisplayBitmap => this.renderTarget.InteropBitmap;
         /// <summary>
         /// Gets information about the current process. This is a dependency property.
         /// </summary>
@@ -253,9 +252,14 @@ namespace Aeon.Presentation
         {
             if (this.emulator != null)
             {
-                this.currentPresenter?.Update();
-                this.currentScaler?.Apply();
-                this.currentScaler?.Output.Invalidate();
+                var presenter = this.currentPresenter;
+                if (presenter == null)
+                    return;
+
+                this.EnsureRenderTarget(presenter);
+
+                presenter.Update(this.renderTarget.PixelBuffer);
+                this.renderTarget.InteropBitmap.Invalidate();
 
                 if (this.emulator.VirtualMachine.IsCursorVisible)
                 {
@@ -282,21 +286,22 @@ namespace Aeon.Presentation
         private void HandleModeChange(object sender, EventArgs e) => this.InitializePresenter();
         private void InitializePresenter()
         {
-            this.currentScaler?.Dispose();
             this.displayImage.Source = null;
+            var oldPresenter = this.currentPresenter;
             this.currentPresenter = null;
-            this.currentScaler = null;
+            oldPresenter?.Dispose();
 
             if (this.emulator == null)
                 return;
 
             var videoMode = this.emulator.VirtualMachine.VideoMode;
-            this.currentScaler = this.GetScaler(videoMode);
-            this.currentPresenter = this.GetPresenter(videoMode, this.currentScaler);
+            this.currentPresenter = this.GetPresenter(videoMode);
+            this.currentPresenter.Scaler = this.ScalingAlgorithm;
+            this.EnsureRenderTarget(this.currentPresenter);
 
-            int pixelWidth = this.currentScaler.TargetWidth;
-            int pixelHeight = this.currentScaler.TargetHeight;
-            this.displayImage.Source = this.currentScaler.Output.InteropBitmap;
+            int pixelWidth = this.currentPresenter.TargetWidth;
+            int pixelHeight = this.currentPresenter.TargetHeight;
+            this.displayImage.Source = this.renderTarget.InteropBitmap;
             this.displayImage.Width = pixelWidth;
             this.displayImage.Height = pixelHeight;
             this.displayArea.Width = pixelWidth;
@@ -305,48 +310,43 @@ namespace Aeon.Presentation
             this.centerPoint.X = pixelWidth / 2;
             this.centerPoint.Y = pixelHeight / 2;
         }
+        private void EnsureRenderTarget(Presenter presenter)
+        {
+            if (this.renderTarget == null || presenter.TargetWidth != this.renderTarget.InteropBitmap.PixelWidth || presenter.TargetHeight != this.renderTarget.InteropBitmap.PixelHeight)
+            {
+                this.renderTarget?.Dispose();
+                this.renderTarget = new FastBitmap(presenter.TargetWidth, presenter.TargetHeight);
+            }
+        }
         private void MoveMouseCursor(int x, int y)
         {
-            Canvas.SetLeft(mouseImage, x * this.currentScaler.WidthRatio);
-            Canvas.SetTop(mouseImage, y * this.currentScaler.HeightRatio);
-        }
-        private Scaler GetScaler(VideoMode videoMode)
-        {
-            return this.ScalingAlgorithm switch
+            var presenter = this.currentPresenter;
+            if (presenter != null)
             {
-                ScalingAlgorithm.Scale2x => new Scale2x(videoMode.PixelWidth, videoMode.PixelHeight),
-                ScalingAlgorithm.Scale3x => new Scale3x(videoMode.PixelWidth, videoMode.PixelHeight),
-                _ => new NopScaler(videoMode.PixelWidth, videoMode.PixelHeight)
-            };
+                Canvas.SetLeft(mouseImage, x * presenter.WidthRatio);
+                Canvas.SetTop(mouseImage, y * presenter.HeightRatio);
+            }
         }
-        private Presenter GetPresenter(VideoMode videoMode, Scaler scaler)
+        private Presenter GetPresenter(VideoMode videoMode)
         {
             if (this.emulator == null)
                 return null;
 
             if (videoMode.VideoModeType == VideoModeType.Text)
             {
-                return new TextPresenter(scaler.VideoModeRenderTarget, videoMode);
+                return new TextPresenter(videoMode);
             }
             else
             {
-                switch (videoMode.BitsPerPixel)
+                return videoMode.BitsPerPixel switch
                 {
-                    case 4:
-                        return new GraphicsPresenter4(scaler.VideoModeRenderTarget, videoMode);
-
-                    case 8:
-                        if (!videoMode.IsPlanar)
-                            return new GraphicsPresenter8(scaler.VideoModeRenderTarget, videoMode);
-                        else
-                            return new GraphicsPresenterX(scaler.VideoModeRenderTarget, videoMode);
-
-                    case 16:
-                        return new GraphicsPresenter16(scaler.VideoModeRenderTarget, videoMode);
-                }
+                    4 => new GraphicsPresenter4(videoMode),
+                    8 when videoMode.IsPlanar => new GraphicsPresenterX(videoMode),
+                    8 when !videoMode.IsPlanar => new GraphicsPresenter8(videoMode),
+                    16 => new GraphicsPresenter16(videoMode),
+                    _ => null
+                };
             }
-
-            return null;
         }
 
         private static void OnEmulationSpeedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -442,17 +442,19 @@ namespace Aeon.Presentation
         {
             if (this.emulator != null && this.emulator.State == EmulatorState.Running)
             {
+                var presenter = this.currentPresenter;
+
                 if (this.MouseInputMode == MouseInputMode.Absolute)
                 {
                     var pos = e.GetPosition(displayImage);
-                    this.emulator.MouseEvent(new MouseMoveAbsoluteEvent((int)(pos.X / this.currentScaler.WidthRatio), (int)(pos.Y / this.currentScaler.HeightRatio)));
+                    this.emulator.MouseEvent(new MouseMoveAbsoluteEvent((int)(pos.X / presenter.WidthRatio), (int)(pos.Y / presenter.HeightRatio)));
                 }
                 else if (this.isMouseCaptured)
                 {
                     var deltaPos = Mouse.GetPosition(this.displayImage);
 
-                    int dx = (int)(deltaPos.X - this.centerPoint.X) / this.currentScaler.WidthRatio;
-                    int dy = (int)(deltaPos.Y - this.centerPoint.Y) / this.currentScaler.HeightRatio;
+                    int dx = (int)(deltaPos.X - this.centerPoint.X) / presenter.WidthRatio;
+                    int dy = (int)(deltaPos.Y - this.centerPoint.Y) / presenter.HeightRatio;
 
                     if (dx != 0 || dy != 0)
                     {

@@ -2,7 +2,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:emu="clr-namespace:Aeon.Presentation;assembly=Aeon.Presentation"
-    xmlns:rendering="clr-namespace:Aeon.Presentation.Rendering;assembly=Aeon.Presentation"
+    xmlns:rendering="clr-namespace:Aeon.Emulator.Video.Rendering;assembly=Aeon.Emulator"
     xmlns:local="clr-namespace:Aeon.Emulator.Launcher"
     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
     Title="Aeon" Width="800" Height="600" MinWidth="360" MinHeight="270" Icon="Aeon.ico" DataContext="{Binding ElementName=emulatorDisplay}" Background="{StaticResource backgroundGradient}">

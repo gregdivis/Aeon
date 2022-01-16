@@ -3,42 +3,24 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
     internal sealed class Scale3x : Scaler
     {
-        private readonly IntPtr innerBuffer;
-        private bool disposed;
-
-        public Scale3x(int width, int height)
-            : base(width, height, new FastBitmap(width * 3, height * 3))
+        public Scale3x(int width, int height) : base(width, height)
         {
-            this.innerBuffer = Marshal.AllocHGlobal(width * height * 4);
         }
-        ~Scale3x() => this.Dispose(false);
 
         public override int TargetWidth => this.SourceWidth * 3;
         public override int TargetHeight => this.SourceHeight * 3;
-        public override IntPtr VideoModeRenderTarget => this.innerBuffer;
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!this.disposed)
-            {
-                Marshal.FreeHGlobal(this.innerBuffer);
-                this.disposed = true;
-
-                base.Dispose(disposing);
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        protected override void Scale()
+        protected override void Scale(IntPtr source, IntPtr destination)
         {
             unsafe
             {
-                uint* psrc = (uint*)this.innerBuffer.ToPointer();
-                uint* pdest = (uint*)this.Output.PixelBuffer;
+                uint* psrc = (uint*)source.ToPointer();
+                uint* pdest = (uint*)destination.ToPointer();
                 int width = this.SourceWidth;
                 int height = this.SourceHeight;
 
@@ -79,12 +61,12 @@ namespace Aeon.Presentation.Rendering
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        protected override void VectorScale()
+        protected override void VectorScale(IntPtr source, IntPtr destination)
         {
             unsafe
             {
-                uint* psrc = (uint*)this.innerBuffer.ToPointer();
-                uint* pdest = (uint*)this.Output.PixelBuffer;
+                uint* psrc = (uint*)source.ToPointer();
+                uint* pdest = (uint*)destination;
                 int width = this.SourceWidth;
                 int height = this.SourceHeight;
 

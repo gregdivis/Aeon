@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Aeon.Emulator.Video;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
     /// <summary>
     /// Renders text-mode graphics to a bitmap.
     /// </summary>
-    internal sealed class TextPresenter : Presenter
+    public sealed class TextPresenter : Presenter
     {
         private readonly uint consoleWidth;
         private readonly uint consoleHeight;
@@ -23,8 +21,7 @@ namespace Aeon.Presentation.Rendering
         /// </summary>
         /// <param name="dest">Pointer to destination bitmap.</param>
         /// <param name="videoMode">VideoMode instance describing the video mode.</param>
-        public TextPresenter(IntPtr dest, VideoMode videoMode)
-            : base(dest, videoMode)
+        public TextPresenter(VideoMode videoMode) : base(videoMode)
         {
             unsafe
             {
@@ -45,7 +42,7 @@ namespace Aeon.Presentation.Rendering
         /// <summary>
         /// Updates the bitmap to match the current state of the video RAM.
         /// </summary>
-        public override void Update()
+        protected override void DrawFrame(IntPtr destination)
         {
             unsafe
             {
@@ -54,7 +51,7 @@ namespace Aeon.Presentation.Rendering
                 this.VideoMode.InternalPalette.CopyTo(new Span<byte>(internalPalette, 16));
                 uint displayPage = (uint)this.VideoMode.ActiveDisplayPage;
 
-                uint* destPtr = (uint*)this.Destination.ToPointer();
+                uint* destPtr = (uint*)destination.ToPointer();
 
                 byte* textPlane = this.videoRam + VideoMode.DisplayPageSize * displayPage;
                 byte* attrPlane = this.videoRam + VideoMode.PlaneSize + VideoMode.DisplayPageSize * displayPage;

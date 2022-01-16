@@ -1,36 +1,113 @@
 ﻿using System;
-using Aeon.Emulator.Video;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
     /// <summary>
     /// Renders emulated video RAM data to a bitmap.
     /// </summary>
-    internal abstract class Presenter
+    public abstract class Presenter : IDisposable
     {
+        private Scaler scaler;
+        private MemoryBitmap internalBuffer;
+        private bool disposed;
+
         /// <summary>
         /// Initializes a new instance of the Presenter class.
         /// </summary>
-        /// <param name="dest">Pointer to destination bitmap.</param>
         /// <param name="videoMode">VideoMode instance describing the video mode.</param>
-        protected Presenter(IntPtr dest, VideoMode videoMode)
+        protected Presenter(VideoMode videoMode)
         {
-            this.Destination = dest;
             this.VideoMode = videoMode;
         }
+
+        /// <summary>
+        /// Gets or sets the scaler used on the output.
+        /// </summary>
+        public ScalingAlgorithm Scaler
+        {
+            get
+            {
+                return this.scaler switch
+                {
+                    Scale2x => ScalingAlgorithm.Scale2x,
+                    Scale3x => ScalingAlgorithm.Scale3x,
+                    _ => ScalingAlgorithm.None
+                };
+            }
+            set
+            {
+                if (this.Scaler == value)
+                    return;
+
+                if (value != ScalingAlgorithm.None && this.internalBuffer == null)
+                {
+                    this.internalBuffer = new MemoryBitmap(this.VideoMode.Width, this.VideoMode.Height);
+                }
+                else
+                {
+                    this.internalBuffer?.Dispose();
+                    this.internalBuffer = null;
+                }
+
+                this.scaler = value switch
+                {
+                    ScalingAlgorithm.Scale2x => new Scale2x(this.VideoMode.PixelWidth, this.VideoMode.PixelHeight),
+                    ScalingAlgorithm.Scale3x => new Scale3x(this.VideoMode.PixelWidth, this.VideoMode.PixelHeight),
+                    _ => null
+                };
+            }
+        }
+        /// <summary>
+        /// Gets the required pixel width of the render target.
+        /// </summary>
+        public int TargetWidth => this.scaler?.TargetWidth ?? this.VideoMode.PixelWidth;
+        /// <summary>
+        /// Gets the required pixel height of the render target.
+        /// </summary>
+        public int TargetHeight => this.scaler?.TargetHeight ?? this.VideoMode.PixelHeight;
+        /// <summary>
+        /// Gets the width ratio of the output if a scaler is being used; otherwise 1.
+        /// </summary>
+        public int WidthRatio => this.scaler?.WidthRatio ?? 1;
+        /// <summary>
+        /// Gets the height ratio of the output if a scaler is being used; otherwise 1.
+        /// </summary>
+        public int HeightRatio => this.scaler?.HeightRatio ?? 1;
 
         /// <summary>
         /// Gets information about the video mode.
         /// </summary>
         protected VideoMode VideoMode { get; }
-        /// <summary>
-        /// Gets a pointer to the destination bitmap.
-        /// </summary>
-        protected IntPtr Destination { get; }
 
         /// <summary>
         /// Updates the bitmap to match the current state of the video RAM.
         /// </summary>
-        public abstract void Update();
+        public void Update(IntPtr destination)
+        {
+            if (this.scaler == null)
+            {
+                this.DrawFrame(destination);
+            }
+            else
+            {
+                this.DrawFrame(this.internalBuffer.PixelBuffer);
+                this.scaler.Apply(this.internalBuffer.PixelBuffer, destination);
+            }
+        }
+
+        /// <summary>
+        /// Updates the bitmap to match the current state of the video RAM.
+        /// </summary>
+        protected abstract void DrawFrame(IntPtr destination);
+
+        public void Dispose()
+        {
+            if (!this.disposed)
+            {
+                this.internalBuffer?.Dispose();
+                this.disposed = true;
+                GC.SuppressFinalize(this);
+            }
+        }
     }
 }

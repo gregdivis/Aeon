@@ -1,4 +1,4 @@
-﻿namespace Aeon.Presentation.Rendering
+﻿namespace Aeon.Emulator.Video.Rendering
 {
     public enum ScalingAlgorithm
     {

@@ -1,9 +1,8 @@
 ﻿using System;
-using Aeon.Emulator.Video;
 
-namespace Aeon.Presentation.Rendering
+namespace Aeon.Emulator.Video.Rendering
 {
-    internal sealed class GraphicsPresenter16 : Presenter
+    public sealed class GraphicsPresenter16 : Presenter
     {
         private const double RedRatio = 255.0 / 31.0;
         private const double GreenRatio = 255.0 / 63.0;
@@ -12,24 +11,22 @@ namespace Aeon.Presentation.Rendering
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphicsPresenter16"/> class.
         /// </summary>
-        /// <param name="dest">Pointer to destination bitmap.</param>
         /// <param name="videoMode">VideoMode instance describing the video mode.</param>
-        public GraphicsPresenter16(IntPtr dest, VideoMode videoMode)
-            : base(dest, videoMode)
+        public GraphicsPresenter16(VideoMode videoMode) : base(videoMode)
         {
         }
 
         /// <summary>
         /// Updates the bitmap to match the current state of the video RAM.
         /// </summary>
-        public override void Update()
+        protected override void DrawFrame(IntPtr destination)
         {
             int totalPixels = this.VideoMode.Width * this.VideoMode.Height;
 
             unsafe
             {
                 ushort* srcPtr = (ushort*)((byte*)this.VideoMode.VideoRam.ToPointer() + this.VideoMode.StartOffset);
-                uint* destPtr = (uint*)this.Destination.ToPointer();
+                uint* destPtr = (uint*)destination.ToPointer();
 
                 for (int i = 0; i < totalPixels; i++)
                     destPtr[i] = Make32Bit(srcPtr[i]);

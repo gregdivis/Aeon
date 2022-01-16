@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace Aeon.Presentation
+namespace Aeon.Emulator.Video.Rendering
 {
     /// <summary>
     /// Simplifies creation and management of an InteropBitmap.
