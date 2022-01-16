@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
     <ProjectReference Include="..\Aeon.DiskImages\Aeon.DiskImages.csproj" />
     <ProjectReference Include="..\Aeon.Emulator.Input\Aeon.Emulator.Input.csproj" />
+    <ProjectReference Include="..\Aeon.Presentation\Aeon.Presentation.csproj" />
     <ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
   </ItemGroup>

@@ -1,10 +1,11 @@
-﻿using System.Windows;
+﻿using System.Linq;
+using System.Windows;
 using Aeon.Emulator.DebugSupport;
-using Aeon.Emulator.Launcher.Presentation.Debugger;
+using Aeon.Presentation.Debugger;
 
 namespace Aeon.Emulator.Launcher
 {
-    public partial class DebuggerWindow : Window
+    public sealed partial class DebuggerWindow : Window
     {
         public static readonly DependencyProperty EmulatorHostProperty = DependencyProperty.Register("EmulatorHost", typeof(EmulatorHost), typeof(DebuggerWindow));
         public static readonly DependencyProperty IsHexFormatProperty = AeonDebug.IsHexFormatProperty.AddOwner(typeof(DebuggerWindow));

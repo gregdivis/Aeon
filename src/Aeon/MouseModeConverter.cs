@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Windows.Data;
-using Aeon.Emulator.Launcher.Presentation;
+using Aeon.Presentation;
 
 namespace Aeon.Emulator.Launcher
 {

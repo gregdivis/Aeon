@@ -7,7 +7,7 @@ using Aeon.DiskImages;
 using Aeon.DiskImages.Archives;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Launcher.Configuration;
-using Aeon.Emulator.Launcher.Presentation.Dialogs;
+using Aeon.Presentation.Dialogs;
 using Microsoft.Win32;
 
 namespace Aeon.Emulator.Launcher

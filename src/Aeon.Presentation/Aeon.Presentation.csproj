@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Aeon</Company>
+    <Version>0.7.0</Version>
+    <Product>Aeon</Product>
+    <Title>Aeon WPF Presentation</Title>
+    <Description>Implements the WPF Aeon display logic.</Description>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\TaskArrow.png" />
+  </ItemGroup>
+</Project>
