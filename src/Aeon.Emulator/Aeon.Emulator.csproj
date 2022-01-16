@@ -7,6 +7,6 @@
     <Product>Aeon</Product>
     <Description>Aeon x86 emulator core library</Description>
     <Title>Aeon Core</Title>
-    <Version>0.7.0</Version>
+    <Version>0.7.1</Version>
   </PropertyGroup>
 </Project>

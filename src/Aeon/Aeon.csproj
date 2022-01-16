@@ -6,7 +6,7 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Company>Aeon</Company>
-    <Version>0.7.0</Version>
+    <Version>0.7.1</Version>
     <Product>Aeon</Product>
     <Title>Aeon</Title>
     <Description>Runtime environment for the Aeon x86 emulator.</Description>
