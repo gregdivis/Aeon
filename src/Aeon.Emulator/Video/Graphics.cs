@@ -12,10 +12,10 @@ namespace Aeon.Emulator.Video
         public unsafe readonly byte* ExpandedSetReset;
         public unsafe readonly bool* ExpandedEnableSetReset;
 
-        private readonly UnsafeBuffer<byte> colorCompareBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<byte> colorDontCareBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<byte> setResetBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<bool> enableSetResetBuffer = new UnsafeBuffer<bool>(4);
+        private readonly UnsafeBuffer<byte> colorCompareBuffer = new(4);
+        private readonly UnsafeBuffer<byte> colorDontCareBuffer = new(4);
+        private readonly UnsafeBuffer<byte> setResetBuffer = new(4);
+        private readonly UnsafeBuffer<bool> enableSetResetBuffer = new(4);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Graphics"/> class.

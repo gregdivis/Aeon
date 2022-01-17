@@ -327,13 +327,16 @@ namespace Aeon.Emulator.Decoding
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static unsafe void ThrowGetOpcodeException(byte* ip) => throw new NotImplementedException($"Opcode {ip[0]:X2} {ip[1]:X2} ({ip[2]:X2}) not implemented.");
 
+#pragma warning disable IDE0044 // Add readonly modifier
+        // these are not readonly because accessing them is performance critical
         private static OpcodeInfo[] oneByteCodes = new OpcodeInfo[256];
         private static OpcodeInfo[][] rmCodes = new OpcodeInfo[256][];
         private static OpcodeInfo[][] twoByteCodes = new OpcodeInfo[256][];
         private static OpcodeInfo[][][] twoByteRmCodes = new OpcodeInfo[256][][];
         private static OpcodeCollection allCodes;
+#pragma warning restore IDE0044 // Add readonly modifier
 
-        private static readonly NativeHeap functionPointerAllocator = new NativeHeap(122880);
+        private static readonly NativeHeap functionPointerAllocator = new(122880);
         internal unsafe static delegate*<VirtualMachine, void>** OneBytePtrs;
         internal unsafe static delegate*<VirtualMachine, void>*** RmPtrs;
         internal unsafe static delegate*<VirtualMachine, void>*** TwoBytePtrs;
@@ -374,7 +377,14 @@ namespace Aeon.Emulator.Decoding
                 get
                 {
                     if (this.count == 0)
-                        this.count = this.Count();
+                    {
+                        int n = 0;
+                        foreach (var _ in this)
+                            n++;
+
+                        this.count = n;
+                    }
+
                     return this.count;
                 }
             }

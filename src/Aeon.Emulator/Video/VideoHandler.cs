@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Aeon.Emulator.Memory;
 using Aeon.Emulator.Interrupts;
+using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Video
 {
@@ -24,7 +25,7 @@ namespace Aeon.Emulator.Video
         private static readonly long HorizontalPeriod = (long)((1000.0 / 60.0) / 480.0 * InterruptTimer.StopwatchTicksPerMillisecond);
         private static readonly long HorizontalBlankingTime = HorizontalPeriod / 2;
 
-        private readonly UnsafeBuffer<byte> videoRamBuffer = new UnsafeBuffer<byte>(TotalVramBytes);
+        private bool disposed;
         private GraphicsRegister graphicsRegister;
         private SequencerRegister sequencerRegister;
         private AttributeControllerRegister attributeRegister;
@@ -39,7 +40,7 @@ namespace Aeon.Emulator.Video
             this.VirtualMachine = vm;
             unsafe
             {
-                this.VideoRam = new IntPtr(this.videoRamBuffer.ToPointer());
+                this.VideoRam = new IntPtr(NativeMemory.AllocZeroed(TotalVramBytes));
             }
 
             this.vbe = new Vesa.VbeHandler(this);
@@ -49,6 +50,8 @@ namespace Aeon.Emulator.Video
             this.TextConsole = new TextConsole(this, vm.PhysicalMemory.Bios);
             this.SetDisplayMode(VideoMode10.ColorText80x25x4);
         }
+
+        ~VideoHandler() => this.InternalDispose();
 
         /// <summary>
         /// Gets the current display mode.
@@ -549,6 +552,8 @@ namespace Aeon.Emulator.Video
 
         void IDisposable.Dispose()
         {
+            this.InternalDispose();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -666,42 +671,20 @@ namespace Aeon.Emulator.Video
         /// </summary>
         private void GetFontInfo()
         {
-            RealModeAddress address;
-
-            switch (VirtualMachine.Processor.BH)
+            var address = this.VirtualMachine.Processor.BH switch
             {
-                case 0x00:
-                    address = VirtualMachine.PhysicalMemory.GetRealModeInterruptAddress(0x1F);
-                    break;
+                0x00 => this.VirtualMachine.PhysicalMemory.GetRealModeInterruptAddress(0x1F),
+                0x01 => this.VirtualMachine.PhysicalMemory.GetRealModeInterruptAddress(0x43),
+                0x02 or 0x05 => new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x14Offset),
+                0x03 => new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x8Offset),
+                0x04 => new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x8Offset + 128 * 8),
+                _ => new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x16Offset),
+            };
 
-                case 0x01:
-                    address = VirtualMachine.PhysicalMemory.GetRealModeInterruptAddress(0x43);
-                    break;
-
-                case 0x02:
-                case 0x05:
-                    address = new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x14Offset);
-                    break;
-
-                case 0x03:
-                    address = new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x8Offset);
-                    break;
-
-                case 0x04:
-                    address = new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x8Offset + 128 * 8);
-                    break;
-
-                case 0x06:
-                case 0x07:
-                default:
-                    address = new RealModeAddress(PhysicalMemory.FontSegment, PhysicalMemory.Font8x16Offset);
-                    break;
-            }
-
-            VirtualMachine.WriteSegmentRegister(SegmentIndex.ES, address.Segment);
-            VirtualMachine.Processor.BP = address.Offset;
-            VirtualMachine.Processor.CX = (short)this.CurrentMode.FontHeight;
-            VirtualMachine.Processor.DL = (byte)VirtualMachine.PhysicalMemory.Bios.ScreenRows;
+            this.VirtualMachine.WriteSegmentRegister(SegmentIndex.ES, address.Segment);
+            this.VirtualMachine.Processor.BP = address.Offset;
+            this.VirtualMachine.Processor.CX = (short)this.CurrentMode.FontHeight;
+            this.VirtualMachine.Processor.DL = this.VirtualMachine.PhysicalMemory.Bios.ScreenRows;
         }
         /// <summary>
         /// Changes the appearance of the text-mode cursor.
@@ -760,6 +743,20 @@ namespace Aeon.Emulator.Video
 
             // Indicate success.
             VirtualMachine.Processor.AL = 0x1B;
+        }
+
+        private void InternalDispose()
+        {
+            if (!this.disposed)
+            {
+                unsafe
+                {
+                    if (this.VideoRam != IntPtr.Zero)
+                        NativeMemory.Free(this.VideoRam.ToPointer());
+                }
+
+                this.disposed = true;
+            }
         }
 
         /// <summary>

@@ -14,17 +14,17 @@ namespace Aeon.Emulator
         private readonly unsafe short** rmOffsets1;
         private readonly unsafe short** rmOffsets2;
 
-        private readonly UnsafeBuffer<uint> gprBuffer = new UnsafeBuffer<uint>(RegisterCount);
-        private readonly UnsafeBuffer<byte> instructionBuffer = new UnsafeBuffer<byte>(16);
-        private readonly UnsafeBuffer<nint> wordRegisterPointersBuffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> byteRegisterPointersBuffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> segmentRegisterPointersBuffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> defaultSegments16Buffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> segmentBasesBuffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod0Buffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod12Buffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> baseOverrideBuffer = new UnsafeBuffer<nint>(8);
-        private readonly UnsafeBuffer<nint> rmOffsets1Buffer = new UnsafeBuffer<nint>(17);
+        private readonly UnsafeBuffer<uint> gprBuffer = new(RegisterCount);
+        private readonly UnsafeBuffer<byte> instructionBuffer = new(16);
+        private readonly UnsafeBuffer<nint> wordRegisterPointersBuffer = new(8);
+        private readonly UnsafeBuffer<nint> byteRegisterPointersBuffer = new(8);
+        private readonly UnsafeBuffer<nint> segmentRegisterPointersBuffer = new(8);
+        private readonly UnsafeBuffer<nint> defaultSegments16Buffer = new(8);
+        private readonly UnsafeBuffer<nint> segmentBasesBuffer = new(8);
+        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod0Buffer = new(8);
+        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod12Buffer = new(8);
+        private readonly UnsafeBuffer<nint> baseOverrideBuffer = new(8);
+        private readonly UnsafeBuffer<nint> rmOffsets1Buffer = new(17);
 
         internal Processor()
         {
@@ -563,7 +563,7 @@ namespace Aeon.Emulator
         #endregion
 
         #region Other
-        public readonly FlagState Flags = new FlagState();
+        public readonly FlagState Flags = new();
         /// <summary>
         /// Gets the value of the EFLAGS register.
         /// </summary>
@@ -630,12 +630,10 @@ namespace Aeon.Emulator
         }
         #endregion
 
-        #region FPU
         /// <summary>
         /// The floating-point unit.
         /// </summary>
-        public readonly FPU FPU = new FPU();
-        #endregion
+        public readonly FPU FPU = new();
 
         #region Internal Properties
         /// <summary>

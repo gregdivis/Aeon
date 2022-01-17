@@ -9,6 +9,7 @@ namespace Aeon.Emulator.Video.Rendering
     {
         private Scaler scaler;
         private MemoryBitmap internalBuffer;
+        private readonly object syncLock = new();
         private bool disposed;
 
         /// <summary>
@@ -41,7 +42,7 @@ namespace Aeon.Emulator.Video.Rendering
 
                 if (value != ScalingAlgorithm.None && this.internalBuffer == null)
                 {
-                    this.internalBuffer = new MemoryBitmap(this.VideoMode.Width, this.VideoMode.Height);
+                    this.internalBuffer = new MemoryBitmap(this.VideoMode.PixelWidth, this.VideoMode.PixelHeight);
                 }
                 else
                 {
@@ -84,14 +85,17 @@ namespace Aeon.Emulator.Video.Rendering
         /// </summary>
         public void Update(IntPtr destination)
         {
-            if (this.scaler == null)
+            lock (this.syncLock)
             {
-                this.DrawFrame(destination);
-            }
-            else
-            {
-                this.DrawFrame(this.internalBuffer.PixelBuffer);
-                this.scaler.Apply(this.internalBuffer.PixelBuffer, destination);
+                if (this.scaler == null)
+                {
+                    this.DrawFrame(destination);
+                }
+                else
+                {
+                    this.DrawFrame(this.internalBuffer.PixelBuffer);
+                    this.scaler.Apply(this.internalBuffer.PixelBuffer, destination);
+                }
             }
         }
 
@@ -102,11 +106,14 @@ namespace Aeon.Emulator.Video.Rendering
 
         public void Dispose()
         {
-            if (!this.disposed)
+            lock (this.syncLock)
             {
-                this.internalBuffer?.Dispose();
-                this.disposed = true;
-                GC.SuppressFinalize(this);
+                if (!this.disposed)
+                {
+                    this.internalBuffer?.Dispose();
+                    this.disposed = true;
+                    GC.SuppressFinalize(this);
+                }
             }
         }
     }

@@ -12,15 +12,15 @@ namespace Aeon.Emulator
         /// <summary>
         /// Represents positive infinity.
         /// </summary>
-        public static readonly Real10 PositiveInfinity = new Real10(0, 0x7FFF);
+        public static readonly Real10 PositiveInfinity = new(0, 0x7FFF);
         /// <summary>
         /// Represents negative infinity.
         /// </summary>
-        public static readonly Real10 NegativeInfinity = new Real10(0, 0xFFFF);
+        public static readonly Real10 NegativeInfinity = new(0, 0xFFFF);
         /// <summary>
         /// Represents a value that is not a number (NaN).
         /// </summary>
-        public static readonly Real10 NaN = new Real10(0x7FFFFFFFFFFFFFFF, 0xFFFF);
+        public static readonly Real10 NaN = new(0x7FFFFFFFFFFFFFFF, 0xFFFF);
 
         private unsafe fixed byte data[10];
 

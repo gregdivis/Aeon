@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Decoding;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
+using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.Memory;
 using Aeon.Emulator.RuntimeExceptions;
-using Aeon.Emulator.Interrupts;
-using System.Runtime.CompilerServices;
-using Aeon.Emulator.CommandInterpreter;
 
 namespace Aeon.Emulator
 {
@@ -18,7 +17,7 @@ namespace Aeon.Emulator
     public sealed class VirtualMachine : IDisposable, IMachineCodeSource
     {
         private static bool instructionSetInitialized;
-        private static readonly object globalInitLock = new object();
+        private static readonly object globalInitLock = new();
 
         /// <summary>
         /// The emulated physical memory of the virtual machine.
@@ -27,25 +26,25 @@ namespace Aeon.Emulator
         /// <summary>
         /// The emulated processor of the virtual machine.
         /// </summary>
-        public readonly Processor Processor = new Processor();
+        public readonly Processor Processor = new();
         /// <summary>
         /// The emulated programmable interrupt controller of the virtual machine.
         /// </summary>
-        public readonly InterruptController InterruptController = new InterruptController();
+        public readonly InterruptController InterruptController = new();
         /// <summary>
         /// The emulated programmable interval timer of the virtual machine.
         /// </summary>
         public readonly InterruptTimer InterruptTimer;
 
         private readonly IInterruptHandler[] interruptHandlers = new IInterruptHandler[256];
-        private readonly SortedList<ushort, IInputPort> inputPorts = new SortedList<ushort, IInputPort>();
-        private readonly SortedList<ushort, IOutputPort> outputPorts = new SortedList<ushort, IOutputPort>();
-        private readonly DefaultPortHandler defaultPortHandler = new DefaultPortHandler();
-        private readonly List<IVirtualDevice> allDevices = new List<IVirtualDevice>();
+        private readonly SortedList<ushort, IInputPort> inputPorts = new();
+        private readonly SortedList<ushort, IOutputPort> outputPorts = new();
+        private readonly DefaultPortHandler defaultPortHandler = new();
+        private readonly List<IVirtualDevice> allDevices = new();
         private readonly ExpandedMemoryManager emm;
         private readonly ExtendedMemoryManager xmm;
-        private readonly List<DmaChannel> dmaDeviceChannels = new List<DmaChannel>();
-        private readonly SortedList<uint, ICallbackProvider> callbackProviders = new SortedList<uint, ICallbackProvider>();
+        private readonly List<DmaChannel> dmaDeviceChannels = new();
+        private readonly SortedList<uint, ICallbackProvider> callbackProviders = new();
         private readonly MultiplexInterruptHandler multiplexHandler;
         private bool disposed;
         private bool showMouse;
@@ -57,6 +56,10 @@ namespace Aeon.Emulator
         public VirtualMachine() : this(16)
         {
         }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VirtualMachine"/> class.
+        /// </summary>
+        /// <param name="physicalMemorySize">Physical memory size in megabytes.</param>
         public VirtualMachine(int physicalMemorySize)
         {
             if (physicalMemorySize < 1 || physicalMemorySize > 2048)
@@ -452,12 +455,12 @@ namespace Aeon.Emulator
         /// Returns an object containing information about current expanded memory usage.
         /// </summary>
         /// <returns>Information about current expanded memory usage.</returns>
-        public ExpandedMemoryInfo GetExpandedMemoryUsage() => new ExpandedMemoryInfo(emm.AllocatedPages);
+        public ExpandedMemoryInfo GetExpandedMemoryUsage() => new(emm.AllocatedPages);
         /// <summary>
         /// Returns an object containing information about current extended memory usage.
         /// </summary>
         /// <returns>Information about current extended memory usage.</returns>
-        public ExtendedMemoryInfo GetExtendedMemoryUsage() => new ExtendedMemoryInfo(xmm.ExtendedMemorySize - (int)xmm.TotalFreeMemory, xmm.ExtendedMemorySize);
+        public ExtendedMemoryInfo GetExtendedMemoryUsage() => new(xmm.ExtendedMemorySize - (int)xmm.TotalFreeMemory, xmm.ExtendedMemorySize);
         /// <summary>
         /// Performs any pending DMA transfers.
         /// </summary>
@@ -586,7 +589,7 @@ namespace Aeon.Emulator
             }
             catch (KeyNotFoundException ex)
             {
-                throw new ArgumentException("There is no handler associated with the callback ID.", "id", ex);
+                throw new ArgumentException("There is no handler associated with the callback ID.", nameof(id), ex);
             }
 
             provider.InvokeCallback();
@@ -858,7 +861,7 @@ namespace Aeon.Emulator
         internal void TaskSwitch32(ushort selector, bool clearBusyFlag, bool? nestedTaskFlag)
         {
             if (selector == 0)
-                throw new ArgumentException(nameof(selector));
+                throw new ArgumentException("Invalid null selector.", nameof(selector));
 
             var p = this.Processor;
 
@@ -1007,6 +1010,7 @@ namespace Aeon.Emulator
                     device?.Dispose();
 
                 allDevices.Clear();
+                this.PhysicalMemory.InternalDispose();
 
                 disposed = true;
             }

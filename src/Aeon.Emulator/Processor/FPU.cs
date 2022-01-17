@@ -23,8 +23,8 @@ namespace Aeon.Emulator
         /// The FPU top pointer.
         /// </summary>
         private uint top;
-        private readonly UnsafeBuffer<double> regBuffer = new UnsafeBuffer<double>(8);
-        private readonly UnsafeBuffer<byte> isUsedBuffer = new UnsafeBuffer<byte>(8);
+        private readonly UnsafeBuffer<double> regBuffer = new(8);
+        private readonly UnsafeBuffer<byte> isUsedBuffer = new(8);
 
         /// <summary>
         /// Initializes a new instance of the FPU class.

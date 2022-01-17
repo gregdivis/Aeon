@@ -8,9 +8,9 @@ namespace Aeon.Emulator.Video.Modes
     /// </summary>
     internal abstract class Planar4 : VideoMode
     {
-        private readonly UnsafeBuffer<nint> planesBuffer = new UnsafeBuffer<nint>(4);
-        private readonly UnsafeBuffer<byte> latchesBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<byte> expandedBuffer = new UnsafeBuffer<byte>(8);
+        private readonly UnsafeBuffer<nint> planesBuffer = new(4);
+        private readonly UnsafeBuffer<byte> latchesBuffer = new(4);
+        private readonly UnsafeBuffer<byte> expandedBuffer = new(8);
         private readonly unsafe byte** planes;
         private readonly unsafe byte* latches;
         private readonly Graphics graphics;

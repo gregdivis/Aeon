@@ -46,7 +46,7 @@ namespace Aeon.Emulator.Video
         /// </summary>
         /// <param name="obj">Object to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override readonly bool Equals(object obj) => obj is Point p ? this.Equals(p) : false;
+        public override readonly bool Equals(object obj) => obj is Point p && this.Equals(p);
         /// <summary>
         /// Gets a hash code for the point.
         /// </summary>

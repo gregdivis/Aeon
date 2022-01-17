@@ -11,7 +11,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
     public sealed class FileSystem
     {
         private const VirtualFileAttributes FindAttributeMask = VirtualFileAttributes.Hidden | VirtualFileAttributes.System | VirtualFileAttributes.VolumeLabel | VirtualFileAttributes.Directory;
-        private readonly DriveList drives = new DriveList();
+        private readonly DriveList drives = new();
         private readonly VirtualPath[] currentDirectories = new VirtualPath[26];
         private DriveLetter currentDrive = DriveLetter.C;
 
@@ -40,7 +40,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             set
             {
                 if (value == null)
-                    throw new ArgumentNullException("value");
+                    throw new ArgumentNullException(nameof(value));
                 if (value.PathType != VirtualPathType.Absolute)
                     throw new ArgumentException("Path must be absolute.");
                 if (value.DriveLetter == null)
