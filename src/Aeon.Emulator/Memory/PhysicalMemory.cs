@@ -100,7 +100,7 @@ namespace Aeon.Emulator
             unsafe
             {
                 this.RawView = (byte*)NativeMemory.AllocZeroed((nuint)memorySize, 1);
-                this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize, 4);
+                this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize / 4, 4);
             }
 
             // Reserve room for the real-mode interrupt table.
@@ -177,7 +177,7 @@ namespace Aeon.Emulator
                 // flush the page cache
                 unsafe
                 {
-                    new Span<byte>(this.RawView, PageAddressCacheSize).Clear();
+                    new Span<uint>(this.pageCache, PageAddressCacheSize).Clear();
                 }
             }
         }

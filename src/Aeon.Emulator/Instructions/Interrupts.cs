@@ -37,9 +37,9 @@ namespace Aeon.Emulator.Instructions
             uint eip;
             uint flags = (uint)vm.Processor.Flags.Value & 0xFFFF0000u;
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                if ((vm.Processor.Flags.Value & EFlags.NestedTask) != 0)
+                if (vm.Processor.Flags.NestedTask)
                 {
                     vm.TaskReturn();
                     vm.Processor.InstructionEpilog();
@@ -83,18 +83,18 @@ namespace Aeon.Emulator.Instructions
             vm.Processor.InstructionEpilog();
 
             if (throwTrap)
-                throw new EnableInstructionTrapException();
+                ThrowHelper.ThrowEnableInstuctionTrapException();
         }
-        [Alternate("InterruptReturn", AddressSize = 16 | 32)]
+        [Alternate(nameof(InterruptReturn), AddressSize = 16 | 32)]
         public static void InterruptReturn32(VirtualMachine vm)
         {
             ushort cs;
             uint eip;
             uint flags;
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                if ((vm.Processor.Flags.Value & EFlags.NestedTask) != 0)
+                if (vm.Processor.Flags.NestedTask)
                 {
                     vm.TaskReturn();
                     vm.Processor.InstructionEpilog();
@@ -138,7 +138,7 @@ namespace Aeon.Emulator.Instructions
             vm.Processor.InstructionEpilog();
 
             if (throwTrap)
-                throw new EnableInstructionTrapException();
+                ThrowHelper.ThrowEnableInstuctionTrapException();
         }
     }
 

@@ -12,8 +12,8 @@ namespace Aeon.Emulator.Sound.Blaster
     {
         private readonly VirtualMachine vm;
         private readonly DmaChannel dmaChannel;
-        private readonly List<byte> commandData = new List<byte>();
-        private readonly Queue<byte> outputData = new Queue<byte>();
+        private readonly List<byte> commandData = new();
+        private readonly Queue<byte> outputData = new();
         private readonly int dma16;
         private readonly Thread playbackThread;
         private readonly Dsp dsp;

@@ -829,31 +829,34 @@ namespace Aeon.Emulator
                 {
                     var descriptor = this.PhysicalMemory.GetDescriptor(value);
                     if (value != 0 && descriptor.DescriptorType != DescriptorType.Segment)
-                        throw new GeneralProtectionFaultException(value);
-
-                    var segmentDescriptor = (SegmentDescriptor)descriptor;
-
-                    if (value > 3u && !segmentDescriptor.IsPresent)
                     {
-                        if ((value & 0x4u) == 0)
-                            throw new GDTSegmentNotPresentException((uint)value >> 3);
-                        else
-                            throw new LDTSegmentNotPresentException((uint)value >> 3);
+                        ThrowHelper.ThrowGeneralProtectionFaultException(value);
                     }
-
-                    this.Processor.segmentBases[(int)segment] = segmentDescriptor.Base;
-
-                    if (segment == SegmentIndex.CS)
+                    else
                     {
-                        if ((segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) == 0)
-                            this.Processor.GlobalSize = 0;
+                        var segmentDescriptor = (SegmentDescriptor)descriptor;
+
+                        if (value > 3u && !segmentDescriptor.IsPresent)
+                        {
+                            ThrowHelper.ThrowSegmentNotPresentException(value);
+                        }
                         else
-                            this.Processor.GlobalSize = 3;
-                    }
-                    else if (segment == SegmentIndex.SS)
-                    {
-                        this.BigStackPointer = (segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) != 0;
-                        this.Processor.TemporaryInterruptMask = true;
+                        {
+                            this.Processor.segmentBases[(int)segment] = segmentDescriptor.Base;
+
+                            if (segment == SegmentIndex.CS)
+                            {
+                                if ((segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) == 0)
+                                    this.Processor.GlobalSize = 0;
+                                else
+                                    this.Processor.GlobalSize = 3;
+                            }
+                            else if (segment == SegmentIndex.SS)
+                            {
+                                this.BigStackPointer = (segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) != 0;
+                                this.Processor.TemporaryInterruptMask = true;
+                            }
+                        }
                     }
                 }
             }

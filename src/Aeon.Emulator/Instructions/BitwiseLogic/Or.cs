@@ -8,7 +8,7 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ByteOr(Processor p, ref byte dest, byte src)
         {
-            dest = (byte)(dest | src);
+            dest |= src;
             p.Flags.Update_Value_Byte(dest);
             p.Flags.Carry = false;
             p.Flags.Overflow = false;
@@ -18,16 +18,16 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WordOr(Processor p, ref ushort dest, ushort src)
         {
-            dest = (ushort)(dest | src);
+            dest |= src;
             p.Flags.Update_Value_Word(dest);
             p.Flags.Carry = false;
             p.Flags.Overflow = false;
         }
-        [Alternate("WordOr", AddressSize = 16 | 32)]
+        [Alternate(nameof(WordOr), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DWordOr(Processor p, ref uint dest, uint src)
         {
-            dest = (uint)(dest | src);
+            dest |= src;
             p.Flags.Update_Value_DWord(dest);
             p.Flags.Carry = false;
             p.Flags.Overflow = false;

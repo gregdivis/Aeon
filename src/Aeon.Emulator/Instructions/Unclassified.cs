@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using Aeon.Emulator.RuntimeExceptions;
 
 namespace Aeon.Emulator.Instructions
@@ -8,7 +9,7 @@ namespace Aeon.Emulator.Instructions
         [Opcode("F4", Name = "hlt", AddressSize = 16 | 32, OperandSize = 16 | 32)]
         public static void Halt(VirtualMachine vm)
         {
-            if((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if(vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 uint cpl = vm.Processor.CS & 3u;
                 if(cpl != 0)
@@ -18,7 +19,7 @@ namespace Aeon.Emulator.Instructions
                 }
             }
 
-            throw new NotImplementedException();
+            ThrowHelper.ThrowNotImplementedException();
         }
         
         [Opcode("9B", Name = "wait", OperandSize = 16 | 32, AddressSize = 16 | 32)]
@@ -98,10 +99,10 @@ namespace Aeon.Emulator.Instructions
         {
             throw new NotSupportedException();
         }
-        [Alternate("ByteSwap", OperandSize = 32, AddressSize = 16 | 32)]
+        [Alternate(nameof(ByteSwap), OperandSize = 32, AddressSize = 16 | 32)]
         public static void ByteSwap32(VirtualMachine vm, ref uint value)
         {
-            value = (uint)System.Net.IPAddress.HostToNetworkOrder((int)value);
+            value = BinaryPrimitives.ReverseEndianness(value);
         }
     }
 }

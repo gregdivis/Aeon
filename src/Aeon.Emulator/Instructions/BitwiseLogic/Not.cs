@@ -17,11 +17,11 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
         {
             dest = (ushort)~dest;
         }
-        [Alternate("WordNot", AddressSize = 16 | 32)]
+        [Alternate(nameof(WordNot), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DWordNot(VirtualMachine vm, ref uint dest)
         {
-            dest = (uint)~dest;
+            dest = ~dest;
         }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Aeon.Emulator.RuntimeExceptions;
 
@@ -12,16 +14,13 @@ namespace Aeon.Emulator.Instructions.Arithmetic
         {
             if (divisor != 0)
             {
-                uint quotient = (ushort)p.AX / (uint)divisor;
-                // this is faster than another DIV, which % would use
-                uint remainder = (ushort)p.AX - (divisor * quotient);
-
+                var (quotient, remainder) = Math.DivRem((ushort)p.AX, divisor);
                 p.AL = (byte)quotient;
                 p.AH = (byte)remainder;
             }
             else
             {
-                throw new EmulatedDivideByZeroException();
+                ThrowHelper.ThrowEmulatedDivideByZeroException();
             }
         }
 
@@ -41,16 +40,13 @@ namespace Aeon.Emulator.Instructions.Arithmetic
                     parts[1] = (ushort)dx;
                 }
 
-                uint quotient = fullValue / divisor;
-                // this is faster than another DIV, which % would use
-                uint remainder = fullValue - (divisor * quotient);
-
+                var (quotient, remainder) = Math.DivRem(fullValue, divisor);
                 ax = (short)(ushort)quotient;
                 dx = (short)(ushort)remainder;
             }
             else
             {
-                throw new EmulatedDivideByZeroException();
+                ThrowHelper.ThrowEmulatedDivideByZeroException();
             }
         }
         [Alternate(nameof(WordDivide), AddressSize = 16 | 32)]
@@ -69,16 +65,13 @@ namespace Aeon.Emulator.Instructions.Arithmetic
                     parts[1] = (uint)edx;
                 }
 
-                ulong quotient = fullValue / divisor;
-                // this is faster than another DIV, which % would use
-                uint remainder = (uint)(fullValue - (divisor * quotient));
-
+                var (quotient, remainder) = Math.DivRem(fullValue, divisor);
                 eax = (int)(uint)quotient;
                 edx = (int)remainder;
             }
             else
             {
-                throw new EmulatedDivideByZeroException();
+                ThrowHelper.ThrowEmulatedDivideByZeroException();
             }
         }
     }
@@ -97,7 +90,7 @@ namespace Aeon.Emulator.Instructions.Arithmetic
             }
             else
             {
-                throw new EmulatedDivideByZeroException();
+                ThrowHelper.ThrowEmulatedDivideByZeroException();
             }
         }
 
@@ -123,7 +116,7 @@ namespace Aeon.Emulator.Instructions.Arithmetic
             }
             else
             {
-                throw new EmulatedDivideByZeroException();
+                ThrowHelper.ThrowEmulatedDivideByZeroException();
             }
         }
         [Alternate(nameof(WordDivide), AddressSize = 16 | 32)]
@@ -148,7 +141,7 @@ namespace Aeon.Emulator.Instructions.Arithmetic
             }
             else
             {
-                throw new EmulatedDivideByZeroException();
+                ThrowHelper.ThrowEmulatedDivideByZeroException();
             }
         }
     }

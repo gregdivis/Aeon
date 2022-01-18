@@ -4,7 +4,7 @@ namespace Aeon.Emulator.Sound.Blaster
 {
     partial class SoundBlaster
     {
-        private static readonly SortedList<byte, byte> commandLengths = new SortedList<byte, byte>
+        private static readonly SortedList<byte, byte> commandLengths = new()
         {
             [Commands.SetTimeConstant] = 1,
             [Commands.SingleCycleDmaOutput8] = 2,

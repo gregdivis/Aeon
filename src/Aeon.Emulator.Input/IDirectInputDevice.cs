@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Input
@@ -69,10 +66,10 @@ namespace Aeon.Emulator.Input
 
     internal static class DeviceObjectTypes
     {
-        public static readonly Guid XAxis = new Guid(0xA36D02E0, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
-        public static readonly Guid YAxis = new Guid(0xA36D02E1, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
-        public static readonly Guid ZAxis = new Guid(0xA36D02E2, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
-        public static readonly Guid Button = new Guid(0xA36D02F0, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
+        public static readonly Guid XAxis = new(0xA36D02E0, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
+        public static readonly Guid YAxis = new(0xA36D02E1, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
+        public static readonly Guid ZAxis = new(0xA36D02E2, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
+        public static readonly Guid Button = new(0xA36D02F0, 0xC9F3, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
         public static readonly IntPtr DataFormat;
 
         static DeviceObjectTypes()
@@ -82,7 +79,7 @@ namespace Aeon.Emulator.Input
                 DataFormat = Marshal.AllocCoTaskMem(sizeof(DIOBJECTDATAFORMAT) * 6);
                 var ptr = (DIOBJECTDATAFORMAT*)DataFormat.ToPointer();
 
-                fixed(Guid* xaxis = &XAxis)
+                fixed (Guid* xaxis = &XAxis)
                 {
                     ptr[0].pguid = new IntPtr(xaxis);
                     ptr[0].dwOfs = 0;
@@ -90,7 +87,7 @@ namespace Aeon.Emulator.Input
                     ptr[0].dwFlags = 0;
                 }
 
-                fixed(Guid* yaxis = &YAxis)
+                fixed (Guid* yaxis = &YAxis)
                 {
                     ptr[1].pguid = new IntPtr(yaxis);
                     ptr[1].dwOfs = 4;
@@ -106,7 +103,7 @@ namespace Aeon.Emulator.Input
                 //    ptr[2].dwFlags = 0;
                 //}
 
-                for(int i = 0; i < 4; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     ptr[i + 2].pguid = IntPtr.Zero;
                     ptr[i + 2].dwOfs = (uint)(i + 8);

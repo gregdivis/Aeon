@@ -10,7 +10,7 @@ namespace Aeon.Emulator.Memory
     internal sealed class EmsHandle
     {
         private readonly List<byte[]> pages;
-        private static readonly string nullHandleName = new string((char)0, 8);
+        private static readonly string nullHandleName = new((char)0, 8);
         private readonly byte[][] savedPageMap = new byte[ExpandedMemoryManager.MaximumPhysicalPages][];
 
         public EmsHandle()
@@ -87,7 +87,7 @@ namespace Aeon.Emulator.Memory
         public void Reallocate(int pagesRequested)
         {
             if (pagesRequested < 0)
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(pagesRequested));
 
             if (pagesRequested < pages.Count)
                 pages.RemoveRange(pagesRequested, pages.Count - pagesRequested);

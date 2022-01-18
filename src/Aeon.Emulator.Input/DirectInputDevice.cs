@@ -56,14 +56,7 @@ namespace Aeon.Emulator.Input
 
             this.releaseHandle = GCHandle.Alloc(release, GCHandleType.Normal);
         }
-        /// <summary>
-        /// Releases unmanaged resources and performs other cleanup operations before the
-        /// <see cref="DirectInputDevice"/> is reclaimed by garbage collection.
-        /// </summary>
-        ~DirectInputDevice()
-        {
-            Dispose(false);
-        }
+        ~DirectInputDevice() => this.InternalDispose();
 
         /// <summary>
         /// Gets the X-axis position.
@@ -99,13 +92,13 @@ namespace Aeon.Emulator.Input
             {
                 var state = new DIJOYSTATE();
                 var res = this.getDeviceState(this.device, (uint)sizeof(DIJOYSTATE), &state);
-                if(res != 0)
+                if (res != 0)
                 {
                     this.acquire(this.device);
                     res = this.getDeviceState(this.device, (uint)sizeof(DIJOYSTATE), &state);
                 }
 
-                if(res == 0)
+                if (res == 0)
                 {
                     this.XAxisPosition = state.lX;
                     this.YAxisPosition = state.lY;
@@ -121,17 +114,13 @@ namespace Aeon.Emulator.Input
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            this.InternalDispose();
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        /// Releases unmanaged and - optionally - managed resources
-        /// </summary>
-        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-        private void Dispose(bool disposing)
+        private void InternalDispose()
         {
-            if(!disposed)
+            if (!disposed)
             {
                 disposed = true;
                 this.release(device);

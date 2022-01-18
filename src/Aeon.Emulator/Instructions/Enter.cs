@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Aeon.Emulator.Instructions
+﻿namespace Aeon.Emulator.Instructions
 {
     internal static class Enter
     {
@@ -14,7 +12,7 @@ namespace Aeon.Emulator.Instructions
             frameTemp = vm.Processor.SP;
 
             if (level > 0)
-                throw new NotImplementedException();
+                ThrowHelper.ThrowNotImplementedException();
 
             vm.Processor.BP = (ushort)frameTemp;
             vm.Processor.SP = (ushort)(vm.Processor.BP - frameSize);
@@ -29,7 +27,7 @@ namespace Aeon.Emulator.Instructions
             frameTemp = vm.Processor.ESP;
 
             if (level > 0)
-                throw new NotImplementedException();
+                ThrowHelper.ThrowNotImplementedException();
 
             vm.Processor.EBP = frameTemp;
             vm.Processor.ESP = (uint)(vm.Processor.EBP - frameSize);

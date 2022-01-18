@@ -8,7 +8,7 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ByteXor(Processor p, ref byte dest, byte src)
         {
-            dest = (byte)(dest ^ src);
+            dest ^= src;
             p.Flags.Update_Value_Byte(dest);
             p.Flags.Carry = false;
             p.Flags.Overflow = false;
@@ -18,16 +18,16 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WordXor(Processor p, ref ushort dest, ushort src)
         {
-            dest = (ushort)(dest ^ src);
+            dest ^= src;
             p.Flags.Update_Value_Word(dest);
             p.Flags.Carry = false;
             p.Flags.Overflow = false;
         }
-        [Alternate("WordXor", AddressSize = 16 | 32)]
+        [Alternate(nameof(WordXor), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DWordXor(Processor p, ref uint dest, uint src)
         {
-            dest = (uint)(dest ^ src);
+            dest ^= src;
             p.Flags.Update_Value_DWord(dest);
             p.Flags.Carry = false;
             p.Flags.Overflow = false;
