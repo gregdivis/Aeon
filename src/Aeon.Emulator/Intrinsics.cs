@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 
 namespace Aeon.Emulator
@@ -27,6 +28,33 @@ namespace Aeon.Emulator
             else
                 return a & ~b;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ResetLowestSetBit(uint value)
+        {
+            if (Bmi1.IsSupported)
+            {
+                return Bmi1.ResetLowestSetBit(value);
+            }
+            else
+            {
+                int trailingZeroCount = BitOperations.TrailingZeroCount(value);
+                if (trailingZeroCount < 32)
+                    return value & ~(1u << trailingZeroCount);
+                else
+                    return 0;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte HighByte(ushort value)
+        {
+            unsafe
+            {
+                return ((byte*)&value)[1];
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte LowByte(ushort value) => (byte)value;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ushort HighWord(uint value)
         {

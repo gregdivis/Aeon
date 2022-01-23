@@ -255,21 +255,19 @@ namespace Aeon.Emulator
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public void RaiseInterrupt(byte interrupt)
         {
-            if ((this.Processor.CR0 & CR0.ProtectedModeEnable) == 0)     // Real mode
+            if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))     // Real mode
             {
-                var address = PhysicalMemory.GetRealModeInterruptAddress(interrupt);
+                var address = this.PhysicalMemory.GetRealModeInterruptAddress(interrupt);
                 if (address.Segment == 0 && address.Offset == 0)
                 {
                     System.Diagnostics.Debug.WriteLine("Unhandled real-mode interrupt");
                     return;
                 }
 
-                PushToStack((ushort)Processor.Flags.Value);
-                PushToStack(Processor.CS);
-                PushToStack(Processor.IP);
+                this.PushToStack((ushort)this.Processor.Flags.Value, this.Processor.CS, this.Processor.IP);
 
-                Processor.EIP = address.Offset;
-                WriteSegmentRegister(SegmentIndex.CS, address.Segment);
+                this.Processor.EIP = address.Offset;
+                this.WriteSegmentRegister(SegmentIndex.CS, address.Segment);
 
                 this.Processor.Flags.Trap = false;
                 this.Processor.Flags.InterruptEnable = false;
@@ -297,31 +295,19 @@ namespace Aeon.Emulator
                         this.Processor.ESP = newESP;
 
                         if (wordSize == 4u)
-                        {
-                            PushToStack32(oldSS);
-                            PushToStack32(oldESP);
-                        }
+                            this.PushToStack32(oldSS, oldESP);
                         else
-                        {
-                            PushToStack(oldSS);
-                            PushToStack((ushort)oldESP);
-                        }
+                            this.PushToStack(oldSS, (ushort)oldESP);
                     }
                     else if (cpl < rpl)
+                    {
                         throw new InvalidOperationException();
+                    }
 
                     if (wordSize == 4u)
-                    {
-                        PushToStack32((uint)this.Processor.Flags.Value);
-                        PushToStack32(this.Processor.CS);
-                        PushToStack32(this.Processor.EIP);
-                    }
+                        this.PushToStack32((uint)this.Processor.Flags.Value, this.Processor.CS, this.Processor.EIP);
                     else
-                    {
-                        PushToStack((ushort)this.Processor.Flags.Value);
-                        PushToStack(this.Processor.CS);
-                        PushToStack(this.Processor.IP);
-                    }
+                        this.PushToStack((ushort)this.Processor.Flags.Value, this.Processor.CS, this.Processor.IP);
 
                     this.Processor.EIP = interruptGate.Offset;
                     WriteSegmentRegister(SegmentIndex.CS, interruptGate.Selector);
@@ -333,7 +319,7 @@ namespace Aeon.Emulator
                 else
                 {
                     var desc = (InterruptDescriptor)descriptor;
-                    TaskSwitch32(desc.Selector, false, true);
+                    this.TaskSwitch32(desc.Selector, false, true);
                 }
             }
         }
@@ -586,59 +572,74 @@ namespace Aeon.Emulator
             else
                 ThrowHelper.ThrowNoCallbackHandlerException(id);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal void PushToStack(ushort value)
         {
             var p = this.Processor;
             unsafe
             {
+                uint address = p.segmentBases[(int)SegmentIndex.SS];
+
                 if (!this.BigStackPointer)
                 {
-                    var sp = (ushort*)p.PSP;
-                    *sp -= 2;
-                    uint address = p.segmentBases[(int)SegmentIndex.SS] + *sp;
-                    this.PhysicalMemory.SetUInt16(address, value);
+                    ref ushort sp = ref p.SP;
+                    sp -= 2;
+                    address += sp;
                 }
                 else
                 {
-                    var esp = (uint*)p.PSP;
-                    *esp -= 2;
-                    uint address = p.segmentBases[(int)SegmentIndex.SS] + *esp;
-                    this.PhysicalMemory.SetUInt16(address, value);
+                    ref uint esp = ref p.ESP;
+                    esp -= 2;
+                    address += esp;
                 }
+
+                this.PhysicalMemory.SetUInt16(address, value);
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal void PushToStack(ushort value1, ushort value2)
         {
             this.PushToStack(value1);
             this.PushToStack(value2);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        internal void PushToStack(ushort value1, ushort value2, ushort value3)
+        {
+            this.PushToStack(value1);
+            this.PushToStack(value2);
+            this.PushToStack(value3);
+        }
         internal void PushToStack32(uint value)
         {
+            var p = this.Processor;
             unsafe
             {
+                uint address = p.segmentBases[(int)SegmentIndex.SS];
+
                 if (!this.BigStackPointer)
                 {
-                    unsafe
-                    {
-                        var sp = (ushort*)this.Processor.PSP;
-                        *sp -= 4;
-                        uint address = this.Processor.segmentBases[(int)SegmentIndex.SS] + *sp;
-                        this.PhysicalMemory.SetUInt32(address, value);
-                    }
+                    ref ushort sp = ref p.SP;
+                    sp -= 4;
+                    address += sp;
                 }
                 else
                 {
-                    var esp = (uint*)this.Processor.PSP;
-                    *esp -= 4;
-                    uint address = this.Processor.segmentBases[(int)SegmentIndex.SS] + *esp;
-                    this.PhysicalMemory.SetUInt32(address, value);
+                    ref uint esp = ref p.ESP;
+                    esp -= 4;
+                    address += esp;
                 }
+
+                this.PhysicalMemory.SetUInt32(address, value);
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        internal void PushToStack32(uint value1, uint value2)
+        {
+            this.PushToStack32(value1);
+            this.PushToStack32(value2);
+        }
+        internal void PushToStack32(uint value1, uint value2, uint value3)
+        {
+            this.PushToStack32(value1);
+            this.PushToStack32(value2);
+            this.PushToStack32(value3);
+        }
         internal ushort PopFromStack()
         {
             ushort value;
@@ -662,7 +663,6 @@ namespace Aeon.Emulator
 
             return value;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal uint PopFromStack32()
         {
             uint value;
@@ -686,7 +686,7 @@ namespace Aeon.Emulator
 
             return value;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void AddToStackPointer(uint value)
         {
             if (!this.BigStackPointer)
@@ -694,7 +694,6 @@ namespace Aeon.Emulator
             else
                 this.Processor.ESP += value;
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal ushort PeekStack16()
         {
             uint address;
@@ -708,7 +707,6 @@ namespace Aeon.Emulator
 
             return this.PhysicalMemory.GetUInt16(address);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal uint PeekStack32()
         {
             uint address;
@@ -722,7 +720,6 @@ namespace Aeon.Emulator
 
             return this.PhysicalMemory.GetUInt32(address);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal ulong PeekStack48()
         {
             uint address;
@@ -774,7 +771,6 @@ namespace Aeon.Emulator
         /// setting the segment register on the processor directly. This method also updates
         /// the precalculated base address for the segment.
         /// </remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public void WriteSegmentRegister(SegmentIndex segment, ushort value)
         {
             ushort oldValue;
@@ -786,7 +782,7 @@ namespace Aeon.Emulator
 
             try
             {
-                UpdateSegment(segment);
+                this.UpdateSegment(segment);
             }
             catch (SegmentNotPresentException)
             {
@@ -807,7 +803,6 @@ namespace Aeon.Emulator
                 throw;
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         internal void UpdateSegment(SegmentIndex segment)
         {
             unsafe
