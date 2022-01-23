@@ -11,11 +11,10 @@ namespace Aeon.Emulator.Instructions.FPU
         {
             ref var st0 = ref vm.Processor.FPU.ST0_Ref;
 
-            double sine = Math.Sin(st0);
-            double cosine = Math.Cos(st0);
+            var (sin, cos) = Math.SinCos(st0);
 
-            st0 = sine;
-            vm.Processor.FPU.Push(cosine);
+            st0 = sin;
+            vm.Processor.FPU.Push(cos);
         }
     }
 }

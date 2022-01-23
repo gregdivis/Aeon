@@ -11,7 +11,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
     /// <summary>
     /// Emulates a PC speaker.
     /// </summary>
-    public sealed class InternalSpeaker : IInputPort, IOutputPort
+    public sealed class InternalSpeaker : IInputPort, IOutputPort, IDisposable
     {
         /// <summary>
         /// Value into which the input frequency is divided to get the frequency in Hz.
@@ -77,15 +77,6 @@ namespace Aeon.Emulator.Sound.PCSpeaker
             }
         }
         void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
         public void Dispose()
         {
             this.frequencyRegister.ValueChanged -= this.FrequencyChanged;

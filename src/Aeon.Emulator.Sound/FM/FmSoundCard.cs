@@ -9,7 +9,7 @@ namespace Aeon.Emulator.Sound.FM
     /// <summary>
     /// Virtual device which emulates OPL3 FM sound.
     /// </summary>
-    public sealed class FmSoundCard : IInputPort, IOutputPort
+    public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
     {
         private const byte Timer1Mask = 0xC0;
         private const byte Timer2Mask = 0xA0;
@@ -116,9 +116,6 @@ namespace Aeon.Emulator.Sound.FM
                 this.generateThread.Start();
                 this.paused = false;
             }
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
         }
 
         public void Dispose()

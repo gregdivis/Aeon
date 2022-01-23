@@ -12,8 +12,8 @@ namespace Aeon.Emulator.Memory
         private VirtualMachine vm;
         private RealModeAddress callbackAddress;
         private int a20EnableCount;
-        private readonly LinkedList<XmsBlock> xms = new LinkedList<XmsBlock>();
-        private readonly SortedList<int, int> handles = new SortedList<int, int>();
+        private readonly LinkedList<XmsBlock> xms = new();
+        private readonly SortedList<int, int> handles = new();
 
         /// <summary>
         /// Specifies the starting physical address of XMS.
@@ -167,19 +167,10 @@ namespace Aeon.Emulator.Memory
         ushort IInputPort.ReadWord(int port) => throw new NotSupportedException();
         void IOutputPort.WriteByte(int port, byte value) => this.vm.PhysicalMemory.EnableA20 = (value & 0x02) != 0;
         void IOutputPort.WriteWord(int port, ushort value) => throw new NotSupportedException();
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             this.vm = vm;
-            InitializeMemoryMap();
-        }
-        void IDisposable.Dispose()
-        {
+            this.InitializeMemoryMap();
         }
 
         /// <summary>
@@ -322,8 +313,7 @@ namespace Aeon.Emulator.Memory
         {
             int handle = (ushort)vm.Processor.DX;
 
-            int lockCount;
-            if (!this.handles.TryGetValue(handle, out lockCount))
+            if (!this.handles.TryGetValue(handle, out int lockCount))
             {
                 vm.Processor.AX = 0; // Didn't work.
                 vm.Processor.BL = 0xA2; // Invalid handle.
@@ -356,8 +346,7 @@ namespace Aeon.Emulator.Memory
         {
             int handle = (ushort)vm.Processor.DX;
 
-            int lockCount;
-            if (!this.handles.TryGetValue(handle, out lockCount))
+            if (!this.handles.TryGetValue(handle, out int lockCount))
             {
                 vm.Processor.AX = 0; // Didn't work.
                 vm.Processor.BL = 0xA2; // Invalid handle.
@@ -380,8 +369,7 @@ namespace Aeon.Emulator.Memory
         {
             int handle = (ushort)vm.Processor.DX;
 
-            int lockCount;
-            if (!this.handles.TryGetValue(handle, out lockCount))
+            if (!this.handles.TryGetValue(handle, out int lockCount))
             {
                 vm.Processor.AX = 0; // Didn't work.
                 vm.Processor.BL = 0xA2; // Invalid handle.
@@ -406,8 +394,7 @@ namespace Aeon.Emulator.Memory
         {
             int handle = (ushort)vm.Processor.DX;
 
-            int lockCount;
-            if (!this.handles.TryGetValue(handle, out lockCount))
+            if (!this.handles.TryGetValue(handle, out int lockCount))
             {
                 vm.Processor.AX = 0; // Didn't work.
                 vm.Processor.BL = 0xA2; // Invalid handle.

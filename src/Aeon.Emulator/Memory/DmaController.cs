@@ -17,10 +17,9 @@ namespace Aeon.Emulator
         private const int MaskRegister16 = 0xD4;
         private const int AutoInitFlag = 1 << 4;
 
-        private readonly List<DmaChannel> channels = new List<DmaChannel>(8);
-        private VirtualMachine vm;
+        private readonly List<DmaChannel> channels = new(8);
 
-        internal DmaController(VirtualMachine vm)
+        internal DmaController()
         {
             for (int i = 0; i < 8; i++)
             {
@@ -102,23 +101,13 @@ namespace Aeon.Emulator
                     break;
             }
         }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
-        void IDisposable.Dispose()
-        {
-        }
 
         /// <summary>
         /// Sets DMA channel mode information.
         /// </summary>
         /// <param name="channel">Channel whose mode is to be set.</param>
         /// <param name="value">Flags specifying channel's new mode information.</param>
-        private void SetChannelMode(DmaChannel channel, int value)
+        private static void SetChannelMode(DmaChannel channel, int value)
         {
             if ((value & AutoInitFlag) != 0)
                 channel.TransferMode = DmaTransferMode.AutoInitialize;
@@ -136,19 +125,13 @@ namespace Aeon.Emulator
             if (index < 0)
                 throw new ArgumentException("Invalid port.");
 
-            switch (index % 3)
+            return (index % 3) switch
             {
-                case 0:
-                    return channels[index / 3].Page;
-
-                case 1:
-                    return channels[index / 3].ReadAddressByte();
-
-                case 2:
-                    return channels[index / 3].ReadCountByte();
-            }
-
-            return 0;
+                0 => channels[index / 3].Page,
+                1 => channels[index / 3].ReadAddressByte(),
+                2 => channels[index / 3].ReadCountByte(),
+                _ => 0
+            };
         }
         /// <summary>
         /// Writes a value to a specified DMA channel port.

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Buffers.Binary;
+using System.Collections.Generic;
 
 namespace Aeon.Emulator
 {
@@ -23,6 +25,12 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="port">Port where first byte will be written.</param>
         /// <param name="value">Value to write to the ports.</param>
-        void WriteWord(int port, ushort value);
+        void WriteWord(int port, ushort value)
+        {
+            Span<byte> buffer = stackalloc byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
+            this.WriteByte(port, buffer[0]);
+            this.WriteByte(port + 1, buffer[1]);
+        }
     }
 }

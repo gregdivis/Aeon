@@ -47,6 +47,7 @@ namespace Aeon.Emulator
 
         public readonly override string ToString() => ((double)this).ToString();
 
+        [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private readonly double ToDouble()
         {

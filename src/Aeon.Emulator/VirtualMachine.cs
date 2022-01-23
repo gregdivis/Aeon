@@ -84,28 +84,28 @@ namespace Aeon.Emulator
             this.InterruptTimer = new InterruptTimer();
             this.emm = new ExpandedMemoryManager();
             this.xmm = new ExtendedMemoryManager();
-            this.DmaController = new DmaController(this);
+            this.DmaController = new DmaController();
             this.Console = new VirtualConsole(this);
             this.multiplexHandler = new MultiplexInterruptHandler();
             this.PhysicalMemory.Video = this.Video;
 
             this.Dos.InitializationComplete();
 
-            RegisterVirtualDevice(this.Dos);
-            RegisterVirtualDevice(this.Video);
-            RegisterVirtualDevice(this.Keyboard);
-            RegisterVirtualDevice(this.Mouse);
-            RegisterVirtualDevice(new RealTimeClockHandler());
-            RegisterVirtualDevice(new ErrorHandler());
-            RegisterVirtualDevice(this.InterruptController);
-            RegisterVirtualDevice(this.InterruptTimer);
-            RegisterVirtualDevice(this.emm);
-            RegisterVirtualDevice(this.DmaController);
-            RegisterVirtualDevice(this.multiplexHandler);
-            RegisterVirtualDevice(new BiosServices.SystemServices());
-            RegisterVirtualDevice(this.xmm);
-            RegisterVirtualDevice(new Dos.CD.Mscdex());
-            RegisterVirtualDevice(new LowLevelDisk.LowLevelDiskInterface());
+            this.RegisterVirtualDevice(this.Dos);
+            this.RegisterVirtualDevice(this.Video);
+            this.RegisterVirtualDevice(this.Keyboard);
+            this.RegisterVirtualDevice(this.Mouse);
+            this.RegisterVirtualDevice(new RealTimeClockHandler());
+            this.RegisterVirtualDevice(new ErrorHandler());
+            this.RegisterVirtualDevice(this.InterruptController);
+            this.RegisterVirtualDevice(this.InterruptTimer);
+            this.RegisterVirtualDevice(this.emm);
+            this.RegisterVirtualDevice(this.DmaController);
+            this.RegisterVirtualDevice(this.multiplexHandler);
+            this.RegisterVirtualDevice(new BiosServices.SystemServices());
+            this.RegisterVirtualDevice(this.xmm);
+            this.RegisterVirtualDevice(new Dos.CD.Mscdex());
+            this.RegisterVirtualDevice(new LowLevelDisk.LowLevelDiskInterface());
 
             this.PhysicalMemory.AddTimerInterruptHandler();
         }
@@ -531,7 +531,7 @@ namespace Aeon.Emulator
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            this.Dispose(true);
             GC.SuppressFinalize(this);
         }
         /// <summary>
@@ -577,22 +577,14 @@ namespace Aeon.Emulator
             if (handler != null)
                 handler.HandleInterrupt(interrupt);
             else
-                throw new ArgumentException("There is no handler associated with the interrupt.");
+                ThrowHelper.ThrowNoInterruptHandlerException(interrupt);
         }
         internal void CallCallback(byte id)
         {
-            ICallbackProvider provider;
-
-            try
-            {
-                provider = this.callbackProviders[id];
-            }
-            catch (KeyNotFoundException ex)
-            {
-                throw new ArgumentException("There is no handler associated with the callback ID.", nameof(id), ex);
-            }
-
-            provider.InvokeCallback();
+            if (this.callbackProviders.TryGetValue(id, out var provider))
+                provider.InvokeCallback();
+            else
+                ThrowHelper.ThrowNoCallbackHandlerException(id);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal void PushToStack(ushort value)
@@ -802,6 +794,7 @@ namespace Aeon.Emulator
                 {
                     *this.Processor.segmentRegisterPointers[(int)segment] = oldValue;
                 }
+
                 throw;
             }
             catch (GeneralProtectionFaultException)
@@ -810,6 +803,7 @@ namespace Aeon.Emulator
                 {
                     *this.Processor.segmentRegisterPointers[(int)segment] = oldValue;
                 }
+
                 throw;
             }
         }
@@ -946,14 +940,14 @@ namespace Aeon.Emulator
                 var selector = this.PhysicalMemory.TaskSelector;
                 var desc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
                 var tss = (TaskStateSegment32*)this.PhysicalMemory.GetSafePointer(desc.Base, (uint)sizeof(TaskStateSegment32));
-                TaskSwitch32(tss->LINK, true, false);
+                this.TaskSwitch32(tss->LINK, true, false);
             }
         }
         internal ushort GetPrivilegedSS(uint privilegeLevel, uint wordSize)
         {
             ushort tss = this.PhysicalMemory.TaskSelector;
             if (tss == 0)
-                throw new InvalidOperationException();
+                ThrowHelper.ThrowInvalidTaskSegmentSelectorException();
 
             var segmentDescriptor = (SegmentDescriptor)this.PhysicalMemory.GetDescriptor(tss);
             unsafe
@@ -965,7 +959,7 @@ namespace Aeon.Emulator
         {
             ushort tss = this.PhysicalMemory.TaskSelector;
             if (tss == 0)
-                throw new InvalidOperationException();
+                ThrowHelper.ThrowInvalidTaskSegmentSelectorException();
 
             var segmentDescriptor = (SegmentDescriptor)this.PhysicalMemory.GetDescriptor(tss);
             unsafe
@@ -1007,15 +1001,21 @@ namespace Aeon.Emulator
 
         private void Dispose(bool disposing)
         {
-            if (!disposed && disposing)
+            if(!this.disposed)
             {
-                foreach (var device in allDevices)
-                    device?.Dispose();
+                if (disposing)
+                {
+                    foreach (var device in this.allDevices)
+                    {
+                        if (device is IDisposable d)
+                            d.Dispose();
+                    }
 
-                allDevices.Clear();
-                this.PhysicalMemory.InternalDispose();
+                    this.allDevices.Clear();
+                    this.PhysicalMemory.InternalDispose();
+                }
 
-                disposed = true;
+                this.disposed = true;
             }
         }
         /// <summary>

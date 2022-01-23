@@ -28,12 +28,12 @@ namespace Aeon.Emulator.Mouse
         private int maxY = 199;
         private int mickeyRatioX = 8;
         private int mickeyRatioY = 16;
-        private readonly ButtonPressTracker buttonTracker = new ButtonPressTracker();
+        private readonly ButtonPressTracker buttonTracker = new();
 
         /// <summary>
         /// Gets the current position of the mouse cursor.
         /// </summary>
-        public Video.Point Position => new Video.Point(currentState.X, currentState.Y);
+        public Video.Point Position => new(currentState.X, currentState.Y);
 
         /// <summary>
         /// Notifies the mouse handler that the mouse was moved and relative coordinates are specified.
@@ -235,7 +235,7 @@ namespace Aeon.Emulator.Mouse
             }
         }
 
-        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { 0x33, new InterruptHandlerInfo(CallbackInterrupt, Registers.AX | Registers.BX | Registers.CX | Registers.DX | Registers.BP | Registers.SI | Registers.DI | Registers.DS | Registers.ES, false, true) };
+        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { (byte)0x33, new InterruptHandlerInfo(CallbackInterrupt, Registers.AX | Registers.BX | Registers.CX | Registers.DX | Registers.BP | Registers.SI | Registers.DI | Registers.DS | Registers.ES, false, true) };
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
             if (interrupt == CallbackInterrupt)
@@ -376,19 +376,10 @@ namespace Aeon.Emulator.Mouse
             }
         }
 
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             this.vm = vm;
             this.vm.VideoModeChanged += this.HandleVideoModeChanged;
-        }
-        void IDisposable.Dispose()
-        {
         }
     }
 }

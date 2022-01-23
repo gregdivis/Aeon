@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Aeon.DiskImages;
 using Aeon.DiskImages.Archives;
 using Aeon.Emulator.Dos.VirtualFileSystem;
@@ -327,6 +328,15 @@ namespace Aeon.Emulator.Launcher
             {
                 this.paletteWindow.Closed -= this.PaletteWindow_Closed;
                 this.paletteWindow = null;
+            }
+        }
+        private void DumpVideoRam_Click(object sender, RoutedEventArgs e)
+        {
+            using var bmp = this.emulatorDisplay?.CurrentPresenter?.Dump();
+            if (bmp != null)
+            {
+                var bmpSource = BitmapSource.Create(bmp.Width, bmp.Height, 96, 96, PixelFormats.Bgr32, null, bmp.PixelBuffer, bmp.Width * bmp.Height * 4, bmp.Width * 4);
+                Clipboard.SetImage(bmpSource);
             }
         }
     }

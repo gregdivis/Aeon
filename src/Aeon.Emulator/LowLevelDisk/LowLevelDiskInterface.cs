@@ -1,12 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace Aeon.Emulator.LowLevelDisk
 {
-    internal sealed class LowLevelDiskInterface : IInterruptHandler
+    internal sealed class LowLevelDiskInterface : IInterruptHandler, IDisposable
     {
         private VirtualMachine vm;
-        private Timer diskMotorTimer;
+        private readonly Timer diskMotorTimer;
 
         public LowLevelDiskInterface() => this.diskMotorTimer = new Timer(this.UpdateDiskMotorTimer);
 

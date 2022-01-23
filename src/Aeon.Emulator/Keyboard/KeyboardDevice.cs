@@ -19,17 +19,17 @@ namespace Aeon.Emulator.Keyboard
         private const int RepeatDelay = 30;
 
         private VirtualMachine vm;
-        private readonly ConcurrentQueue<byte> hardwareQueue = new ConcurrentQueue<byte>();
-        private readonly List<byte> internalBuffer = new List<byte>();
-        private readonly ConcurrentQueue<ushort> typeBuffer = new ConcurrentQueue<ushort>();
+        private readonly ConcurrentQueue<byte> hardwareQueue = new();
+        private readonly List<byte> internalBuffer = new();
+        private readonly ConcurrentQueue<ushort> typeBuffer = new();
         private KeyModifiers modifiers;
         private bool leftShiftDown;
         private bool rightShiftDown;
-        private readonly SortedList<Keys, bool> pressedKeys = new SortedList<Keys, bool>();
+        private readonly SortedList<Keys, bool> pressedKeys = new();
         private int expectedInputByteCount;
         private volatile Keys lastKey;
         private Timer autoRepeatTimer;
-        private readonly object autoRepeatTimerLock = new object();
+        private readonly object autoRepeatTimerLock = new();
 
         public KeyboardDevice()
         {
@@ -383,7 +383,7 @@ namespace Aeon.Emulator.Keyboard
             }
         }
 
-        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { new InterruptHandlerInfo(0x09, Registers.AX | Registers.CX), 0x16 };
+        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new[] { new InterruptHandlerInfo(0x09, Registers.AX | Registers.CX), (byte)0x16 };
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
             if (interrupt == 0x09)
@@ -395,17 +395,12 @@ namespace Aeon.Emulator.Keyboard
         IEnumerable<int> IInputPort.InputPorts => new[] { 0x60, 0x64 };
         byte IInputPort.ReadByte(int port)
         {
-            switch (port)
+            return port switch
             {
-                case 0x60:
-                    return this.CurrentHardwareByte ?? 0;
-
-                case 0x64:
-                    return 0;
-
-                default:
-                    throw new ArgumentException();
-            }
+                0x60 => this.CurrentHardwareByte ?? 0,
+                0x64 => 0,
+                _ => throw new ArgumentException("Invalid port number.")
+            };
         }
         ushort IInputPort.ReadWord(int port) => throw new NotSupportedException();
 
@@ -419,16 +414,6 @@ namespace Aeon.Emulator.Keyboard
         }
         void IOutputPort.WriteWord(int port, ushort value) => throw new NotSupportedException();
 
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
-
-        void IDisposable.Dispose()
-        {
-        }
     }
 }

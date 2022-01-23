@@ -8,37 +8,21 @@ namespace Aeon.Emulator.Video.Modes
     /// </summary>
     internal abstract class Planar4 : VideoMode
     {
-        private readonly UnsafeBuffer<nint> planesBuffer = new(4);
-        private readonly UnsafeBuffer<byte> latchesBuffer = new(4);
-        private readonly UnsafeBuffer<byte> expandedBuffer = new(8);
-        private readonly unsafe byte** planes;
-        private readonly unsafe byte* latches;
+        private readonly unsafe uint* videoRam;
+        private uint latches;
         private readonly Graphics graphics;
         private readonly Sequencer sequencer;
-        private readonly unsafe byte* expandedForeground;
-        private readonly unsafe byte* expandedBackground;
 
         public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, VideoHandler video)
             : base(width, height, bpp, true, fontHeight, modeType, video)
         {
             unsafe
             {
-                this.planes = (byte**)this.planesBuffer.ToPointer();
-                byte* vram = (byte*)video.VideoRam.ToPointer();
-                this.planes[0] = vram + PlaneSize * 0;
-                this.planes[1] = vram + PlaneSize * 1;
-                this.planes[2] = vram + PlaneSize * 2;
-                this.planes[3] = vram + PlaneSize * 3;
+                this.videoRam = (uint*)video.VideoRam.ToPointer();
             }
 
             this.graphics = video.Graphics;
             this.sequencer = video.Sequencer;
-            unsafe
-            {
-                this.latches = this.latchesBuffer.ToPointer();
-                this.expandedForeground = this.latchesBuffer.ToPointer();
-                this.expandedBackground = this.expandedForeground + 4;
-            }
         }
 
         internal override byte GetVramByte(uint offset)
@@ -47,22 +31,19 @@ namespace Aeon.Emulator.Video.Modes
 
             unsafe
             {
-                latches[0] = planes[0][offset];
-                latches[1] = planes[1][offset];
-                latches[2] = planes[2][offset];
-                latches[3] = planes[3][offset];
+                this.latches = this.videoRam[offset];
 
                 if ((graphics.GraphicsMode & (1 << 3)) == 0)
                 {
-                    return latches[graphics.ReadMapSelect & 0x3];
+                    return ReadByte(this.latches, graphics.ReadMapSelect & 0x3u);
                 }
                 else
                 {
-                    int result1 = graphics.ExpandedColorDontCare[0] & ~(latches[0] ^ graphics.ExpandedColorCompare[0]);
-                    int result2 = graphics.ExpandedColorDontCare[1] & ~(latches[1] ^ graphics.ExpandedColorCompare[1]);
-                    int result3 = graphics.ExpandedColorDontCare[2] & ~(latches[2] ^ graphics.ExpandedColorCompare[2]);
-                    int result4 = graphics.ExpandedColorDontCare[3] & ~(latches[3] ^ graphics.ExpandedColorCompare[3]);
-                    return (byte)(result1 | result2 | result3 | result4);
+                    uint colorDontCare = graphics.ColorDontCare.Expanded;
+                    uint colorCompare = graphics.ColorCompare * 0x01010101u;
+                    uint results = Intrinsics.AndNot(colorDontCare, this.latches ^ colorCompare);
+                    byte* bytes = (byte*)&results;
+                    return (byte)(bytes[0] | bytes[1] | bytes[2] | bytes[3]);
                 }
             }
         }
@@ -71,77 +52,61 @@ namespace Aeon.Emulator.Video.Modes
         {
             offset %= 65536u;
 
-            uint writeMode = graphics.GraphicsMode & 0x3u;
+            uint writeMode = this.graphics.GraphicsMode & 0x3u;
             if (writeMode == 0)
             {
-                SetByteMode0(offset, value);
+                this.SetByteMode0(offset, value);
             }
             else if (writeMode == 1)
             {
-                uint mapMask = sequencer.MapMask;
+                // when mapMask = 0 keep value in vram
+                // whem mapMask = 1 take value from latches
+                // input value is not used at all
+
+                uint mapMask = this.sequencer.MapMask.Expanded;
+
                 unsafe
                 {
-                    if ((sequencer.MapMask & 0x01) != 0)
-                        planes[0][offset] = latches[0];
-                    if ((sequencer.MapMask & 0x02) != 0)
-                        planes[1][offset] = latches[1];
-                    if ((sequencer.MapMask & 0x04) != 0)
-                        planes[2][offset] = latches[2];
-                    if ((sequencer.MapMask & 0x08) != 0)
-                        planes[3][offset] = latches[3];
+                    uint current = Intrinsics.AndNot(this.videoRam[offset], mapMask); // read value and clear mask bits
+                    current |= this.latches & mapMask; // set latch bits
+                    this.videoRam[offset] = current;
                 }
+            }
+            else if (writeMode == 2)
+            {
+                this.SetByteMode2(offset, value);
             }
             else
             {
-                SetByteMode2(offset, value);
+                ThrowHelper.ThrowNotImplementedException();
             }
         }
         internal override ushort GetVramWord(uint offset)
         {
-            offset %= 65536u;
-
-            uint latchOffset = offset + 1u;
-            unsafe
-            {
-                latches[0] = planes[0][latchOffset];
-                latches[1] = planes[1][latchOffset];
-                latches[2] = planes[2][latchOffset];
-                latches[3] = planes[3][latchOffset];
-                return *(ushort*)(planes[graphics.ReadMapSelect & 0x3] + offset);
-            }
+            return (ushort)(this.GetVramByte(offset) | (this.GetVramByte(offset + 1u) << 8));
         }
         internal override void SetVramWord(uint offset, ushort value)
         {
-            SetVramByte(offset, (byte)value);
-            SetVramByte(offset + 1u, (byte)(value >> 8));
+            this.SetVramByte(offset, (byte)value);
+            this.SetVramByte(offset + 1u, (byte)(value >> 8));
         }
         internal override uint GetVramDWord(uint offset)
         {
-            offset %= 65536u;
-
-            uint latchOffset = offset + 3u;
-            unsafe
-            {
-                latches[0] = planes[0][latchOffset];
-                latches[1] = planes[1][latchOffset];
-                latches[2] = planes[2][latchOffset];
-                latches[3] = planes[3][latchOffset];
-                return *(uint*)(planes[graphics.ReadMapSelect & 0x3] + offset);
-            }
+            return (uint)(this.GetVramByte(offset) | (this.GetVramByte(offset + 1u) << 8) | (this.GetVramByte(offset + 2u) << 16) | (this.GetVramByte(offset + 3u) << 24));
         }
         internal override void SetVramDWord(uint offset, uint value)
         {
-            SetVramByte(offset, (byte)value);
-            SetVramByte(offset + 1u, (byte)(value >> 8));
-            SetVramByte(offset + 2u, (byte)(value >> 16));
-            SetVramByte(offset + 3u, (byte)(value >> 24));
+            this.SetVramByte(offset, (byte)value);
+            this.SetVramByte(offset + 1u, (byte)(value >> 8));
+            this.SetVramByte(offset + 2u, (byte)(value >> 16));
+            this.SetVramByte(offset + 3u, (byte)(value >> 24));
         }
         internal override void WriteCharacter(int x, int y, int index, byte foreground, byte background)
         {
             unsafe
             {
-                VideoComponent.ExpandRegister(foreground, new Span<byte>(expandedForeground, 4));
-                VideoComponent.ExpandRegister(background, new Span<byte>(expandedBackground, 4));
+                uint fg = new MaskValue(foreground).Expanded;
+                //uint bg = VideoComponent.ExpandRegister(background);
 
                 int stride = this.Stride;
                 int startPos = y * stride * 16 + x;
@@ -149,27 +114,14 @@ namespace Aeon.Emulator.Video.Modes
 
                 for (int row = 0; row < 16; row++)
                 {
-                    uint fgMask = font[index * 16 + row];
-                    uint bgMask = ~fgMask;
-                    uint value1 = expandedForeground[0] & fgMask;
-                    uint value2 = expandedForeground[1] & fgMask;
-                    uint value3 = expandedForeground[2] & fgMask;
-                    uint value4 = expandedForeground[3] & fgMask;
+                    uint fgMask = font[index * 16 + row] * 0x01010101u;
+                    //uint bgMask = ~fgMask;
+                    uint value = fg & fgMask;
 
                     if ((background & 0x08) == 0)
-                    {
-                        planes[0][startPos + row * stride] = (byte)value1;
-                        planes[1][startPos + row * stride] = (byte)value2;
-                        planes[2][startPos + row * stride] = (byte)value3;
-                        planes[3][startPos + row * stride] = (byte)value4;
-                    }
+                        this.videoRam[startPos + (row * stride)] = value;
                     else
-                    {
-                        planes[0][startPos + row * stride] ^= (byte)value1;
-                        planes[1][startPos + row * stride] ^= (byte)value2;
-                        planes[2][startPos + row * stride] ^= (byte)value3;
-                        planes[3][startPos + row * stride] ^= (byte)value4;
-                    }
+                        this.videoRam[startPos + (row * stride)] ^= value;
                 }
             }
         }
@@ -179,34 +131,33 @@ namespace Aeon.Emulator.Video.Modes
         /// </summary>
         /// <param name="offset">Video RAM offset to write byte.</param>
         /// <param name="input">Byte to write to video RAM.</param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetByteMode0(uint offset, byte input)
         {
             unsafe
             {
                 if (graphics.DataRotate == 0)
                 {
-                    byte mask = graphics.BitMask;
+                    uint source = (uint)input * 0x01010101;
+                    uint mask = (uint)graphics.BitMask * 0x01010101;
 
-                    for (int p = 0; p < 4; p++)
-                    {
-                        if (sequencer.ExpandedMapMask[p])
-                        {
-                            byte source = input;
+                    // when mapMask is set, use computed value; otherwise keep vram value
+                    uint mapMask = this.sequencer.MapMask.Expanded;
 
-                            if (graphics.ExpandedEnableSetReset[p])
-                                source = graphics.ExpandedSetReset[p];
+                    uint original = this.videoRam[offset];
 
-                            source &= mask;
-                            source |= (byte)(latches[p] & ~mask);
+                    uint setResetEnabled = this.graphics.EnableSetReset.Expanded;
+                    uint setReset = this.graphics.SetReset.Expanded;
 
-                            planes[p][offset] = source;
-                        }
-                    }
+                    source = Intrinsics.AndNot(source, setResetEnabled);
+                    source |= setReset & setResetEnabled;
+                    source &= mask;
+                    source |= Intrinsics.AndNot(this.latches, mask);
+
+                    this.videoRam[offset] = (source & mapMask) | Intrinsics.AndNot(original, mapMask);
                 }
                 else
                 {
-                    SetByteMode0_Extended(offset, input);
+                    this.SetByteMode0_Extended(offset, input);
                 }
             }
         }
@@ -223,106 +174,111 @@ namespace Aeon.Emulator.Video.Modes
         {
             unsafe
             {
-                byte source;
+                uint source = (uint)input * 0x01010101;
+                uint mask = (uint)graphics.BitMask * 0x01010101;
+
+                // when mapMask is set, use computed value; otherwise keep vram value
+                uint mapMask = sequencer.MapMask.Expanded;
+                uint original = this.videoRam[offset];
+
+                uint setResetEnabled = this.graphics.EnableSetReset.Expanded;
+                uint setReset = this.graphics.SetReset.Expanded;
+
+                source = Intrinsics.AndNot(source, setResetEnabled);
+                source |= setReset & setResetEnabled;
+
                 int rotateCount = graphics.DataRotate & 0x07;
-                int logicalOp = (graphics.DataRotate >> 3) & 0x03;
+                source = RotateBytes(source, rotateCount);
 
-                for (int p = 0; p < 4; p++)
+                uint logicalOp = Intrinsics.ExtractBits(graphics.DataRotate, 3, 2, 0b11000);
+
+                if (logicalOp == 0)
                 {
-                    int planeBit = 1 << p;
-                    if ((sequencer.MapMask & planeBit) != 0)
-                    {
-                        if ((graphics.EnableSetReset & planeBit) != 0)
-                            source = ((graphics.SetReset & planeBit) != 0) ? (byte)0xFF : (byte)0;
-                        else
-                            source = input;
-
-                        uint a = (uint)(source >> rotateCount);
-                        uint b = (uint)(source << (8 - rotateCount));
-                        source = (byte)(a | b);
-                        switch (logicalOp)
-                        {
-                            case 1:
-                                source &= (byte)latches[p];
-                                break;
-
-                            case 2:
-                                source |= (byte)latches[p];
-                                break;
-
-                            case 3:
-                                source ^= (byte)latches[p];
-                                break;
-                        }
-
-                        byte mask = graphics.BitMask;
-                        source &= mask;
-                        source |= (byte)(latches[p] & ~mask);
-
-                        planes[p][offset] = source;
-                    }
                 }
+                else if (logicalOp == 1)
+                {
+                    source &= this.latches;
+                }
+                else if (logicalOp == 2)
+                {
+                    source |= this.latches;
+                }
+                else
+                {
+                    source ^= this.latches;
+                }
+
+                source &= mask;
+                source |= Intrinsics.AndNot(this.latches, mask);
+
+                this.videoRam[offset] = (source & mapMask) | Intrinsics.AndNot(original, mapMask);
             }
+
         }
         /// <summary>
         /// Writes a byte to video RAM using the rules for write mode 2.
         /// </summary>
         /// <param name="offset">Video RAM offset to write byte.</param>
         /// <param name="input">Byte to write to video RAM.</param>
-        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private void SetByteMode2(uint offset, byte input)
         {
             unsafe
             {
-                var values = stackalloc byte[4];
+                uint values = input;
 
-                if ((input & 0x1) == 0x1)
-                    values[0] = 0xFF;
-                if ((input & 0x2) == 0x2)
-                    values[1] = 0xFF;
-                if ((input & 0x4) == 0x4)
-                    values[2] = 0xFF;
-                if ((input & 0x8) == 0x8)
-                    values[3] = 0xFF;
+                uint logicalOp = Intrinsics.ExtractBits(graphics.DataRotate, 3, 2, 0b11000);
 
-                uint logicalOp = ((uint)graphics.DataRotate >> 3) & 0x03u;
                 if (logicalOp == 0)
                 {
                 }
                 else if (logicalOp == 1)
                 {
-                    *(uint*)values &= *(uint*)latches;
+                    values &= this.latches;
                 }
                 else if (logicalOp == 2)
                 {
-                    *(uint*)values |= *(uint*)latches;
+                    values |= this.latches;
                 }
                 else
                 {
-                    *(uint*)values ^= *(uint*)latches;
+                    values ^= this.latches;
                 }
 
-                var mask = stackalloc byte[4];
-                byte bm = graphics.BitMask;
-                mask[0] = bm;
-                mask[1] = bm;
-                mask[2] = bm;
-                mask[3] = bm;
+                uint mask = (uint)graphics.BitMask * 0x01010101;
 
-                *(uint*)values &= *(uint*)mask;
-                *(uint*)values |= *(uint*)latches & ~*(uint*)mask;
+                values &= mask;
+                values |= Intrinsics.AndNot(this.latches, mask);
 
-                byte mapMask = this.sequencer.MapMask;
+                // when mapMask = 0 keep value in vram
+                // whem mapMask = 1 take value from latches
+                // input value is not used at all
 
-                if ((mapMask & 0x01) == 0x01)
-                    planes[0][offset] = values[0];
-                if ((mapMask & 0x02) == 0x02)
-                    planes[1][offset] = values[1];
-                if ((mapMask & 0x04) == 0x04)
-                    planes[2][offset] = values[2];
-                if ((mapMask & 0x08) == 0x08)
-                    planes[3][offset] = values[3];
+                uint mapMask = this.sequencer.MapMask.Expanded;
+                unsafe
+                {
+                    uint current = Intrinsics.AndNot(this.videoRam[offset], mapMask); // read value and clear mask bits
+                    current |= values & mapMask; // set value bits
+                    this.videoRam[offset] = current;
+                }
             }
+        }
+        private static uint RotateBytes(uint value, int count)
+        {
+            unsafe
+            {
+                byte* v = (byte*)&value;
+                int count2 = 8 - count;
+                v[0] = (byte)((v[0] >> count) | (v[0] << count2));
+                v[1] = (byte)((v[1] >> count) | (v[1] << count2));
+                v[2] = (byte)((v[2] >> count) | (v[2] << count2));
+                v[3] = (byte)((v[3] >> count) | (v[3] << count2));
+                return value;
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static byte ReadByte(uint value, uint index)
+        {
+            return (byte)Intrinsics.ExtractBits(value, (byte)(index * 8u), 8, 0xFFu << ((int)index * 8));
         }
     }
 }

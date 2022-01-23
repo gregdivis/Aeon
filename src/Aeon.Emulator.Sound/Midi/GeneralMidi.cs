@@ -6,7 +6,7 @@ namespace Aeon.Emulator.Sound
     /// <summary>
     /// Virtual device which emulates general midi playback.
     /// </summary>
-    public sealed class GeneralMidi : IInputPort, IOutputPort
+    public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
     {
         private MidiDevice midiMapper;
         private readonly Queue<byte> dataBytes = new();
@@ -109,17 +109,8 @@ namespace Aeon.Emulator.Sound
         }
         void IOutputPort.WriteWord(int port, ushort value) => ((IOutputPort)this).WriteByte(port, (byte)value);
 
-        void IVirtualDevice.Pause()
-        {
-            this.midiMapper?.Pause();
-        }
-        void IVirtualDevice.Resume()
-        {
-            this.midiMapper?.Resume();
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
+        void IVirtualDevice.Pause() => this.midiMapper?.Pause();
+        void IVirtualDevice.Resume() => this.midiMapper?.Resume();
 
         public void Dispose()
         {

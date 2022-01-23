@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Aeon.Emulator.Memory;
 
 namespace Aeon.Emulator.Instructions
@@ -47,19 +46,19 @@ namespace Aeon.Emulator.Instructions
         public static void FarAbsoluteCall(VirtualMachine vm, uint address)
         {
             if (address == 0)
-                throw new InvalidOperationException("Attempted to call function at address 0.");
+                ThrowHelper.ThrowNullCallException();
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
+            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 // Real mode call.
                 vm.PushToStack(vm.Processor.CS, vm.Processor.IP);
 
-                vm.WriteSegmentRegister(SegmentIndex.CS, (ushort)(address >> 16));
-                vm.Processor.EIP = (ushort)address;
+                vm.WriteSegmentRegister(SegmentIndex.CS, Intrinsics.HighWord(address));
+                vm.Processor.EIP = Intrinsics.LowWord(address);
             }
             else
             {
-                ProtectedModeFarCall(vm, (ushort)(address >> 16), (ushort)address, false);
+                ProtectedModeFarCall(vm, Intrinsics.HighWord(address), Intrinsics.LowWord(address), false);
             }
         }
         [Alternate(nameof(FarAbsoluteCall), AddressSize = 16 | 32)]
@@ -67,7 +66,7 @@ namespace Aeon.Emulator.Instructions
         public static void FarAbsoluteCall32(VirtualMachine vm, ulong address)
         {
             if (address == 0)
-                throw new InvalidOperationException("Attempted to call function at address 0.");
+                ThrowHelper.ThrowNullCallException();
 
             if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
@@ -75,12 +74,12 @@ namespace Aeon.Emulator.Instructions
                 vm.PushToStack32(vm.Processor.CS);
                 vm.PushToStack32(vm.Processor.EIP);
 
-                vm.WriteSegmentRegister(SegmentIndex.CS, (ushort)(address >> 32));
-                vm.Processor.EIP = (uint)address;
+                vm.WriteSegmentRegister(SegmentIndex.CS, (ushort)Intrinsics.HighDWord(address));
+                vm.Processor.EIP = Intrinsics.LowDWord(address);
             }
             else
             {
-                ProtectedModeFarCall(vm, (ushort)(address >> 32), (uint)address, true);
+                ProtectedModeFarCall(vm, (ushort)Intrinsics.HighDWord(address), Intrinsics.LowDWord(address), true);
             }
         }
 
@@ -113,7 +112,7 @@ namespace Aeon.Emulator.Instructions
                 uint dpl = callGate.Selector & 3u;
 
                 if (callGate.DWordCount != 0)
-                    throw new NotImplementedException();
+                    ThrowHelper.ThrowNotImplementedException();
 
                 ushort oldSS = vm.Processor.SS;
                 uint oldESP = vm.Processor.ESP;
@@ -131,7 +130,9 @@ namespace Aeon.Emulator.Instructions
                     vm.PushToStack32(oldESP);
                 }
                 else if (cpl < dpl)
-                    throw new InvalidOperationException();
+                {
+                    ThrowHelper.ThrowCplLessThanDplException();
+                }
 
                 vm.PushToStack32(vm.Processor.CS);
                 vm.PushToStack32(vm.Processor.EIP);
@@ -141,7 +142,7 @@ namespace Aeon.Emulator.Instructions
             }
             else
             {
-                throw new NotImplementedException();
+                ThrowHelper.ThrowNotImplementedException();
             }
         }
     }
@@ -172,7 +173,7 @@ namespace Aeon.Emulator.Instructions
             vm.Processor.EIP = vm.PopFromStack();
             vm.AddToStackPointer(bytesToPop);
         }
-        [Alternate("NearReturnPop", AddressSize = 16 | 32)]
+        [Alternate(nameof(NearReturnPop), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void NearReturnPop32(VirtualMachine vm, ushort bytesToPop)
         {
@@ -220,8 +221,8 @@ namespace Aeon.Emulator.Instructions
         public static void FarReturnPop32(VirtualMachine vm, ushort bytesToPop)
         {
             ulong dest = vm.PeekStack48();
-            uint eip = (uint)dest;
-            ushort cs = (ushort)(dest >> 32);
+            uint eip = Intrinsics.LowDWord(dest);
+            ushort cs = (ushort)Intrinsics.HighDWord(dest);
 
             if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {

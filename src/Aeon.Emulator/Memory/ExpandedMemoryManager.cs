@@ -28,7 +28,7 @@ namespace Aeon.Emulator.Memory
         private const int SegmentsPerPage = PageSize / 16;
 
         private VirtualMachine vm;
-        private readonly SortedList<int, EmsHandle> handles = new SortedList<int, EmsHandle>();
+        private readonly SortedList<int, EmsHandle> handles = new();
         private readonly byte[][] mappedPages = new byte[MaximumPhysicalPages][];
 
         /// <summary>
@@ -168,20 +168,11 @@ namespace Aeon.Emulator.Memory
                     break;
             }
         }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             this.vm = vm;
             this.vm.PhysicalMemory.SetString(0xF100, 0x000A, "EMMXXXX0");
             this.vm.PhysicalMemory.Reserve(PageFrameSegment, PageSize * MaximumPhysicalPages);
-        }
-        void IDisposable.Dispose()
-        {
         }
 
         /// <summary>
@@ -231,8 +222,7 @@ namespace Aeon.Emulator.Memory
             if (pagesRequested < MaximumLogicalPages)
             {
                 int handle = vm.Processor.DX;
-                EmsHandle emsHandle;
-                if (handles.TryGetValue(handle, out emsHandle))
+                if (handles.TryGetValue(handle, out var emsHandle))
                 {
                     emsHandle.Reallocate(pagesRequested);
 

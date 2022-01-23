@@ -9,6 +9,7 @@ namespace Aeon.Emulator.Interrupts
     internal sealed class ErrorHandler : IInterruptHandler
     {
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x00, 0x04, 0x06 };
+
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
             switch (interrupt)
@@ -22,18 +23,6 @@ namespace Aeon.Emulator.Interrupts
                 case 0x06:
                     throw new InvalidOperationException("Unhandled undefined opcode.");
             }
-        }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
-        void IDisposable.Dispose()
-        {
         }
     }
 }

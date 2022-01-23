@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Aeon.Emulator.Video
+﻿namespace Aeon.Emulator.Video
 {
     /// <summary>
     /// Emulates the VGA Sequencer registers.
@@ -15,21 +13,21 @@ namespace Aeon.Emulator.Video
         }
 
         /// <summary>
-        /// Gets or sets the Reset register.
+        /// Gets the Reset register.
         /// </summary>
-        public byte Reset { get; set; }
+        public byte Reset { get; private set; }
         /// <summary>
-        /// Gets or sets the Clocking Mode register.
+        /// Gets the Clocking Mode register.
         /// </summary>
-        public byte ClockingMode { get; set; }
+        public byte ClockingMode { get; private set; }
         /// <summary>
         /// Gets or sets the Map Mask register.
         /// </summary>
-        public byte MapMask { get; set; }
+        public MaskValue MapMask { get; set; }
         /// <summary>
-        /// Gets or sets the Character Map Select register.
+        /// Gets the Character Map Select register.
         /// </summary>
-        public byte CharacterMapSelect { get; set; }
+        public byte CharacterMapSelect { get; private set; }
         /// <summary>
         /// Gets or sets the Sequencer Memory Mode register.
         /// </summary>
@@ -46,7 +44,7 @@ namespace Aeon.Emulator.Video
             {
                 SequencerRegister.Reset => this.Reset,
                 SequencerRegister.ClockingMode => this.ClockingMode,
-                SequencerRegister.MapMask => this.MapMask,
+                SequencerRegister.MapMask => this.MapMask.Packed,
                 SequencerRegister.CharacterMapSelect => this.CharacterMapSelect,
                 SequencerRegister.SequencerMemoryMode => (byte)this.SequencerMemoryMode,
                 _ => 0
@@ -71,7 +69,6 @@ namespace Aeon.Emulator.Video
 
                 case SequencerRegister.MapMask:
                     this.MapMask = value;
-                    ExpandRegister(value, this.ExpandedMapMask);
                     break;
 
                 case SequencerRegister.CharacterMapSelect:
@@ -86,19 +83,5 @@ namespace Aeon.Emulator.Video
                     break;
             }
         }
-
-        /// <summary>
-        /// Map Mask register expanded to four booleans.
-        /// </summary>
-        public readonly bool[] ExpandedMapMask = new bool[4];
-    }
-
-    [Flags]
-    internal enum SequencerMemoryMode : byte
-    {
-        None = 0,
-        ExtendedMemory = 2,
-        OddEvenWriteAddressingDisabled = 4,
-        Chain4 = 8,
     }
 }

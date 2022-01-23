@@ -9,7 +9,7 @@ namespace Aeon.Emulator.Video
     /// <summary>
     /// Provides emulated video and int 10h functions.
     /// </summary>
-    internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort
+    internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort, IDisposable
     {
         /// <summary>
         /// Total number of bytes allocated for video RAM.
@@ -434,18 +434,7 @@ namespace Aeon.Emulator.Video
                     break;
             }
         }
-        public void WriteWord(int port, ushort value)
-        {
-            WriteByte(port, (byte)value);
-            WriteByte(port + 1, (byte)(value >> 8));
-        }
 
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => vm.RegisterVirtualDevice(this.vbe);
 
         /// <summary>
@@ -524,7 +513,7 @@ namespace Aeon.Emulator.Video
                     break;
 
                 case VideoMode10.Graphics320x200x8:
-                    Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4;
+                    this.Sequencer.SequencerMemoryMode = SequencerMemoryMode.Chain4;
                     mode = new Modes.Vga256(320, 200, this);
                     break;
 

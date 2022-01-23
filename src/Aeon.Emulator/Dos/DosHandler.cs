@@ -12,7 +12,7 @@ namespace Aeon.Emulator.Dos
     /// <summary>
     /// Provides all of the emulated DOS functions.
     /// </summary>
-    internal sealed class DosHandler : IInterruptHandler
+    internal sealed class DosHandler : IInterruptHandler, IDisposable
     {
         /// <summary>
         /// The location of offset 0 of the DOS list of lists.
@@ -501,16 +501,6 @@ namespace Aeon.Emulator.Dos
         {
             fileControl.Dispose();
             memoryAllocator.Dispose();
-        }
-
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
         }
 
         private void SaveFlags(EFlags modified)

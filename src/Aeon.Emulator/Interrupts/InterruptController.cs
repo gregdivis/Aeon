@@ -7,7 +7,7 @@ namespace Aeon.Emulator
     /// <summary>
     /// Emulates the Intel 8259 programmable interrupt controller.
     /// </summary>
-    public sealed class InterruptController : IInputPort, IOutputPort
+    public sealed class InterruptController : IInputPort, IOutputPort, IDisposable
     {
         private const int CommandPort1 = 0x20;
         private const int MaskPort1 = 0x21;
@@ -23,7 +23,7 @@ namespace Aeon.Emulator
         private Command currentCommand2;
         private State state1;
         private State state2;
-        private ReaderWriterLockSlim readerWriter = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim readerWriter = new();
 
         internal InterruptController()
         {
@@ -113,15 +113,6 @@ namespace Aeon.Emulator
                 this.WriteByte(0xA0, (byte)value);
                 this.WriteByte(0xA1, (byte)(value >> 8));
             }
-        }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
         }
         void IDisposable.Dispose() => readerWriter.Dispose();
 

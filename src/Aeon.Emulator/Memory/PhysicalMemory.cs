@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
@@ -16,7 +18,7 @@ namespace Aeon.Emulator
     public sealed class PhysicalMemory : IMemorySource
     {
         /// <summary>
-        /// Size of the page address cache in bytes.
+        /// Size of the page address cache in dwords.
         /// </summary>
         private const int PageAddressCacheSize = 1 << 20;
         /// <summary>
@@ -55,12 +57,19 @@ namespace Aeon.Emulator
         /// <summary>
         /// Starting physical address of video RAM.
         /// </summary>
-        internal const int VramAddress = 0xA000 << 4;
+        private const int VramAddress = 0xA000 << 4;
         /// <summary>
         /// Last physical address of video RAM.
         /// </summary>
-        internal const int VramUpperBound = (0xBFFF << 4);
-        internal const uint VramMask = 0xFFFE0000;
+
+        /// <summary>
+        /// The highest address which is mapped to <see cref="Video.VideoHandler"/>.
+        /// </summary>
+        /// <remarks>
+        /// Video RAM mapping is technically up to 0xBFFF0 normally.
+        /// </remarks>
+        private const int VramUpperBound = 0xAFFF << 4;
+
         /// <summary>
         /// Segment where font data is stored.
         /// </summary>
@@ -100,7 +109,7 @@ namespace Aeon.Emulator
             unsafe
             {
                 this.RawView = (byte*)NativeMemory.AllocZeroed((nuint)memorySize, 1);
-                this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize / 4, 4);
+                this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize, 4);
             }
 
             // Reserve room for the real-mode interrupt table.
@@ -289,9 +298,9 @@ namespace Aeon.Emulator
                 return new IntPtr(RawView + address);
             }
         }
-        public Span<byte> GetSpan(int address, int length)
+        public Span<byte> GetSpan(uint address, int length)
         {
-            address &= (int)addressMask;
+            address &= addressMask;
 
             unsafe
             {
@@ -302,9 +311,58 @@ namespace Aeon.Emulator
         {
             unsafe
             {
-                return new Span<byte>(RawView + GetRealModePhysicalAddress(segment, offset), length);
+                uint fullAddress = GetRealModePhysicalAddress(segment, offset);
+                if (fullAddress >= VramAddress && fullAddress < VramUpperBound)
+                    throw new ArgumentException("Not supported for video RAM mapped addresses.");
+
+                return new Span<byte>(RawView + fullAddress, length);
             }
         }
+        public int ReadFromStream(uint segment, uint offset, Stream source, int length)
+        {
+            uint fullAddress = GetRealModePhysicalAddress(segment, offset);
+            if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
+                return source.Read(this.GetSpan(segment, offset, length));
+
+            var buffer = ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                var span = buffer.AsSpan(0, length);
+                int bytesRead = source.Read(span);
+                for (int i = 0; i < span.Length; i++)
+                    this.SetByte(fullAddress + (uint)i, span[i]);
+
+                return bytesRead;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+        public void WriteToStream(uint segment, uint offset, Stream destination, int length)
+        {
+            uint fullAddress = GetRealModePhysicalAddress(segment, offset);
+            if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
+            {
+                destination.Write(this.GetSpan(segment, offset, length));
+                return;
+            }
+
+            var buffer = ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                var span = buffer.AsSpan(0, length);
+                for (int i = 0; i < span.Length; i++)
+                    span[i] = this.GetByte(fullAddress + (uint)i);
+
+                destination.Write(span);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
         /// <summary>
         /// Reads a byte from emulated memory.
         /// </summary>
@@ -570,7 +628,7 @@ namespace Aeon.Emulator
                 }
             }
 
-            return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(ptr, maxLength);
+            return Marshal.PtrToStringAnsi(ptr, maxLength);
         }
         /// <summary>
         /// Writes a string to memory as a null-terminated ANSI byte array.
@@ -1003,7 +1061,7 @@ namespace Aeon.Emulator
 
             unsafe
             {
-                if (!checkVram || (fullAddress & VramMask) != VramAddress)
+                if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
                 {
                     return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
                 }
@@ -1034,7 +1092,7 @@ namespace Aeon.Emulator
 
             unsafe
             {
-                if ((fullAddress & VramMask) != VramAddress)
+                if (fullAddress is < VramAddress or > VramUpperBound)
                 {
                     Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
                 }
@@ -1050,6 +1108,7 @@ namespace Aeon.Emulator
             }
         }
 
+        [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private T PagedRead<T>(uint logicalAddress, PageFaultCause mode = PageFaultCause.Read, bool checkVram = true) where T : unmanaged
         {

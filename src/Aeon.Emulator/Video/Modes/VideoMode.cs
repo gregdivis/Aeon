@@ -113,7 +113,7 @@ namespace Aeon.Emulator.Video
         /// <summary>
         /// Gets the current EGA/VGA compatibility map.
         /// </summary>
-        public byte[] InternalPalette => attributeController.InternalPalette;
+        public ReadOnlySpan<byte> InternalPalette => this.attributeController.InternalPalette;
         /// <summary>
         /// Gets the current VGA color palette.
         /// </summary>

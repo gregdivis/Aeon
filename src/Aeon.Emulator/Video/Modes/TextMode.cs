@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 
 namespace Aeon.Emulator.Video.Modes
 {
@@ -86,15 +87,18 @@ namespace Aeon.Emulator.Video.Modes
                 uint address = offset - BaseAddress;
 
                 if (this.IsOddEvenWriteEnabled)
+                {
                     this.planes[address & 1][address >> 1] = value;
+                }
                 else
                 {
-                    if ((sequencer.MapMask & 0x01) != 0)
+                    uint mapMask = this.sequencer.MapMask.Packed;
+                    if ((mapMask & 0x01) != 0)
                         planes[0][address] = value;
-                    if ((sequencer.MapMask & 0x02) != 0)
+                    if ((mapMask & 0x02) != 0)
                         planes[1][address] = value;
 
-                    if ((sequencer.MapMask & 0x04) != 0)
+                    if ((mapMask & 0x04) != 0)
                         this.Font[(address / 32) * this.FontHeight + (address % 32)] = value;
                 }
             }

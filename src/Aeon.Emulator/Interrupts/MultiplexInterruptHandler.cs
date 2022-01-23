@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Aeon.Emulator.Interrupts
 {
@@ -9,7 +8,7 @@ namespace Aeon.Emulator.Interrupts
     internal sealed class MultiplexInterruptHandler : IInterruptHandler
     {
         private Processor processor;
-        private readonly List<IMultiplexInterruptHandler> handlers = new List<IMultiplexInterruptHandler>();
+        private readonly List<IMultiplexInterruptHandler> handlers = new();
 
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x2F };
         public IList<IMultiplexInterruptHandler> Handlers => this.handlers;
@@ -29,15 +28,6 @@ namespace Aeon.Emulator.Interrupts
 
             System.Diagnostics.Debug.WriteLine($"Multiplex interrupt ID {id:X2}h not implemented.");
         }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.processor = vm.Processor;
-        void IDisposable.Dispose()
-        {
-        }
     }
 }

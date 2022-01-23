@@ -8,7 +8,6 @@ namespace Aeon.Emulator.Video.Vesa
     /// </summary>
     internal sealed class VbeHandler : ICallbackProvider
     {
-        #region Private Constants
         /// <summary>
         /// VBE capabilities: 8-bit DAC, no VGA support
         /// </summary>
@@ -17,16 +16,12 @@ namespace Aeon.Emulator.Video.Vesa
         private const string VendorName = "Aeon";
         private const string ProductName = "AeonVbe";
         private const string ProductRev = "2.0";
-        #endregion
 
-        #region Private Fields
         private readonly VideoHandler videoHandler;
         private readonly VirtualMachine vm;
         private Modes.VesaWindowed windowedMode;
         private RealModeAddress windowFuncPtr;
-        #endregion
 
-        #region Constructors
         /// <summary>
         /// Initializes a new instance of the VbeHandler class.
         /// </summary>
@@ -36,66 +31,59 @@ namespace Aeon.Emulator.Video.Vesa
             this.vm = videoHandler.VirtualMachine;
             this.videoHandler = videoHandler;
         }
-        #endregion
 
-        #region Public Properties
         /// <summary>
         /// Gets a value indicating whether the callback is hookable.
         /// </summary>
-        bool ICallbackProvider.IsHookable
-        {
-            get { return false; }
-        }
+        bool ICallbackProvider.IsHookable => false;
         /// <summary>
         /// Sets the address of the callback function.
         /// </summary>
         RealModeAddress ICallbackProvider.CallbackAddress
         {
-            set { this.windowFuncPtr = value; }
+            set => this.windowFuncPtr = value;
         }
-        #endregion
 
-        #region Public Methods
         /// <summary>
         /// Emulates the function in the AL register.
         /// </summary>
         public void HandleFunction()
         {
-            switch(vm.Processor.AL)
+            switch (vm.Processor.AL)
             {
-            case Functions.ReturnVBEControllerInformation:
-                GetControllerInfo();
-                break;
-                
-            case Functions.ReturnSVGAModeInformation:
-                GetModeInfo();
-                break;
+                case Functions.ReturnVBEControllerInformation:
+                    GetControllerInfo();
+                    break;
 
-            case Functions.SetSVGAVideoMode:
-                SetMode(vm.Processor.BX & 0x7FFF);
-                break;
+                case Functions.ReturnSVGAModeInformation:
+                    GetModeInfo();
+                    break;
 
-            case Functions.MemoryWindowControl:
-                if(vm.Processor.BH == 0)
-                    SetWindowPosition((ushort)vm.Processor.DX);
-                else if(vm.Processor.BH == 1)
-                    GetWindowPosition();
-                else
-                    throw new InvalidOperationException();
-                break;
+                case Functions.SetSVGAVideoMode:
+                    SetMode(vm.Processor.BX & 0x7FFF);
+                    break;
 
-            case Functions.DisplayStartControl:
-                if(vm.Processor.BH == 0)
-                    SetDisplayStart(vm.Processor.CX, vm.Processor.DX);
-                else
-                    throw new InvalidOperationException();
-                break;
+                case Functions.MemoryWindowControl:
+                    if (vm.Processor.BH == 0)
+                        SetWindowPosition((ushort)vm.Processor.DX);
+                    else if (vm.Processor.BH == 1)
+                        GetWindowPosition();
+                    else
+                        throw new InvalidOperationException();
+                    break;
 
-            default:
-                throw new NotImplementedException();
-                //vm.Processor.AL = 0;
-                //vm.Processor.AH = 1;
-                //return;
+                case Functions.DisplayStartControl:
+                    if (vm.Processor.BH == 0)
+                        SetDisplayStart(vm.Processor.CX, vm.Processor.DX);
+                    else
+                        throw new InvalidOperationException();
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+                    //vm.Processor.AL = 0;
+                    //vm.Processor.AH = 1;
+                    //return;
             }
 
             // Success
@@ -106,42 +94,14 @@ namespace Aeon.Emulator.Video.Vesa
         /// </summary>
         void ICallbackProvider.InvokeCallback()
         {
-            if(vm.Processor.BH == 0)
+            if (vm.Processor.BH == 0)
                 SetWindowPosition((ushort)vm.Processor.DX);
-            else if(vm.Processor.BH == 1)
+            else if (vm.Processor.BH == 1)
                 GetWindowPosition();
             else
                 throw new InvalidOperationException();
         }
-        /// <summary>
-        /// Invoked when the emulator enters a paused state.
-        /// </summary>
-        void IVirtualDevice.Pause()
-        {
-        }
-        /// <summary>
-        /// Invoked when the emulator resumes from a paused state.
-        /// </summary>
-        void IVirtualDevice.Resume()
-        {
-        }
-        /// <summary>
-        /// Invoked when the virtual device has been added to a VirtualMachine.
-        /// </summary>
-        /// <param name="vm">VirtualMachine which owns the device.</param>
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing,
-        /// releasing, or resetting unmanaged resources.
-        /// </summary>
-        void IDisposable.Dispose()
-        {
-        }
-        #endregion
 
-        #region Private Static Methods
         /// <summary>
         /// Returns a 4-character string as a 4-byte System.UInt32 value.
         /// </summary>
@@ -149,11 +109,9 @@ namespace Aeon.Emulator.Video.Vesa
         /// <returns>4-byte System.UInt32 value.</returns>
         private static uint MakeSignature(string signature)
         {
-            return (byte)signature[0] | ((uint)(signature[1]) << 8) | ((uint)(signature[2]) << 16) | ((uint)(signature[3]) << 24);
+            return (byte)signature[0] | ((uint)signature[1] << 8) | ((uint)signature[2] << 16) | ((uint)signature[3] << 24);
         }
-        #endregion
 
-        #region Private Methods
         /// <summary>
         /// Returns VBE controller information.
         /// </summary>
@@ -167,10 +125,10 @@ namespace Aeon.Emulator.Video.Vesa
                 var infoBlock = (VbeInfoBlock*)vm.PhysicalMemory.GetPointer(vm.Processor.ES, vm.Processor.DI).ToPointer();
                 bool isVbe2 = infoBlock->VbeSignature == MakeSignature("VBE2");
 
-                if(isVbe2)
+                if (isVbe2)
                 {
                     byte* ptr = (byte*)infoBlock;
-                    for(int i = 0; i < 512; i++)
+                    for (int i = 0; i < 512; i++)
                         ptr[i] = 0;
 
                     modeListOffset += (uint)sizeof(VbeInfoBlock);
@@ -189,7 +147,7 @@ namespace Aeon.Emulator.Video.Vesa
                 infoBlock->OemStringPtr = WriteOemString(ref oemStringOffset, OemString);
                 infoBlock->VideoModePtr = (uint)(vm.Processor.ES << 16) | modeListOffset;
 
-                if(isVbe2)
+                if (isVbe2)
                 {
                     infoBlock->OemSoftwareRev = 0x0200;
                     infoBlock->OemVendorNamePtr = WriteOemString(ref oemStringOffset, VendorName);
@@ -210,7 +168,7 @@ namespace Aeon.Emulator.Video.Vesa
         /// </summary>
         private void GetModeInfo()
         {
-            if(vm.Processor.CX != 0x100 && vm.Processor.CX != 0x101)
+            if (vm.Processor.CX != 0x100 && vm.Processor.CX != 0x101)
             {
                 vm.Processor.AH = 1;
                 return;
@@ -221,7 +179,7 @@ namespace Aeon.Emulator.Video.Vesa
                 var modeInfo = (ModeInfoBlock*)vm.PhysicalMemory.GetPointer(vm.Processor.ES, vm.Processor.DI).ToPointer();
 
                 var buffer = (byte*)modeInfo;
-                for(int i = 0; i < 256; i++)
+                for (int i = 0; i < 256; i++)
                     buffer[i] = 0;
 
                 modeInfo->ModeAttributes = ModeAttributes.Supported | ModeAttributes.Reserved1 | ModeAttributes.Color | ModeAttributes.Graphics | ModeAttributes.LinearFrameBuffer;
@@ -254,25 +212,13 @@ namespace Aeon.Emulator.Video.Vesa
         /// <param name="mode">Index of the display mode.</param>
         private void SetMode(int mode)
         {
-            VideoMode videoMode;
-
-            switch(mode)
+            VideoMode videoMode = mode switch
             {
-            case 0x100:
-                videoMode = this.windowedMode = new Modes.VesaWindowed256(640, 400, this.videoHandler);
-                break;
-
-            case 0x101:
-                videoMode = this.windowedMode = new Modes.VesaWindowed256(640, 480, this.videoHandler);
-                break;
-
-            case 0x111:
-                videoMode = this.windowedMode = new Modes.VesaWindowed16Bit(640, 480, this.videoHandler);
-                break;
-
-            default:
-                throw new NotSupportedException();
-            }
+                0x100 => this.windowedMode = new Modes.VesaWindowed256(640, 400, this.videoHandler),
+                0x101 => this.windowedMode = new Modes.VesaWindowed256(640, 480, this.videoHandler),
+                0x111 => this.windowedMode = new Modes.VesaWindowed16Bit(640, 480, this.videoHandler),
+                _ => throw new NotSupportedException()
+            };
 
             this.videoHandler.SetDisplayMode(videoMode);
             vm.Processor.AH = 0;
@@ -283,7 +229,7 @@ namespace Aeon.Emulator.Video.Vesa
         /// <param name="position">New window position in granularity units.</param>
         private void SetWindowPosition(uint position)
         {
-            if(this.windowedMode == null)
+            if (this.windowedMode == null)
             {
                 vm.Processor.AH = 0x03;
                 return;
@@ -297,7 +243,7 @@ namespace Aeon.Emulator.Video.Vesa
         /// </summary>
         private void GetWindowPosition()
         {
-            if(this.windowedMode == null)
+            if (this.windowedMode == null)
                 throw new InvalidOperationException();
 
             vm.Processor.DX = (short)this.windowedMode.WindowPosition;
@@ -310,7 +256,7 @@ namespace Aeon.Emulator.Video.Vesa
         /// <param name="scanLine">Vertical position.</param>
         private void SetDisplayStart(int firstPixel, int scanLine)
         {
-            if(this.windowedMode == null)
+            if (this.windowedMode == null)
             {
                 vm.Processor.AH = 1;
                 return;
@@ -334,6 +280,5 @@ namespace Aeon.Emulator.Video.Vesa
 
             return address;
         }
-        #endregion
     }
 }

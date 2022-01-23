@@ -218,8 +218,8 @@ namespace Aeon.Emulator
             var device = this.Device;
             if (device != null && this.transferTimer.ElapsedTicks >= this.TransferPeriod)
             {
-                int memoryAddress = (this.Page << 16) | this.Address;
-                int sourceOffset = this.Count + 1 - this.TransferBytesRemaining;
+                uint memoryAddress = ((uint)this.Page << 16) | this.Address;
+                uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
                 int count = Math.Min(this.TransferChunkSize, this.TransferBytesRemaining);
                 var source = memory.GetSpan(memoryAddress + sourceOffset, count);

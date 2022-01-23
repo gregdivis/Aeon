@@ -3,12 +3,14 @@ using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Video.Rendering
 {
-    internal sealed class MemoryBitmap : IDisposable
+    public sealed class MemoryBitmap : IDisposable
     {
         private unsafe void* data;
 
         public MemoryBitmap(int width, int height)
         {
+            this.Width = width;
+            this.Height = height;
             unsafe
             {
                 this.data = NativeMemory.AlignedAlloc((nuint)(width * height * sizeof(uint)), sizeof(uint));
@@ -16,6 +18,8 @@ namespace Aeon.Emulator.Video.Rendering
         }
         ~MemoryBitmap() => this.Dispose(false);
 
+        public int Width { get; }
+        public int Height { get; }
         public IntPtr PixelBuffer
         {
             get

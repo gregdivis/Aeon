@@ -122,7 +122,8 @@ namespace Aeon.Emulator.Dos
             var filePath = new VirtualPath(fileName).Truncate();
 
             var fileInfo = vm.FileSystem.GetFileInfo(filePath);
-            if (this.vm.Processor.AL == 0 && fileInfo.Result == null && fileInfo.ErrorCode != ExtendedErrorCode.FileNotFound)
+            //if (this.vm.Processor.AL == 0 && fileInfo.Result == null && fileInfo.ErrorCode != ExtendedErrorCode.FileNotFound)
+            if (this.vm.Processor.AL == 0 && fileInfo.Result == null)
             {
                 vm.Processor.Flags.Carry = true;
                 vm.Processor.AX = (short)fileInfo.ErrorCode;
@@ -137,7 +138,7 @@ namespace Aeon.Emulator.Dos
                 1 => vm.FileSystem.OpenFile(filePath, FileMode.OpenOrCreate, FileAccess.Write),
                 // Read/write access
                 2 => vm.FileSystem.OpenFile(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite),
-                _ => ExtendedErrorCode.FunctionNumberInvalid,
+                _ => ExtendedErrorCode.FunctionNumberInvalid
             };
 
             if (s.Result != null)
@@ -251,10 +252,7 @@ namespace Aeon.Emulator.Dos
             {
                 int length = (ushort)vm.Processor.CX;
                 if (length > 0)
-                {
-                    var ptr = vm.PhysicalMemory.GetSpan(vm.Processor.DS, (ushort)vm.Processor.DX, length);
-                    s.Write(ptr);
-                }
+                    vm.PhysicalMemory.WriteToStream(vm.Processor.DS, (ushort)vm.Processor.DX, s.BaseStream, length);
 
                 vm.Processor.AX = vm.Processor.CX;
                 vm.Processor.Flags.Carry = false;
@@ -277,11 +275,10 @@ namespace Aeon.Emulator.Dos
                 if (s.CanRead)
                 {
                     int bytesToRead = (ushort)vm.Processor.CX;
-                    var ptr = vm.PhysicalMemory.GetSpan(vm.Processor.DS, (ushort)vm.Processor.DX, bytesToRead);
-                    int bytesRead = s.Read(ptr);
+                    int bytesRead = vm.PhysicalMemory.ReadFromStream(vm.Processor.DS, (ushort)vm.Processor.DX, s.BaseStream, bytesToRead);
 
                     vm.Processor.Flags.Carry = false;
-                    vm.Processor.AX = (short)((ushort)bytesRead);
+                    vm.Processor.AX = (short)(ushort)bytesRead;
                 }
                 else
                 {
@@ -317,6 +314,20 @@ namespace Aeon.Emulator.Dos
 
                 case 0x01:
                     vm.Processor.Flags.Carry = true;
+                    return;
+
+                case 0x03:
+                    if (this.fileHandles.TryGetValue(vm.Processor.BX, out var s))
+                    {
+                        var span = vm.PhysicalMemory.GetSpan(vm.Processor.DS, (ushort)vm.Processor.DX, (ushort)vm.Processor.CX);
+                        s.Write(span);
+                    }
+                    else
+                    {
+                        vm.Processor.Flags.Carry = true;
+                        vm.Processor.AH = 0x06;
+                    }
+
                     return;
 
                 case 0x05:

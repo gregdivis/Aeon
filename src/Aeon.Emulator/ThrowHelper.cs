@@ -24,5 +24,17 @@ namespace Aeon.Emulator
         }
         [DoesNotReturn]
         internal static void ThrowNotImplementedException() => throw new NotImplementedException();
+        [DoesNotReturn]
+        internal static void ThrowCplGreaterThanRplException() => throw new InvalidOperationException("iret not supported when cpl > rpl.");
+        [DoesNotReturn]
+        internal static void ThrowCplLessThanDplException() => throw new InvalidOperationException("call not supported when cpl < dpl.");
+        [DoesNotReturn]
+        internal static void ThrowNoInterruptHandlerException(byte interrupt) => throw new ArgumentException($"There is no handler associated with interrupt {interrupt:X2}h.");
+        [DoesNotReturn]
+        internal static void ThrowNoCallbackHandlerException(byte id) => throw new ArgumentException($"There is no handler associated with callback #{id}.");
+        [DoesNotReturn]
+        internal static void ThrowInvalidTaskSegmentSelectorException() => throw new InvalidOperationException("Invalid task segment selector.");
+        [DoesNotReturn]
+        internal static void ThrowNullCallException() => throw new InvalidOperationException("Attempted to call function at address 0.");
     }
 }

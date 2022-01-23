@@ -1,5 +1,7 @@
 ﻿using System;
 
+#nullable enable
+
 namespace Aeon.Emulator.Video.Rendering
 {
     /// <summary>
@@ -7,15 +9,15 @@ namespace Aeon.Emulator.Video.Rendering
     /// </summary>
     public abstract class Presenter : IDisposable
     {
-        private Scaler scaler;
-        private MemoryBitmap internalBuffer;
+        private Scaler? scaler;
+        private MemoryBitmap? internalBuffer;
         private readonly object syncLock = new();
         private bool disposed;
 
         /// <summary>
-        /// Initializes a new instance of the Presenter class.
+        /// Initializes a new instance of the <see cref="Presenter"/> class.
         /// </summary>
-        /// <param name="videoMode">VideoMode instance describing the video mode.</param>
+        /// <param name="videoMode"><see cref="Video.VideoMode"/> instance describing the video mode.</param>
         protected Presenter(VideoMode videoMode)
         {
             this.VideoMode = videoMode;
@@ -75,6 +77,9 @@ namespace Aeon.Emulator.Video.Rendering
         /// </summary>
         public int HeightRatio => this.scaler?.HeightRatio ?? 1;
 
+        public TimeSpan RenderTime { get; private set; }
+        public TimeSpan ScalerTime { get; private set; }
+
         /// <summary>
         /// Gets information about the video mode.
         /// </summary>
@@ -93,11 +98,13 @@ namespace Aeon.Emulator.Video.Rendering
                 }
                 else
                 {
-                    this.DrawFrame(this.internalBuffer.PixelBuffer);
+                    this.DrawFrame(this.internalBuffer!.PixelBuffer);
                     this.scaler.Apply(this.internalBuffer.PixelBuffer, destination);
                 }
             }
         }
+
+        public virtual MemoryBitmap? Dump() => null;
 
         /// <summary>
         /// Updates the bitmap to match the current state of the video RAM.

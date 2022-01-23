@@ -7,7 +7,7 @@ namespace Aeon.Emulator.Input
     /// <summary>
     /// Emulates a joystick or game controller on the game port.
     /// </summary>
-    public sealed class JoystickDevice : IInputPort, IOutputPort
+    public sealed class JoystickDevice : IInputPort, IOutputPort, IDisposable
     {
         /// <summary>
         /// The number of cycles that represents the maximum value of an axis.
@@ -163,25 +163,6 @@ namespace Aeon.Emulator.Input
         /// <param name="value">Value to write to the ports.</param>
         void IOutputPort.WriteWord(int port, ushort value) => ((IOutputPort)this).WriteByte(port, (byte)value);
 
-        /// <summary>
-        /// Invoked when the emulator enters a paused state.
-        /// </summary>
-        public void Pause()
-        {
-        }
-        /// <summary>
-        /// Invoked when the emulator resumes from a paused state.
-        /// </summary>
-        public void Resume()
-        {
-        }
-        /// <summary>
-        /// Invoked when the virtual device has been added to a VirtualMachine.
-        /// </summary>
-        /// <param name="vm">VirtualMachine which owns the device.</param>
-        public void DeviceRegistered(VirtualMachine vm)
-        {
-        }
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>

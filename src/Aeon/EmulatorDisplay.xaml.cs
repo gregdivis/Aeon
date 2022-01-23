@@ -159,6 +159,7 @@ namespace Aeon.Emulator.Launcher
         /// Gets the command used to pause the emulator.
         /// </summary>
         public ICommand PauseCommand => this.pauseCommand;
+        public Presenter CurrentPresenter => this.currentPresenter;
 
         /// <summary>
         /// Disposes the current emulator and returns the control to its default state.

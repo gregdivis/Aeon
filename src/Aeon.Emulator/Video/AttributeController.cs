@@ -1,23 +1,41 @@
-﻿namespace Aeon.Emulator.Video
+﻿using System;
+
+namespace Aeon.Emulator.Video
 {
     /// <summary>
     /// Emulates the VGA Attribute Controller registers.
     /// </summary>
     internal sealed class AttributeController
     {
+        private readonly unsafe byte* internalPalette;
+        private readonly UnsafeBuffer<byte> internalPaletteBuffer = new(16);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AttributeController"/> class.
         /// </summary>
         public AttributeController()
         {
-            for (int i = 0; i < this.InternalPalette.Length; i++)
-                this.InternalPalette[i] = (byte)i;
+            unsafe
+            {
+                this.internalPalette = this.internalPaletteBuffer.ToPointer();
+                for (int i = 0; i < this.InternalPalette.Length; i++)
+                    this.internalPalette[i] = (byte)i;
+            }
         }
 
         /// <summary>
         /// Gets the internal palette.
         /// </summary>
-        public byte[] InternalPalette { get; } = new byte[16];
+        public Span<byte> InternalPalette
+        {
+            get
+            {
+                unsafe
+                {
+                    return new Span<byte>(this.internalPalette, 16);
+                }
+            }
+        }
         /// <summary>
         /// Gets or sets the Attribute Mode Control register.
         /// </summary>
