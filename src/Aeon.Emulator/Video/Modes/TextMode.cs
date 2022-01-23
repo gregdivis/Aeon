@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers.Binary;
 
 namespace Aeon.Emulator.Video.Modes
 {
@@ -10,7 +9,7 @@ namespace Aeon.Emulator.Video.Modes
     {
         private const uint BaseAddress = 0x18000;
 
-        private readonly UnsafeBuffer<nint> planesBuffer = new UnsafeBuffer<nint>(4);
+        private readonly UnsafeBuffer<nint> planesBuffer = new(4);
         private readonly unsafe byte* videoRam;
         private readonly unsafe byte** planes;
         private readonly Graphics graphics;
@@ -77,10 +76,7 @@ namespace Aeon.Emulator.Video.Modes
         internal override void SetVramByte(uint offset, byte value)
         {
             if (offset - BaseAddress >= VideoHandler.TotalVramBytes)
-            {
-                //throw new InvalidOperationException();
                 return;
-            }
 
             unsafe
             {
@@ -110,8 +106,8 @@ namespace Aeon.Emulator.Video.Modes
         }
         internal override void SetVramWord(uint offset, ushort value)
         {
-            SetVramByte(offset, (byte)value);
-            SetVramByte(offset + 1u, (byte)(value >> 8));
+            this.SetVramByte(offset, (byte)value);
+            this.SetVramByte(offset + 1u, (byte)(value >> 8));
         }
         internal override uint GetVramDWord(uint offset)
         {
@@ -123,10 +119,10 @@ namespace Aeon.Emulator.Video.Modes
         }
         internal override void SetVramDWord(uint offset, uint value)
         {
-            SetVramByte(offset, (byte)value);
-            SetVramByte(offset + 1u, (byte)(value >> 8));
-            SetVramByte(offset + 2u, (byte)(value >> 16));
-            SetVramByte(offset + 3u, (byte)(value >> 24));
+            this.SetVramByte(offset, (byte)value);
+            this.SetVramByte(offset + 1u, (byte)(value >> 8));
+            this.SetVramByte(offset + 2u, (byte)(value >> 16));
+            this.SetVramByte(offset + 3u, (byte)(value >> 24));
         }
         internal override void WriteCharacter(int x, int y, int index, byte foreground, byte background)
         {

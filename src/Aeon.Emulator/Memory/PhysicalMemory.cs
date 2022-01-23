@@ -68,7 +68,7 @@ namespace Aeon.Emulator
         /// <remarks>
         /// Video RAM mapping is technically up to 0xBFFF0 normally.
         /// </remarks>
-        private const int VramUpperBound = 0xAFFF << 4;
+        private const int VramUpperBound = 0xBFFF << 4;
 
         /// <summary>
         /// Segment where font data is stored.
