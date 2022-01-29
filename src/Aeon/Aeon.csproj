@@ -14,9 +14,6 @@
     <ApplicationIcon>Aeon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="YamlDotNet" Version="8.1.2" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
     <ProjectReference Include="..\Aeon.DiskImages\Aeon.DiskImages.csproj" />
     <ProjectReference Include="..\Aeon.Emulator.Input\Aeon.Emulator.Input.csproj" />

@@ -21,6 +21,6 @@ namespace Aeon.Emulator.Launcher.Debugger
         /// <summary>
         /// Gets the target address.
         /// </summary>
-        public TargetAddress Target { get; private set; }
+        public TargetAddress Target { get; }
     }
 }
