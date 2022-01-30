@@ -2,6 +2,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Aeon.DiskImages;
@@ -12,14 +13,21 @@ using Microsoft.Win32;
 
 namespace Aeon.Emulator.Launcher
 {
-    public sealed partial class MainWindow : Window
+    public sealed partial class MainWindow : Window, System.Windows.Forms.IWin32Window
     {
         private PerformanceWindow performanceWindow;
         private AeonConfiguration currentConfig;
         private bool hasActivated;
         private PaletteDialog paletteWindow;
+        private readonly Lazy<WindowInteropHelper> interopHelper;
 
-        public MainWindow() => this.InitializeComponent();
+        public MainWindow()
+        {
+            this.interopHelper = new Lazy<WindowInteropHelper>(() => new WindowInteropHelper(this));
+            this.InitializeComponent();
+        }
+
+        IntPtr System.Windows.Forms.IWin32Window.Handle => this.interopHelper.Value.Handle;
 
         protected override void OnActivated(EventArgs e)
         {
@@ -163,14 +171,15 @@ namespace Aeon.Emulator.Launcher
         }
         private void CommandPrompt_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new FolderBrowserDialog
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
             {
-                Title = "Select folder for C:\\ drive..."
+                Description = "Select folder for C:\\ drive...",
+                UseDescriptionForTitle = true
             };
 
-            if (dialog.ShowDialog(this))
+            if (dialog.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                this.currentConfig = AeonConfiguration.GetQuickLaunchConfiguration(dialog.Path, null);
+                this.currentConfig = AeonConfiguration.GetQuickLaunchConfiguration(dialog.SelectedPath, null);
                 this.LaunchCurrentConfig();
             }
         }
@@ -188,7 +197,7 @@ namespace Aeon.Emulator.Launcher
         {
             CommandManager.InvalidateRequerySuggested();
             if (this.emulatorDisplay.EmulatorState == EmulatorState.ProgramExited && this.currentConfig != null && this.currentConfig.HideUserInterface)
-                Close();
+                this.Close();
         }
         private void SlowerButton_Click(object sender, RoutedEventArgs e)
         {

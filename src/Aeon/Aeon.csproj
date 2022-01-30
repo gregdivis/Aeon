@@ -11,6 +11,7 @@
     <Title>Aeon</Title>
     <Description>Runtime environment for the Aeon x86 emulator.</Description>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Aeon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
