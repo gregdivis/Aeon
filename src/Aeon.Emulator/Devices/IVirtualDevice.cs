@@ -1,4 +1,6 @@
-﻿namespace Aeon.Emulator
+﻿using System.Threading.Tasks;
+
+namespace Aeon.Emulator
 {
     /// <summary>
     /// Defines a virtual device for an emulated machine.
@@ -8,15 +10,11 @@
         /// <summary>
         /// Invoked when the emulator enters a paused state.
         /// </summary>
-        void Pause()
-        {
-        }
+        Task PauseAsync() => Task.CompletedTask;
         /// <summary>
         /// Invoked when the emulator resumes from a paused state.
         /// </summary>
-        void Resume()
-        {
-        }
+        Task ResumeAsync() => Task.CompletedTask;
         /// <summary>
         /// Invoked when the virtual device has been added to a VirtualMachine.
         /// </summary>

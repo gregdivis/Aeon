@@ -1,4 +1,6 @@
-﻿namespace Aeon.Emulator.Dos.VirtualFileSystem
+﻿using System;
+
+namespace Aeon.Emulator.Dos.VirtualFileSystem
 {
     /// <summary>
     /// Describes a device which allows sector-level reading.
@@ -16,7 +18,6 @@
         /// <param name="startingSector">Sector to begin reading.</param>
         /// <param name="sectorsToRead">Number of sectors to read.</param>
         /// <param name="buffer">Buffer into which sectors are read.</param>
-        /// <param name="offset">Offset in <paramref name="buffer"/> to start writing.</param>
-        void ReadSectors(int startingSector, int sectorsToRead, byte[] buffer, int offset);
+        void ReadSectors(int startingSector, int sectorsToRead, Span<byte> buffer);
     }
 }

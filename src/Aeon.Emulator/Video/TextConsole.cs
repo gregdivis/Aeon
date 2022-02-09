@@ -214,7 +214,11 @@ namespace Aeon.Emulator.Video
                         this.MoveBlock(new Point(0, 1), new Point(0, 0), this.Width, this.Height - 1, 0);
                     }
                 }
-                else if (c != '\r')
+                else if (c == '\r')
+                {
+                    cursorPos.X = 0;
+                }
+                else
                 {
                     if (c == 8 && advanceCursor)
                     {

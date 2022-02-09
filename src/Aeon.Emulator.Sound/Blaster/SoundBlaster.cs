@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Aeon.Emulator.Sound.Blaster
 {
@@ -159,8 +160,16 @@ namespace Aeon.Emulator.Sound.Blaster
         int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
         void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
 
-        void IVirtualDevice.Pause() => this.pausePlayback = true;
-        void IVirtualDevice.Resume() => this.pausePlayback = false;
+        Task IVirtualDevice.PauseAsync()
+        {
+            this.pausePlayback = true;
+            return Task.CompletedTask;
+        }
+        Task IVirtualDevice.ResumeAsync()
+        {
+            this.pausePlayback = false;
+            return Task.CompletedTask;
+        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             vm.EnvironmentVariables["BLASTER"] = $"A220 I{this.IRQ} D{this.DMA} T4";
@@ -375,6 +384,8 @@ namespace Aeon.Emulator.Sound.Blaster
                     while (this.pausePlayback)
                     {
                         Thread.Sleep(1);
+                        if (this.endPlayback)
+                            return;
                     }
 
                     player.BeginPlayback();

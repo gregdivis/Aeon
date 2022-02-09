@@ -16,12 +16,8 @@ namespace Aeon.Test
             this.callback = callback;
         }
 
-        public IEnumerable<InterruptHandlerInfo> HandledInterrupts => new InterruptHandlerInfo[] { this.interrupt };
+        public IEnumerable<InterruptHandlerInfo> HandledInterrupts => new InterruptHandlerInfo[] { new InterruptHandlerInfo((byte)this.interrupt) };
 
         public void HandleInterrupt(int interrupt) => this.callback();
-
-        void IDisposable.Dispose()
-        {
-        }
     }
 }

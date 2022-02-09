@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Memory;
 
@@ -13,8 +16,12 @@ namespace Aeon.Emulator.Dos.CD
     /// </summary>
     internal sealed class Mscdex : IMultiplexInterruptHandler
     {
+        private const ushort Status_Done = 1 << 8;
+        private const int LeadInSectors = 200;
+
         private VirtualMachine vm;
         private ReservedBlock deviceHeader;
+        private readonly List<IAudioCD> paused = new();
 
         int IMultiplexInterruptHandler.Identifier => 0x15;
 
@@ -55,6 +62,10 @@ namespace Aeon.Emulator.Dos.CD
                     SaveFlags(EFlags.Carry);
                     break;
 
+                case Functions.SendDeviceRequest:
+                    this.SendDeviceRequest();
+                    break;
+
                 default:
                     System.Diagnostics.Debug.WriteLine($"MSCDEX function {vm.Processor.AL:X2}h not implemented.");
                     break;
@@ -67,8 +78,185 @@ namespace Aeon.Emulator.Dos.CD
             vm.PhysicalMemory.SetUInt32(this.deviceHeader.Segment, 0, uint.MaxValue);
             vm.PhysicalMemory.SetUInt16(this.deviceHeader.Segment, 4, 0xC800);
             vm.PhysicalMemory.SetString(this.deviceHeader.Segment, 10, "AEONVMCD", false);
+
+
+        }
+        Task IVirtualDevice.PauseAsync()
+        {
+            foreach (var drive in vm.FileSystem.Drives)
+            {
+                if (drive.Mapping is IAudioCD cd && cd.Playing)
+                {
+                    cd.Stop();
+                    this.paused.Add(cd);
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        Task IVirtualDevice.ResumeAsync()
+        {
+            foreach (var cd in this.paused)
+                cd.Play();
+
+            this.paused.Clear();
+            return Task.CompletedTask;
         }
 
+        private void SendDeviceRequest()
+        {
+            var drive = this.vm.FileSystem.Drives[vm.Processor.CX];
+            if (drive.DriveType != DriveType.CDROM || drive.Mapping is not IAudioCD cd)
+            {
+                System.Diagnostics.Debug.WriteLine("Drive does not contain an audio CD.");
+                return;
+            }
+
+            var reqHeaderAddress = new RealModeAddress(vm.Processor.ES, (ushort)vm.Processor.BX);
+            int headerSize = this.vm.PhysicalMemory.GetByte(reqHeaderAddress.Segment, reqHeaderAddress.Offset);
+            var fullHeader = this.vm.PhysicalMemory.GetSpan(reqHeaderAddress.Segment, reqHeaderAddress.Offset, headerSize + 18);
+            int commandCode = fullHeader[2];
+            ref ushort status = ref Unsafe.As<byte, ushort>(ref fullHeader[3]);
+            ushort dataSegment = BinaryPrimitives.ReadUInt16LittleEndian(fullHeader.Slice(0x10, 2));
+            ushort dataOffset = BinaryPrimitives.ReadUInt16LittleEndian(fullHeader.Slice(0x0E, 2));
+            ushort dataLength = BinaryPrimitives.ReadUInt16LittleEndian(fullHeader.Slice(0x12, 2));
+            var data = this.vm.PhysicalMemory.GetSpan(dataSegment, dataOffset, dataLength + 1);
+
+            switch (commandCode)
+            {
+                case CommandCodes.Read:
+                    status = this.IoctlRead(cd, data);
+                    break;
+
+                case CommandCodes.Write:
+                    status = this.IoctlWrite(cd, data);
+                    break;
+
+                case CommandCodes.Seek:
+                    status = Status_Done;
+                    break;
+
+                case CommandCodes.PlayAudio:
+                    {
+                        int startFrame = BinaryPrimitives.ReadInt32LittleEndian(fullHeader[14..]);
+                        int playLength = BinaryPrimitives.ReadInt32LittleEndian(fullHeader[18..]);
+                        cd.PlaybackSector = startFrame;
+                        cd.Play(playLength);
+                    }
+                    break;
+
+                case CommandCodes.StopAudio:
+                    cd.Stop();
+                    status = Status_Done;
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+
+            }
+
+            //status = 1 << 8;
+            //this.vm.PhysicalMemory.SetUInt16(reqHeaderAddress.Segment, (ushort)(reqHeaderAddress.Offset + 3u), 1 << 8);
+        }
+        private ushort IoctlRead(IAudioCD cd, Span<byte> data)
+        {
+            switch (data[0])
+            {
+                case 8:
+                    BinaryPrimitives.WriteInt32LittleEndian(data[1..], cd.TotalSectors);
+                    return Status_Done;
+
+                case 10:
+                    {
+                        var leadOut = new CDTimeSpan(cd.TotalSectors + LeadInSectors);
+                        data[1] = 1;
+                        data[2] = (byte)cd.Tracks.Count;
+                        data[3] = (byte)leadOut.Frames;
+                        data[4] = (byte)leadOut.Seconds;
+                        data[5] = (byte)leadOut.Minutes;
+
+                        //BinaryPrimitives.WriteInt32LittleEndian(data[3..], cd.TotalSectors);
+                    }
+                    return Status_Done;
+
+                case 11:
+                    {
+                        var offset = cd.Tracks[data[1] - 1].Offset + new CDTimeSpan(LeadInSectors);
+                        data[2] = (byte)offset.Frames;
+                        data[3] = (byte)offset.Seconds;
+                        data[4] = (byte)offset.Minutes;
+                        data[5] = 0;
+                        data[6] = 0;
+                    }
+                    return Status_Done;
+
+                case 12:
+                    {
+                        var pos = new CDTimeSpan(cd.PlaybackSector);
+                        int trackNumber = 0;
+                        while (trackNumber < cd.Tracks.Count - 1)
+                        {
+                            if (cd.Tracks[trackNumber].Offset > pos)
+                            {
+                                trackNumber--;
+                                break;
+                            }
+
+                            trackNumber++;
+                        }
+
+                        var track = cd.Tracks[trackNumber];
+
+                        int indexIndex = 0;
+                        while (indexIndex < track.Indexes.Count - 1)
+                        {
+                            if (track.Indexes[indexIndex].Position > pos)
+                            {
+                                indexIndex--;
+                                break;
+                            }
+
+                            indexIndex++;
+                        }
+
+                        var leadIn = new CDTimeSpan(LeadInSectors);
+
+                        var trackPos = pos - track.Offset; //+ 0//leadIn;
+                        pos += leadIn;
+
+                        data[1] = 0; // control/adr
+                        data[2] = ToBCD(trackNumber + 1);
+                        data[3] = (byte)track.Indexes[indexIndex].Number;
+                        data[4] = (byte)trackPos.Minutes;
+                        data[5] = (byte)trackPos.Seconds;
+                        data[6] = (byte)trackPos.Frames;
+                        data[7] = 0;
+                        data[8] = (byte)pos.Minutes;
+                        data[9] = (byte)pos.Seconds;
+                        data[10] = (byte)pos.Frames;
+                    }
+                    return Status_Done;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        private ushort IoctlWrite(IAudioCD cd, Span<byte> data)
+        {
+            switch (data[0])
+            {
+                case 2:
+                    // reset drive
+                    return Status_Done;
+
+                case 3:
+                    System.Diagnostics.Debug.WriteLine("CD volume control");
+                    return Status_Done;
+
+                default:
+                    throw new NotImplementedException();
+            }
+        }
         /// <summary>
         /// Returns a collection of all of the CD-ROM drives currently defined in the emulated system.
         /// </summary>
@@ -99,7 +287,7 @@ namespace Aeon.Emulator.Dos.CD
         private void GetCDRomDeviceList()
         {
             // First make sure the device header is correct.
-            if (GetCDRomDrives().Count() > 0)
+            if (this.GetCDRomDrives().Any())
                 vm.PhysicalMemory.SetByte(this.deviceHeader.Segment, 20, (byte)(GetCDRomDrives().First().Key - 'A' + 1));
 
             vm.PhysicalMemory.SetByte(this.deviceHeader.Segment, 21, (byte)GetCDRomDrives().Count());
@@ -220,8 +408,7 @@ namespace Aeon.Emulator.Dos.CD
                 return;
             }
 
-            var drive = this.vm.FileSystem.Drives[driveIndex].Mapping as IRawSectorReader;
-            if (drive == null)
+            if (this.vm.FileSystem.Drives[driveIndex].Mapping is not IRawSectorReader drive)
             {
                 System.Diagnostics.Debug.WriteLine("Tried to read raw sectors from a device that does not implement IRawSectorReader");
                 this.vm.Processor.AX = 21;
@@ -232,7 +419,7 @@ namespace Aeon.Emulator.Dos.CD
             int sectorsToRead = (ushort)this.vm.Processor.DX;
             int startingSector = (this.vm.Processor.SI << 16) | this.vm.Processor.DI;
             var buffer = new byte[sectorsToRead * drive.SectorSize];
-            drive.ReadSectors(startingSector, sectorsToRead, buffer, 0);
+            drive.ReadSectors(startingSector, sectorsToRead, buffer);
             Thread.Sleep(5);
 
             var ptr = this.vm.PhysicalMemory.GetPointer(this.vm.Processor.ES, (ushort)this.vm.Processor.BX);
@@ -244,5 +431,7 @@ namespace Aeon.Emulator.Dos.CD
             oldFlags &= ~modified;
             vm.PhysicalMemory.SetUInt16(vm.Processor.SS, (ushort)(vm.Processor.SP + 4), (ushort)(oldFlags | (vm.Processor.Flags.Value & modified)));
         }
+
+        private static byte ToBCD(int n) => (byte)(((n / 10) << 4) | (n % 10));
     }
 }

@@ -41,17 +41,17 @@ namespace Aeon.Emulator.Sound
             }
         }
 
-        private void FillBuffer(Span<float> buffer, out uint samplesWritten)
+        private void FillBuffer(Span<float> buffer, out int samplesWritten)
         {
             try
             {
                 this.context.Render(buffer);
-                samplesWritten = (uint)buffer.Length;
+                samplesWritten = buffer.Length;
             }
             catch (ObjectDisposedException)
             {
                 buffer.Clear();
-                samplesWritten = (uint)buffer.Length;
+                samplesWritten = buffer.Length;
             }
         }
         private void LoadRoms(string path)

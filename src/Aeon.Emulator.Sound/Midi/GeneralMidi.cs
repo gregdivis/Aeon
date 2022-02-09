@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Aeon.Emulator.Sound
 {
@@ -109,8 +110,16 @@ namespace Aeon.Emulator.Sound
         }
         void IOutputPort.WriteWord(int port, ushort value) => ((IOutputPort)this).WriteByte(port, (byte)value);
 
-        void IVirtualDevice.Pause() => this.midiMapper?.Pause();
-        void IVirtualDevice.Resume() => this.midiMapper?.Resume();
+        Task IVirtualDevice.PauseAsync()
+        {
+            this.midiMapper?.Pause();
+            return Task.CompletedTask;
+        }
+        Task IVirtualDevice.ResumeAsync()
+        {
+            this.midiMapper?.Resume();
+            return Task.CompletedTask;
+        }
 
         public void Dispose()
         {

@@ -66,11 +66,22 @@ namespace Aeon.Emulator.Launcher
                 if (config.Archive == null)
                 {
                     if (!string.IsNullOrEmpty(info.HostPath))
+                    {
                         vmDrive.Mapping = info.ReadOnly ? new MappedFolder(info.HostPath) : new WritableMappedFolder(info.HostPath);
+                    }
                     else if (!string.IsNullOrEmpty(info.ImagePath))
-                        vmDrive.Mapping = new ISOImage(info.ImagePath);
+                    {
+                        if (Path.GetExtension(info.ImagePath).Equals(".iso", StringComparison.OrdinalIgnoreCase))
+                            vmDrive.Mapping = new ISOImage(info.ImagePath);
+                        else if (Path.GetExtension(info.ImagePath).Equals(".cue", StringComparison.OrdinalIgnoreCase))
+                            vmDrive.Mapping = new CueSheetImage(info.ImagePath);
+                        else
+                            throw new FormatException();
+                    }
                     else
+                    {
                         throw new FormatException();
+                    }
                 }
                 else
                 {

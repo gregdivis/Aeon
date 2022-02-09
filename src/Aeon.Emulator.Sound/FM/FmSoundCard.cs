@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using TinyAudio;
 using Ymf262Emu;
 
@@ -17,8 +19,8 @@ namespace Aeon.Emulator.Sound.FM
         private readonly AudioPlayer audioPlayer = Audio.CreatePlayer();
         private int currentAddress;
         private readonly FmSynthesizer synth;
-        private System.Threading.Thread generateThread;
-        private volatile bool endThread;
+        private Task generateTask;
+        private CancellationTokenSource cancelPlayback = new();
         private byte timer1Data;
         private byte timer2Data;
         private byte timerControlByte;
@@ -28,12 +30,7 @@ namespace Aeon.Emulator.Sound.FM
 
         public FmSoundCard()
         {
-            this.synth = new FmSynthesizer((int)this.audioPlayer.Format.SampleRate);
-            this.generateThread = new System.Threading.Thread(this.GenerateWaveforms)
-            {
-                IsBackground = true,
-                Priority = System.Threading.ThreadPriority.AboveNormal
-            };
+            this.synth = new FmSynthesizer(this.audioPlayer.Format.SampleRate);
         }
 
         IEnumerable<int> IInputPort.InputPorts => new int[] { 0x388 };
@@ -98,24 +95,26 @@ namespace Aeon.Emulator.Sound.FM
             }
         }
 
-        void IVirtualDevice.Pause()
+        async Task IVirtualDevice.PauseAsync()
         {
             if (this.initialized && !this.paused)
             {
-                this.endThread = true;
-                this.generateThread.Join();
+                this.cancelPlayback.Cancel();
+                await this.generateTask.ConfigureAwait(false);
                 this.paused = true;
             }
         }
-        void IVirtualDevice.Resume()
+        Task IVirtualDevice.ResumeAsync()
         {
             if (paused)
             {
-                this.endThread = false;
-                this.generateThread = new System.Threading.Thread(this.GenerateWaveforms) { IsBackground = true };
-                this.generateThread.Start();
+                this.cancelPlayback?.Dispose();
+                this.cancelPlayback = new();
+                this.generateTask = Task.Run(this.GenerateWaveformsAsync);
                 this.paused = false;
             }
+
+            return Task.CompletedTask;
         }
 
         public void Dispose()
@@ -124,20 +123,18 @@ namespace Aeon.Emulator.Sound.FM
             {
                 if (!paused)
                 {
-                    this.endThread = true;
-                    this.generateThread.Join();
+                    this.cancelPlayback.Cancel();
+                    this.generateTask.GetAwaiter().GetResult();
                 }
 
                 this.audioPlayer.Dispose();
+                this.cancelPlayback.Dispose();
                 this.initialized = false;
             }
         }
 
-        /// <summary>
-        /// Generates and plays back output waveform data.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private void GenerateWaveforms()
+        private async Task GenerateWaveformsAsync()
         {
             var buffer = new float[1024];
             float[] playBuffer;
@@ -150,10 +147,16 @@ namespace Aeon.Emulator.Sound.FM
 
             this.audioPlayer.BeginPlayback();
             fillBuffer();
-            while (!endThread)
+            try
             {
-                Audio.WriteFullBuffer(this.audioPlayer, playBuffer);
-                fillBuffer();
+                while (!cancelPlayback.IsCancellationRequested)
+                {
+                    await this.audioPlayer.WriteDataAsync(playBuffer, this.cancelPlayback.Token).ConfigureAwait(false);
+                    fillBuffer();
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
 
             this.audioPlayer.StopPlayback();
@@ -165,12 +168,9 @@ namespace Aeon.Emulator.Sound.FM
                     ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
             }
         }
-        /// <summary>
-        /// Performs DirectSound initialization.
-        /// </summary>
         private void Initialize()
         {
-            this.generateThread.Start();
+            this.generateTask = Task.Run(this.GenerateWaveformsAsync);
             this.initialized = true;
         }
     }

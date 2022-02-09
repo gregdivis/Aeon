@@ -84,17 +84,7 @@ namespace Aeon.DiskImages
 
             return ExtendedErrorCode.FileNotFound;
         }
-        /// <summary>
-        /// Reads sectors from the device into a buffer.
-        /// </summary>
-        /// <param name="startingSector">Sector to begin reading.</param>
-        /// <param name="sectorsToRead">Number of sectors to read.</param>
-        /// <param name="buffer">Buffer into which sectors are read.</param>
-        /// <param name="offset">Offset in <paramref name="buffer"/> to start writing.</param>
-        public void ReadSectors(int startingSector, int sectorsToRead, byte[] buffer, int offset)
-        {
-            this.disc.ReadRaw(startingSector, sectorsToRead, buffer, offset);
-        }
+        public void ReadSectors(int startingSector, int sectorsToRead, Span<byte> buffer) => this.disc.ReadRaw(startingSector, sectorsToRead, buffer);
         /// <summary>
         /// Releases resources used by the drive.
         /// </summary>
@@ -103,6 +93,5 @@ namespace Aeon.DiskImages
             this.disc.Dispose();
             this.fileStream.Dispose();
         }
-
     }
 }

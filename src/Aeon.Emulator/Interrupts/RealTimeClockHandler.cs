@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Aeon.Emulator.Interrupts
 {
@@ -49,8 +50,17 @@ namespace Aeon.Emulator.Interrupts
             SaveFlags(EFlags.Carry);
         }
 
-        void IVirtualDevice.Pause() => this.timer.Change(Timeout.Infinite, Timeout.Infinite);
-        void IVirtualDevice.Resume() => this.timer.Change(0, 55);
+        Task IVirtualDevice.PauseAsync()
+        {
+            this.timer.Change(Timeout.Infinite, Timeout.Infinite);
+            return Task.CompletedTask;
+        }
+        Task IVirtualDevice.ResumeAsync()
+        {
+            this.timer.Change(0, 55);
+            return Task.CompletedTask;
+        }
+
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             this.vm = vm;

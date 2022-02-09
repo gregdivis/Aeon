@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.RuntimeExceptions;
@@ -16,9 +17,8 @@ namespace Aeon.Emulator
     /// </summary>
     public sealed class EmulatorHost : IDisposable
     {
-        private Thread processorThread;
+        private Task processorTask;
         private volatile EmulatorState targetState;
-        private readonly AutoResetEvent resumeEvent = new(false);
         private readonly ConcurrentQueue<MouseEvent> mouseQueue = new();
         private EmulatorState currentState;
         private bool disposed;
@@ -58,13 +58,13 @@ namespace Aeon.Emulator
         /// <param name="instructionLog">Log which will be used to record instructions.</param>
         public EmulatorHost(VirtualMachine virtualMachine, InstructionLog instructionLog)
         {
-            VirtualMachine = virtualMachine ?? throw new ArgumentNullException(nameof(virtualMachine));
-            VirtualMachine.VideoModeChanged += (s, e) => this.OnVideoModeChanged(e);
-            VirtualMachine.MouseMoveByEmulator += (s, e) => this.OnMouseMoveByEmulator(e);
-            VirtualMachine.MouseMove += (s, e) => this.OnMouseMove(e);
-            VirtualMachine.MouseVisibilityChanged += (s, e) => this.OnMouseVisibilityChanged(e);
-            VirtualMachine.CursorVisibilityChanged += (s, e) => this.OnCursorVisibilityChanged(e);
-            VirtualMachine.CurrentProcessChanged += (s, e) => this.OnCurrentProcessChanged(e);
+            this.VirtualMachine = virtualMachine ?? throw new ArgumentNullException(nameof(virtualMachine));
+            this.VirtualMachine.VideoModeChanged += (s, e) => this.OnVideoModeChanged(e);
+            this.VirtualMachine.MouseMoveByEmulator += (s, e) => this.OnMouseMoveByEmulator(e);
+            this.VirtualMachine.MouseMove += (s, e) => this.OnMouseMove(e);
+            this.VirtualMachine.MouseVisibilityChanged += (s, e) => this.OnMouseVisibilityChanged(e);
+            this.VirtualMachine.CursorVisibilityChanged += (s, e) => this.OnCursorVisibilityChanged(e);
+            this.VirtualMachine.CurrentProcessChanged += (s, e) => this.OnCurrentProcessChanged(e);
 
             this.log = instructionLog;
         }
@@ -179,12 +179,12 @@ namespace Aeon.Emulator
 
             if (this.State == EmulatorState.Ready)
             {
-                this.processorThread = new Thread(this.ProcessorThreadMain) { IsBackground = true };
-                this.processorThread.Start();
+                this.processorTask = Task.Run(() => this.ProcessorThreadMainAsync(false));
             }
             else if (this.State == EmulatorState.Paused)
             {
-                this.resumeEvent.Set();
+                this.targetState = EmulatorState.Running;
+                this.processorTask = Task.Run(() => this.ProcessorThreadMainAsync(true));
             }
         }
         /// <summary>
@@ -196,19 +196,15 @@ namespace Aeon.Emulator
                 throw new InvalidOperationException("No program is running.");
 
             this.targetState = EmulatorState.Paused;
+            this.processorTask.Wait();
         }
         /// <summary>
         /// Immediately stops emulation and places the emulator in a halted state.
         /// </summary>
         public void Halt()
         {
-            bool paused = this.State == EmulatorState.Paused;
-
             this.State = EmulatorState.Halted;
             this.targetState = EmulatorState.Halted;
-
-            if (paused)
-                this.resumeEvent.Set();
         }
         /// <summary>
         /// Presses a key on the emulated keyboard.
@@ -409,113 +405,115 @@ namespace Aeon.Emulator
             if (disposing && !disposed)
             {
                 this.Halt();
-                this.processorThread?.Join();
-                this.resumeEvent?.Close();
+                this.processorTask?.GetAwaiter().GetResult();
                 this.VirtualMachine?.Dispose();
                 this.disposed = true;
             }
         }
-        private void ProcessorThreadMain()
+
+        private async Task ProcessorThreadMainAsync(bool resume)
         {
-            while (this.targetState != EmulatorState.Halted)
+            try
             {
-                try
-                {
-                    this.State = EmulatorState.Running;
-                    this.EmulationLoop();
-                }
-                catch (EndOfProgramException)
-                {
-                    this.State = EmulatorState.ProgramExited;
-                    return;
-                }
-                catch (NotImplementedException ex)
-                {
-                    this.State = EmulatorState.Halted;
-                    this.OnError(new ErrorEventArgs(ex.Message));
-                    return;
-                }
-                catch (NotSupportedException)
-                {
-                    this.State = EmulatorState.Halted;
-                    this.OnError(new ErrorEventArgs("Unknown error."));
-                    return;
-                }
+                this.State = EmulatorState.Running;
+                this.State = await this.EmulationLoopAsync(resume).ConfigureAwait(false);
+            }
+            catch (EndOfProgramException)
+            {
+                this.State = EmulatorState.ProgramExited;
+                return;
+            }
+            catch (NotImplementedException ex)
+            {
+                this.State = EmulatorState.Halted;
+                this.OnError(new ErrorEventArgs(ex.Message));
+                return;
+            }
+            catch (Exception ex)
+            {
+                this.State = EmulatorState.Halted;
+                this.OnError(new ErrorEventArgs("Unknown error: " + ex.Message));
+                return;
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private void EmulationLoop()
+        private async Task<EmulatorState> EmulationLoopAsync(bool resume)
         {
-            const int InstructionBatchCount = 500;
-            const int Iterations = 5;
-            const int IterationInstructionCount = InstructionBatchCount * Iterations;
-
             try
             {
                 var speedTimer = new Stopwatch();
-
-                bool breakPause = false;
                 var vm = this.VirtualMachine;
-                var interruptTimer = vm.InterruptTimer;
-                interruptTimer.Reset();
+
+                if (resume)
+                {
+                    foreach (var device in vm.Devices)
+                        await device.ResumeAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    vm.InterruptTimer.Reset();
+                }
 
                 while (true)
                 {
-                    speedTimer.Restart();
-                    for (int i = 0; i < Iterations; i++)
-                    {
-                        if (interruptTimer.IsIntervalComplete)
-                        {
-                            // Raise the hardware timer interrupt.
-                            vm.InterruptController.RaiseHardwareInterrupt(0);
-                            interruptTimer.Reset();
-                        }
+                    this.EmulationTightLoop(speedTimer);
 
-                        if (this.log == null)
-                            this.EmulateInstructions(InstructionBatchCount);
-                        else
-                            this.EmulateInstructionsWithLogging(InstructionBatchCount);
-
-                        Interlocked.Add(ref totalInstructions, InstructionBatchCount);
-
-                        if (this.targetState == EmulatorState.Halted)
-                            return;
-                    }
-
-                    long ticksPerInst = TimeSpan.TicksPerSecond / this.emulationSpeed;
-                    long targetTicks = ticksPerInst * IterationInstructionCount;
-
-                    while (speedTimer.ElapsedTicks < targetTicks)
-                    {
-                        Thread.SpinWait(100);
-                    }
-
-                    bool pauseSignal = this.targetState == EmulatorState.Paused;
-                    if (pauseSignal || breakPause)
+                    if (this.targetState == EmulatorState.Paused || this.targetState == EmulatorState.Halted)
                     {
                         foreach (var device in vm.Devices)
-                            device.Pause();
+                            await device.PauseAsync().ConfigureAwait(false);
 
-                        this.State = EmulatorState.Paused;
-                        this.resumeEvent.WaitOne();
-
-                        foreach (var device in vm.Devices)
-                            device.Resume();
-
-                        if (this.targetState == EmulatorState.Halted)
-                            return;
-
-                        breakPause = false;
-                        this.targetState = EmulatorState.Running;
-                        this.State = EmulatorState.Running;
+                        return this.targetState;
                     }
                 }
             }
             finally
             {
-                this.log?.Dispose();
+                if (this.State != EmulatorState.Paused)
+                    this.log?.Dispose();
             }
         }
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        private void EmulationTightLoop(Stopwatch speedTimer)
+        {
+            const int InstructionBatchCount = 500;
+            const int Iterations = 5;
+            const int IterationInstructionCount = InstructionBatchCount * Iterations;
+
+            var vm = this.VirtualMachine;
+            var interruptTimer = vm.InterruptTimer;
+
+            speedTimer.Restart();
+
+            for (int i = 0; i < Iterations; i++)
+            {
+                if (interruptTimer.IsIntervalComplete)
+                {
+                    // Raise the hardware timer interrupt.
+                    vm.InterruptController.RaiseHardwareInterrupt(0);
+                    interruptTimer.Reset();
+                }
+
+                if (this.log == null)
+                    this.EmulateInstructions(InstructionBatchCount);
+                else
+                    this.EmulateInstructionsWithLogging(InstructionBatchCount);
+
+                Interlocked.Add(ref totalInstructions, InstructionBatchCount);
+
+                if (this.targetState == EmulatorState.Halted)
+                    return;
+            }
+
+            long ticksPerInst = TimeSpan.TicksPerSecond / this.emulationSpeed;
+            long targetTicks = ticksPerInst * IterationInstructionCount;
+
+            while (speedTimer.ElapsedTicks < targetTicks)
+            {
+                Thread.SpinWait(100);
+            }
+        }
+
         private bool RaiseMouseEvent()
         {
             if (this.mouseQueue.TryDequeue(out var mouseEvent))

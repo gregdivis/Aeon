@@ -5,6 +5,7 @@ namespace Aeon.Emulator.Launcher.Configuration
     public sealed class AeonDriveConfiguration
     {
         [JsonPropertyName("type")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public DriveType Type { get; set; }
         [JsonPropertyName("host-path")]
         public string HostPath { get; set; }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Video.Modes
 {
@@ -224,7 +223,7 @@ namespace Aeon.Emulator.Video.Modes
         {
             unsafe
             {
-                uint values = input;
+                uint values = new MaskValue(input).Expanded;
 
                 uint logicalOp = Intrinsics.ExtractBits(graphics.DataRotate, 3, 2, 0b11000);
 

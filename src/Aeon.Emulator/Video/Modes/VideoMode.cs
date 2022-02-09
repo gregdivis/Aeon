@@ -222,8 +222,8 @@ namespace Aeon.Emulator.Video
                     stride = this.Width;
             }
 
-            crtController.Overflow = (1 << 4);
-            crtController.MaximumScanLine = (1 << 6);
+            crtController.Overflow = 1 << 4;
+            crtController.MaximumScanLine = 1 << 6;
             crtController.LineCompare = 0xFF;
             crtController.Offset = (byte)(stride / 2u);
             crtController.StartAddress = 0;
@@ -242,46 +242,16 @@ namespace Aeon.Emulator.Video
         /// <param name="memory">Current PhysicalMemory instance.</param>
         private void InitializeFont(PhysicalMemory memory)
         {
-            uint offset;
-            int length;
-            switch (this.FontHeight)
+            var (offset, length) = this.FontHeight switch
             {
-                case 8:
-                    offset = PhysicalMemory.Font8x8Offset;
-                    length = 8 * 256;
-                    break;
+                8 => (PhysicalMemory.Font8x8Offset, 8 * 256),
+                14 => (PhysicalMemory.Font8x14Offset, 16 * 256),
+                16 => (PhysicalMemory.Font8x16Offset, 16 * 256),
+                _ => throw new InvalidOperationException("Unsupported font height.")
+            };
 
-                case 14:
-                    offset = PhysicalMemory.Font8x14Offset;
-                    length = 16 * 256;
-                    break;
-
-                case 16:
-                    offset = PhysicalMemory.Font8x16Offset;
-                    length = 16 * 256;
-                    break;
-
-                default:
-                    throw new InvalidOperationException("Unsupported font height.");
-            }
-
-            var ptr = memory.GetPointer(PhysicalMemory.FontSegment, offset);
-            System.Runtime.InteropServices.Marshal.Copy(ptr, this.Font, 0, length);
+            var span = memory.GetSpan(PhysicalMemory.FontSegment, offset, length);
+            span.CopyTo(this.Font);
         }
-    }
-
-    /// <summary>
-    /// Specifies whether a video mode is text-only or graphical.
-    /// </summary>
-    public enum VideoModeType
-    {
-        /// <summary>
-        /// The video mode is text-only.
-        /// </summary>
-        Text,
-        /// <summary>
-        /// The video mode is graphical.
-        /// </summary>
-        Graphics
     }
 }

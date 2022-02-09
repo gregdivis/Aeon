@@ -48,23 +48,21 @@ namespace Aeon.DiskImages
             if (imageFileName == null)
                 throw new ArgumentNullException(nameof(imageFileName));
 
-            using (var reader = new RawCDReader(sourceVolume))
-            using (var writer = File.Create(imageFileName))
+            using var reader = new RawCDReader(sourceVolume);
+            using var writer = File.Create(imageFileName);
+            var buffer = new byte[2048];
+            uint count = (uint)(reader.Length / 2048);
+            int currentPercent = 0;
+
+            for (uint i = 0; i < count; i++)
             {
-                var buffer = new byte[2048];
-                uint count = (uint)(reader.Length / 2048);
-                int currentPercent = 0;
+                reader.Read(buffer, 0, 2048);
+                writer.Write(buffer, 0, 2048);
 
-                for (uint i = 0; i < count; i++)
+                if (reportProgress != null && currentPercent != (int)((double)i / (double)count))
                 {
-                    reader.Read(buffer, 0, 2048);
-                    writer.Write(buffer, 0, 2048);
-
-                    if (reportProgress != null && currentPercent != (int)((double)i / (double)count))
-                    {
-                        currentPercent = (int)((double)i / (double)count);
-                        reportProgress(currentPercent);
-                    }
+                    currentPercent = (int)((double)i / (double)count);
+                    reportProgress(currentPercent);
                 }
             }
         }
