@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+
 using TinyAudio;
 
 namespace Aeon.Emulator.Sound.PCSpeaker
@@ -208,7 +209,15 @@ namespace Aeon.Emulator.Sound.PCSpeaker
                 }
                 else
                 {
-                    while (player.WriteData(buffer) > 0)
+                    var floatArray = new float[buffer.Length];
+
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        floatArray[i] = buffer[i];
+                    }
+
+
+                    while (player.WriteData(floatArray.AsSpan()) > 0)
                     {
                     }
 
