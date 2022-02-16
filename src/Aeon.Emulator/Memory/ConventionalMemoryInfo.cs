@@ -94,7 +94,7 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="obj">Other object to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override bool Equals(object obj) => (obj is ProcessAllocation a) ? this.Equals(a) : false;
+        public override bool Equals(object obj) => obj is ProcessAllocation a && this.Equals(a);
         /// <summary>
         /// Tests for equality with another ProcessAllocation struct.
         /// </summary>

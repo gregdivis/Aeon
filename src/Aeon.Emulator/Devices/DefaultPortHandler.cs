@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Aeon.Emulator
 {
@@ -8,7 +7,7 @@ namespace Aeon.Emulator
     /// </summary>
     internal sealed class DefaultPortHandler : IInputPort, IOutputPort
     {
-        private readonly SortedList<int, ushort> values = new SortedList<int, ushort>();
+        private readonly SortedList<int, ushort> values = new();
 
         public IEnumerable<int> InputPorts => values.Keys;
         public byte ReadByte(int port) => 0xFF;
@@ -17,18 +16,5 @@ namespace Aeon.Emulator
         public IEnumerable<int> OutputPorts => values.Keys;
         public void WriteByte(int port, byte value) => values[port] = value;
         public void WriteWord(int port, ushort value) => values[port] = value;
-
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
-        void IDisposable.Dispose()
-        {
-        }
     }
 }

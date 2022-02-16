@@ -18,12 +18,12 @@ namespace Aeon.Emulator
     {
         private Thread processorThread;
         private volatile EmulatorState targetState;
-        private readonly AutoResetEvent resumeEvent = new AutoResetEvent(false);
-        private readonly ConcurrentQueue<MouseEvent> mouseQueue = new ConcurrentQueue<MouseEvent>();
+        private readonly AutoResetEvent resumeEvent = new(false);
+        private readonly ConcurrentQueue<MouseEvent> mouseQueue = new();
         private EmulatorState currentState;
         private bool disposed;
         private long totalInstructions;
-        private readonly SortedSet<Keys> keysPresssed = new SortedSet<Keys>();
+        private readonly SortedSet<Keys> keysPresssed = new();
         private int emulationSpeed = 10_000_000;
         private readonly InstructionLog log;
 
@@ -134,7 +134,7 @@ namespace Aeon.Emulator
             set
             {
                 if (value < MinimumSpeed)
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(value));
 
                 this.emulationSpeed = value;
             }
@@ -179,8 +179,7 @@ namespace Aeon.Emulator
 
             if (this.State == EmulatorState.Ready)
             {
-                this.processorThread = new Thread(this.ProcessorThreadMain);
-                this.processorThread.IsBackground = true;
+                this.processorThread = new Thread(this.ProcessorThreadMain) { IsBackground = true };
                 this.processorThread.Start();
             }
             else if (this.State == EmulatorState.Paused)

@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.BitwiseLogic
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.BitwiseLogic
 {
     internal static class Bsf
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Opcode("0FBC/r rw,rmw", OperandSize = 16, AddressSize = 16 | 32)]
         public static void BitScanReverse16(Processor p, ref ushort index, ushort value)
         {
@@ -18,7 +21,8 @@
             p.Flags.Zero = true;
         }
 
-        [Alternate("BitScanReverse16", OperandSize = 32, AddressSize = 16 | 32)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [Alternate(nameof(BitScanReverse16), OperandSize = 32, AddressSize = 16 | 32)]
         public static void BitScanReverse32(Processor p, ref uint index, uint value)
         {
             for (int i = 0; i <= 31; i++)

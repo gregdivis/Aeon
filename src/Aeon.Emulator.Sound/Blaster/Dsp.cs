@@ -147,7 +147,7 @@ namespace Aeon.Emulator.Sound.Blaster
             if (blocks > 0)
             {
                 this.InternalRead(this.decodeBuffer.AsSpan(0, blocks));
-                this.decoder.Decode(this.decodeBuffer, 0, blocks, buffer.Slice(offset));
+                this.decoder.Decode(this.decodeBuffer, 0, blocks, buffer[offset..]);
             }
 
             int remainder = length % this.decoder.CompressionFactor;
@@ -222,7 +222,7 @@ namespace Aeon.Emulator.Sound.Blaster
                     this.readIdleCycles = 0;
                 }
 
-                dest = dest.Slice(amt);
+                dest = dest[amt..];
             }
         }
         /// <summary>
@@ -281,7 +281,7 @@ namespace Aeon.Emulator.Sound.Blaster
         /// <summary>
         /// Contains generated waveform data waiting to be read.
         /// </summary>
-        private readonly CircularBuffer waveBuffer = new CircularBuffer(TargetBufferSize);
+        private readonly CircularBuffer waveBuffer = new(TargetBufferSize);
 
         /// <summary>
         /// Size of output buffer in samples.

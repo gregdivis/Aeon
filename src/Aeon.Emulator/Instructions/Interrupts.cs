@@ -9,10 +9,7 @@ namespace Aeon.Emulator.Instructions
     internal static class Int
     {
         [Opcode("CC", Name = "int 3h")]
-        public static void RaiseInterrupt3(VirtualMachine vm)
-        {
-            vm.RaiseInterrupt(3);
-        }
+        public static void RaiseInterrupt3(VirtualMachine vm) => vm.RaiseInterrupt(3);
         [Opcode("CD ib", AddressSize = 16 | 32, OperandSize = 16 | 32)]
         public static void RaiseInterrupt(VirtualMachine vm, byte interrupt)
         {
@@ -37,9 +34,9 @@ namespace Aeon.Emulator.Instructions
             uint eip;
             uint flags = (uint)vm.Processor.Flags.Value & 0xFFFF0000u;
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                if ((vm.Processor.Flags.Value & EFlags.NestedTask) != 0)
+                if (vm.Processor.Flags.NestedTask)
                 {
                     vm.TaskReturn();
                     vm.Processor.InstructionEpilog();
@@ -56,7 +53,7 @@ namespace Aeon.Emulator.Instructions
                 if (cpl != rpl)
                 {
                     if (cpl > rpl)
-                        throw new InvalidOperationException();
+                        ThrowHelper.ThrowCplGreaterThanRplException();
 
                     uint esp = vm.PopFromStack();
                     ushort ss = vm.PopFromStack();
@@ -73,7 +70,7 @@ namespace Aeon.Emulator.Instructions
 
             bool throwTrap = false;
 
-            if (((EFlags)flags & EFlags.Trap) != 0 && (vm.Processor.Flags.Value & EFlags.Trap) == 0)
+            if (((EFlags)flags).HasFlag(EFlags.Trap) && !vm.Processor.Flags.Trap)
                 throwTrap = true;
 
             vm.Processor.Flags.Value = (EFlags)flags | EFlags.Reserved1;
@@ -83,18 +80,18 @@ namespace Aeon.Emulator.Instructions
             vm.Processor.InstructionEpilog();
 
             if (throwTrap)
-                throw new EnableInstructionTrapException();
+                ThrowHelper.ThrowEnableInstuctionTrapException();
         }
-        [Alternate("InterruptReturn", AddressSize = 16 | 32)]
+        [Alternate(nameof(InterruptReturn), AddressSize = 16 | 32)]
         public static void InterruptReturn32(VirtualMachine vm)
         {
             ushort cs;
             uint eip;
             uint flags;
 
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                if ((vm.Processor.Flags.Value & EFlags.NestedTask) != 0)
+                if (vm.Processor.Flags.NestedTask)
                 {
                     vm.TaskReturn();
                     vm.Processor.InstructionEpilog();
@@ -111,7 +108,7 @@ namespace Aeon.Emulator.Instructions
                 if (cpl != rpl)
                 {
                     if (cpl > rpl)
-                        throw new InvalidOperationException();
+                        ThrowHelper.ThrowCplGreaterThanRplException();
 
                     uint esp = vm.PopFromStack32();
                     ushort ss = (ushort)vm.PopFromStack32();
@@ -128,7 +125,7 @@ namespace Aeon.Emulator.Instructions
 
             bool throwTrap = false;
 
-            if (((EFlags)flags & EFlags.Trap) != 0 && (vm.Processor.Flags.Value & EFlags.Trap) == 0)
+            if (((EFlags)flags).HasFlag(EFlags.Trap) && !vm.Processor.Flags.Trap)
                 throwTrap = true;
 
             vm.Processor.Flags.Value = (EFlags)flags | EFlags.Reserved1;
@@ -138,23 +135,17 @@ namespace Aeon.Emulator.Instructions
             vm.Processor.InstructionEpilog();
 
             if (throwTrap)
-                throw new EnableInstructionTrapException();
+                ThrowHelper.ThrowEnableInstuctionTrapException();
         }
     }
 
     internal static class Host
     {
         [Opcode("0F55 ib", Name = "inth")]
-        public static void RaiseInterrupt(VirtualMachine vm, byte interrupt)
-        {
-            vm.CallInterruptHandler(interrupt);
-        }
+        public static void RaiseInterrupt(VirtualMachine vm, byte interrupt) => vm.CallInterruptHandler(interrupt);
 
         [Opcode("0F56 ib", Name = "callh")]
-        public static void InvokeCallback(VirtualMachine vm, byte id)
-        {
-            vm.CallCallback(id);
-        }
+        public static void InvokeCallback(VirtualMachine vm, byte id) => vm.CallCallback(id);
 
         [Opcode("0F57 ib", Name = "cmd")]
         public static void RunCommandInterpreter(VirtualMachine vm, byte mode)
@@ -175,10 +166,9 @@ namespace Aeon.Emulator.Instructions
             {
                 // mode 0 = process args if any specified
                 var args = vm.CurrentProcess.CommandLineArguments;
-                int index = args.IndexOf("/c", StringComparison.OrdinalIgnoreCase);
-                if (index >= 0)
+                if (args.Contains("/c", StringComparison.OrdinalIgnoreCase))
                 {
-                    var actualArgs = args.AsSpan().Slice(2).Trim();
+                    var actualArgs = args.AsSpan()[2..].Trim();
                     if (StatementParser.IsBatchFile(actualArgs))
                     {
                         StatementParser.Split(actualArgs, out var batchFileName, out var batchArgs);

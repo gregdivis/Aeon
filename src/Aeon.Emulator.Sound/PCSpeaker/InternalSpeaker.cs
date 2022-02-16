@@ -12,7 +12,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
     /// <summary>
     /// Emulates a PC speaker.
     /// </summary>
-    public sealed class InternalSpeaker : IInputPort, IOutputPort
+    public sealed class InternalSpeaker : IInputPort, IOutputPort, IDisposable
     {
         /// <summary>
         /// Value into which the input frequency is divided to get the frequency in Hz.
@@ -21,13 +21,13 @@ namespace Aeon.Emulator.Sound.PCSpeaker
 
         private readonly int outputSampleRate = 48000;
         private readonly int ticksPerSample;
-        private readonly LatchedUInt16 frequencyRegister = new LatchedUInt16();
-        private readonly Stopwatch durationTimer = new Stopwatch();
-        private readonly ConcurrentQueue<QueuedNote> queuedNotes = new ConcurrentQueue<QueuedNote>();
-        private readonly object threadStateLock = new object();
+        private readonly LatchedUInt16 frequencyRegister = new();
+        private readonly Stopwatch durationTimer = new();
+        private readonly ConcurrentQueue<QueuedNote> queuedNotes = new();
+        private readonly object threadStateLock = new();
         private SpeakerControl controlRegister = SpeakerControl.UseTimer;
         private Task generateWaveformTask;
-        private readonly CancellationTokenSource cancelGenerateWaveform = new CancellationTokenSource();
+        private readonly CancellationTokenSource cancelGenerateWaveform = new();
         private int currentPeriod;
 
         /// <summary>
@@ -78,15 +78,6 @@ namespace Aeon.Emulator.Sound.PCSpeaker
             }
         }
         void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
         public void Dispose()
         {
             this.frequencyRegister.ValueChanged -= this.FrequencyChanged;
@@ -149,7 +140,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         /// <param name="buffer">Buffer to fill.</param>
         /// <param name="period">The number of samples in the period.</param>
         /// <returns>Number of bytes written to the buffer.</returns>
-        private int GenerateSquareWave(Span<byte> buffer, int period)
+        private static int GenerateSquareWave(Span<byte> buffer, int period)
         {
             if (period < 2)
             {
@@ -158,7 +149,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
             }
 
             int halfPeriod = period / 2;
-            buffer.Slice(0, halfPeriod).Fill(96);
+            buffer[..halfPeriod].Fill(96);
             buffer.Slice(halfPeriod, halfPeriod).Fill(120);
 
             return period;

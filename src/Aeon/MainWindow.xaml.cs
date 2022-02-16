@@ -2,24 +2,32 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Aeon.DiskImages;
 using Aeon.DiskImages.Archives;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Launcher.Configuration;
-using Aeon.Presentation.Dialogs;
 using Microsoft.Win32;
 
 namespace Aeon.Emulator.Launcher
 {
-    public sealed partial class MainWindow : Window
+    public sealed partial class MainWindow : Window, System.Windows.Forms.IWin32Window
     {
         private PerformanceWindow performanceWindow;
         private AeonConfiguration currentConfig;
         private bool hasActivated;
         private PaletteDialog paletteWindow;
+        private readonly Lazy<WindowInteropHelper> interopHelper;
 
-        public MainWindow() => this.InitializeComponent();
+        public MainWindow()
+        {
+            this.interopHelper = new Lazy<WindowInteropHelper>(() => new WindowInteropHelper(this));
+            this.InitializeComponent();
+        }
+
+        IntPtr System.Windows.Forms.IWin32Window.Handle => this.interopHelper.Value.Handle;
 
         protected override void OnActivated(EventArgs e)
         {
@@ -97,7 +105,7 @@ namespace Aeon.Emulator.Launcher
             vm.RegisterVirtualDevice(new Sound.GeneralMidi(globalConfig.Mt32Enabled ? globalConfig.Mt32RomsPath : null));
 
             emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 20_000_000;
-            emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? Presentation.MouseInputMode.Absolute : Presentation.MouseInputMode.Relative;
+            emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? MouseInputMode.Absolute : MouseInputMode.Relative;
             toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             if (!string.IsNullOrEmpty(config.Title))
@@ -163,14 +171,15 @@ namespace Aeon.Emulator.Launcher
         }
         private void CommandPrompt_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Presentation.Browsers.FolderBrowserDialog
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
             {
-                Title = "Select folder for C:\\ drive..."
+                Description = "Select folder for C:\\ drive...",
+                UseDescriptionForTitle = true
             };
 
-            if (dialog.ShowDialog(this))
+            if (dialog.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
             {
-                this.currentConfig = AeonConfiguration.GetQuickLaunchConfiguration(dialog.Path, null);
+                this.currentConfig = AeonConfiguration.GetQuickLaunchConfiguration(dialog.SelectedPath, null);
                 this.LaunchCurrentConfig();
             }
         }
@@ -188,7 +197,7 @@ namespace Aeon.Emulator.Launcher
         {
             CommandManager.InvalidateRequerySuggested();
             if (this.emulatorDisplay.EmulatorState == EmulatorState.ProgramExited && this.currentConfig != null && this.currentConfig.HideUserInterface)
-                Close();
+                this.Close();
         }
         private void SlowerButton_Click(object sender, RoutedEventArgs e)
         {
@@ -239,7 +248,7 @@ namespace Aeon.Emulator.Launcher
                 this.SetCurrentValue(BackgroundProperty, this.FindResource("backgroundGradient"));
             }
         }
-        private void EmulatorDisplay_EmulationError(object sender, Presentation.EmulationErrorRoutedEventArgs e)
+        private void EmulatorDisplay_EmulationError(object sender, EmulationErrorRoutedEventArgs e)
         {
             var end = new TaskDialogItem("End Program", "Terminates the current emulation session.");
             var debug = new TaskDialogItem("Debug", "View the current emulation session in the Aeon debugger.");
@@ -328,6 +337,15 @@ namespace Aeon.Emulator.Launcher
             {
                 this.paletteWindow.Closed -= this.PaletteWindow_Closed;
                 this.paletteWindow = null;
+            }
+        }
+        private void DumpVideoRam_Click(object sender, RoutedEventArgs e)
+        {
+            using var bmp = this.emulatorDisplay?.CurrentPresenter?.Dump();
+            if (bmp != null)
+            {
+                var bmpSource = BitmapSource.Create(bmp.Width, bmp.Height, 96, 96, PixelFormats.Bgr32, null, bmp.PixelBuffer, bmp.Width * bmp.Height * 4, bmp.Width * 4);
+                Clipboard.SetImage(bmpSource);
             }
         }
     }

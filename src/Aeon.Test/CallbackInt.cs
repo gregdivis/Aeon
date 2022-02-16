@@ -7,8 +7,8 @@ namespace Aeon.Test
 {
     public class CallbackInt : IInterruptHandler
     {
-        private int interrupt;
-        private Action callback;
+        private readonly int interrupt;
+        private readonly Action callback;
 
         public CallbackInt(int interrupt, Action callback)
         {
@@ -16,29 +16,11 @@ namespace Aeon.Test
             this.callback = callback;
         }
 
-        public IEnumerable<InterruptHandlerInfo> HandledInterrupts
-        {
-            get { return new InterruptHandlerInfo[] { this.interrupt }; }
-        }
+        public IEnumerable<InterruptHandlerInfo> HandledInterrupts => new InterruptHandlerInfo[] { this.interrupt };
 
-        public void HandleInterrupt(int interrupt)
-        {
-            this.callback();
-        }
+        public void HandleInterrupt(int interrupt) => this.callback();
 
-        public void Pause()
-        {
-        }
-
-        public void Resume()
-        {
-        }
-
-        public void DeviceRegistered(VirtualMachine vm)
-        {
-        }
-
-        public void Dispose()
+        void IDisposable.Dispose()
         {
         }
     }

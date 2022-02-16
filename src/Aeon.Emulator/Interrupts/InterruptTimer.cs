@@ -24,7 +24,7 @@ namespace Aeon.Emulator.Interrupts
         private int outLatch;
         private bool wroteLowByte;
         private bool readLowByte;
-        private readonly Stopwatch pitStopwatch = new Stopwatch();
+        private readonly Stopwatch pitStopwatch = new();
         private const double pitTickDuration = 8.3809651519468982047972644529744e-4;
 
         internal InterruptTimer()
@@ -135,18 +135,6 @@ namespace Aeon.Emulator.Interrupts
                 this.SetInitialValue(value);
             else
                 this.SetInitialValue(65536);
-        }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
-        void IDisposable.Dispose()
-        {
         }
 
         /// <summary>

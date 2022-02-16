@@ -12,25 +12,25 @@ namespace Aeon.Emulator.Dos
     /// <summary>
     /// Provides all of the emulated DOS functions.
     /// </summary>
-    internal sealed class DosHandler : IInterruptHandler
+    internal sealed class DosHandler : IInterruptHandler, IDisposable
     {
         /// <summary>
         /// The location of offset 0 of the DOS list of lists.
         /// </summary>
-        internal static readonly RealModeAddress ListOfListsAddress = new RealModeAddress(0x0080, 0x0026);
+        internal static readonly RealModeAddress ListOfListsAddress = new(0x0080, 0x0026);
         /// <summary>
         /// The location of the current directory in the form A:\.
         /// </summary>
-        internal static readonly RealModeAddress CurrentDirectoryAddress = new RealModeAddress(0x0080, 0x001A);
+        internal static readonly RealModeAddress CurrentDirectoryAddress = new(0x0080, 0x001A);
 
         private readonly VirtualMachine vm;
         private readonly FileControl fileControl;
         private readonly MemoryAllocator memoryAllocator;
-        private readonly List<byte> readLineBuffer = new List<byte>();
+        private readonly List<byte> readLineBuffer = new();
         private byte extendedCode;
         private byte terminationType;
 
-        private static readonly RealModeAddress SwappableDataArea = new RealModeAddress(0xB2, 0);
+        private static readonly RealModeAddress SwappableDataArea = new(0xB2, 0);
 
         public DosHandler(VirtualMachine vm)
         {
@@ -503,16 +503,6 @@ namespace Aeon.Emulator.Dos
             memoryAllocator.Dispose();
         }
 
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
-        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-        {
-        }
-
         private void SaveFlags(EFlags modified)
         {
             var oldFlags = (EFlags)vm.PhysicalMemory.GetUInt16(vm.Processor.SS, (ushort)(vm.Processor.SP + 4));
@@ -732,9 +722,7 @@ namespace Aeon.Emulator.Dos
         }
         private void LoadAndRun()
         {
-            string fileName = vm.PhysicalMemory.GetString(vm.Processor.DS, (ushort)vm.Processor.DX, 256, 0);
-            var filePath = new VirtualPath(fileName);
-
+            var fileName = vm.PhysicalMemory.GetString(vm.Processor.DS, (ushort)vm.Processor.DX, 256, 0);
             var program = ProgramImage.Load(fileName, this.vm);
 
             if (vm.Processor.ES == 0)
@@ -760,7 +748,7 @@ namespace Aeon.Emulator.Dos
         {
             string fileName = vm.PhysicalMemory.GetString(vm.Processor.DS, (ushort)vm.Processor.DX, 256, 0);
             var program = ProgramImage.Load(fileName, vm);
-            if (!(program is ExeFile))
+            if (program is not ExeFile)
                 throw new InvalidOperationException();
 
             ushort overlaySegment = vm.PhysicalMemory.GetUInt16(vm.Processor.ES, (ushort)vm.Processor.BX);

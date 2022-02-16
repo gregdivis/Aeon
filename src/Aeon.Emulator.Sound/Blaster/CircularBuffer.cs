@@ -52,7 +52,7 @@ namespace Aeon.Emulator.Sound.Blaster
                     var src1 = this.data.AsSpan(readPos, this.data.Length - readPos);
                     var src2 = this.data.AsSpan(0, count - src1.Length);
                     src1.CopyTo(buffer);
-                    src2.CopyTo(buffer.Slice(src1.Length));
+                    src2.CopyTo(buffer[src1.Length..]);
                 }
 
                 Interlocked.Add(ref this.bytesInBuffer, -count);
@@ -71,7 +71,7 @@ namespace Aeon.Emulator.Sound.Blaster
             int bytesAvailable = this.bytesInBuffer;
             int bytesFree = this.Capacity - bytesAvailable;
 
-            var sourceSpan = source.Length <= bytesFree ? source : source.Slice(0, bytesFree);
+            var sourceSpan = source.Length <= bytesFree ? source : source[..bytesFree];
 
             if (sourceSpan.Length > 0)
             {
@@ -79,8 +79,8 @@ namespace Aeon.Emulator.Sound.Blaster
                 var target = this.data.AsSpan(writePos);
                 if (!sourceSpan.TryCopyTo(target))
                 {
-                    var src1 = sourceSpan.Slice(0, target.Length);
-                    var src2 = sourceSpan.Slice(target.Length);
+                    var src1 = sourceSpan[..target.Length];
+                    var src2 = sourceSpan[target.Length..];
 
                     src1.CopyTo(target);
                     src2.CopyTo(this.data.AsSpan());

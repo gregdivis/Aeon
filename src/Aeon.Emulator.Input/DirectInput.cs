@@ -11,7 +11,7 @@ namespace Aeon.Emulator.Input
     public sealed class DirectInput : IDisposable
     {
         private static WeakReference instance;
-        private static readonly object getInstanceLock = new object();
+        private static readonly object getInstanceLock = new();
 
         private IntPtr hwnd;
         private readonly IntPtr directInput;
@@ -26,11 +26,10 @@ namespace Aeon.Emulator.Input
         /// </summary>
         private DirectInput(IntPtr hwnd)
         {
-            IntPtr dinput8;
             var iid = SafeNativeMethods.IID_IDirectInput8W;
             var clsid = SafeNativeMethods.CLSID_DirectInput8;
             var hinst = SafeNativeMethods.GetModuleHandleW(IntPtr.Zero);
-            SafeNativeMethods.CoCreateInstance(ref clsid, IntPtr.Zero, 1, ref iid, out dinput8);
+            _ = SafeNativeMethods.CoCreateInstance(ref clsid, IntPtr.Zero, 1, ref iid, out var dinput8);
             this.directInput = dinput8;
             this.hwnd = hwnd;
 
@@ -48,22 +47,12 @@ namespace Aeon.Emulator.Input
 
             this.releaseHandle = GCHandle.Alloc(this.release, GCHandleType.Normal);
         }
-        /// <summary>
-        /// Releases unmanaged resources and performs other cleanup operations before the
-        /// <see cref="DirectInput"/> is reclaimed by garbage collection.
-        /// </summary>
-        ~DirectInput()
-        {
-            Dispose(false);
-        }
+        ~DirectInput() => this.Dispose();
 
         /// <summary>
         /// Gets the window handle which owns this instance.
         /// </summary>
-        internal IntPtr WindowHandle
-        {
-            get { return this.hwnd; }
-        }
+        internal IntPtr WindowHandle => this.hwnd;
 
         /// <summary>
         /// Gets the current DirectInput instance.
@@ -72,15 +61,15 @@ namespace Aeon.Emulator.Input
         /// <returns>Current DirectInput instance.</returns>
         public static DirectInput GetInstance(IntPtr hwnd)
         {
-            lock(getInstanceLock)
+            lock (getInstanceLock)
             {
                 DirectInput directInput;
-                if(instance != null)
+                if (instance != null)
                 {
                     directInput = instance.Target as DirectInput;
-                    if(directInput != null)
+                    if (directInput != null)
                     {
-                        if(hwnd != IntPtr.Zero)
+                        if (hwnd != IntPtr.Zero)
                             directInput.hwnd = hwnd;
 
                         return directInput;
@@ -112,13 +101,13 @@ namespace Aeon.Emulator.Input
             var devices = new List<DeviceInfo>();
             unsafe
             {
-                EnumDevicesCallback callback = (i, p) =>
-                    {
-                        devices.Add(new DeviceInfo((DIDEVICEINSTANCE*)i.ToPointer()));
-                        return 1;
-                    };
-
                 var res = this.enumDevices(this.directInput, (uint)deviceClass, callback, IntPtr.Zero, (uint)filter);
+
+                uint callback(IntPtr i, IntPtr p)
+                {
+                    devices.Add(new DeviceInfo((DIDEVICEINSTANCE*)i.ToPointer()));
+                    return 1;
+                }
             }
 
             return devices;
@@ -143,28 +132,21 @@ namespace Aeon.Emulator.Input
             {
                 DirectInputDevice8Inst* device;
 
-                if(this.createDevice(this.directInput, &deviceId, &device, IntPtr.Zero) != 0)
+                if (this.createDevice(this.directInput, &deviceId, &device, IntPtr.Zero) != 0)
                     throw new ArgumentException("Unable to create input device.");
 
                 return new DirectInputDevice(new IntPtr(device), this);
             }
         }
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
         void IDisposable.Dispose()
         {
-            Dispose(true);
+            this.Dispose();
             GC.SuppressFinalize(this);
         }
-        /// <summary>
-        /// Releases unmanaged and - optionally - managed resources
-        /// </summary>
-        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-        private void Dispose(bool disposing)
+        private void Dispose()
         {
-            if(!disposed)
+            if (!disposed)
             {
                 this.disposed = true;
                 this.release(directInput);

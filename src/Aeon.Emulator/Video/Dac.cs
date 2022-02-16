@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Video
 {
@@ -8,7 +9,7 @@ namespace Aeon.Emulator.Video
     internal sealed class Dac
     {
         private readonly unsafe uint* palette;
-        private readonly UnsafeBuffer<uint> paletteBuffer = new UnsafeBuffer<uint>(256);
+        private readonly UnsafeBuffer<uint> paletteBuffer = new(256);
         private int readChannel;
         private int writeChannel;
         private byte readIndex;

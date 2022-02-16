@@ -32,10 +32,10 @@ namespace Aeon.Emulator.Memory
         /// <summary>
         /// Gets the source address as a segment:offset value.
         /// </summary>
-        public RealModeAddress SourceAddress => new RealModeAddress((ushort)(this.SourceOffset >> 16), (ushort)this.SourceOffset);
+        public RealModeAddress SourceAddress => new((ushort)(this.SourceOffset >> 16), (ushort)this.SourceOffset);
         /// <summary>
         /// Gets the destination address as a segment:offset value.
         /// </summary>
-        public RealModeAddress DestAddress => new RealModeAddress((ushort)(this.DestOffset >> 16), (ushort)this.DestOffset);
+        public RealModeAddress DestAddress => new((ushort)(this.DestOffset >> 16), (ushort)this.DestOffset);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using Aeon.Emulator.RuntimeExceptions;
 
 namespace Aeon.Emulator.Instructions
@@ -8,19 +9,19 @@ namespace Aeon.Emulator.Instructions
         [Opcode("F4", Name = "hlt", AddressSize = 16 | 32, OperandSize = 16 | 32)]
         public static void Halt(VirtualMachine vm)
         {
-            if((vm.Processor.CR0 & CR0.ProtectedModeEnable) != 0)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 uint cpl = vm.Processor.CS & 3u;
-                if(cpl != 0)
+                if (cpl != 0)
                 {
                     vm.RaiseException(new GeneralProtectionFaultException(0));
                     return;
                 }
             }
 
-            throw new NotImplementedException();
+            ThrowHelper.ThrowNotImplementedException();
         }
-        
+
         [Opcode("9B", Name = "wait", OperandSize = 16 | 32, AddressSize = 16 | 32)]
         public static void Wait(VirtualMachine vm)
         {
@@ -36,7 +37,7 @@ namespace Aeon.Emulator.Instructions
 
             vm.Processor.InstructionEpilog();
         }
-        [Alternate("TranslateByte", OperandSize = 16 | 32, AddressSize = 32)]
+        [Alternate(nameof(TranslateByte), OperandSize = 16 | 32, AddressSize = 32)]
         public static void TranslateByte32(VirtualMachine vm)
         {
             uint offset = (uint)vm.Processor.EBX;
@@ -46,11 +47,11 @@ namespace Aeon.Emulator.Instructions
 
             vm.Processor.InstructionEpilog();
         }
-        
+
         [Opcode("C9", Name = "leave", AddressSize = 16 | 32)]
         public static void Leave(VirtualMachine vm)
         {
-            if(vm.BigStackPointer)
+            if (vm.BigStackPointer)
                 vm.Processor.ESP = vm.Processor.EBP;
             else
                 vm.Processor.SP = vm.Processor.BP;
@@ -59,10 +60,10 @@ namespace Aeon.Emulator.Instructions
 
             vm.Processor.InstructionEpilog();
         }
-        [Alternate("Leave", AddressSize = 16 | 32)]
+        [Alternate(nameof(Leave), AddressSize = 16 | 32)]
         public static void Leave32(VirtualMachine vm)
         {
-            if(vm.BigStackPointer)
+            if (vm.BigStackPointer)
                 vm.Processor.ESP = vm.Processor.EBP;
             else
                 vm.Processor.SP = vm.Processor.BP;
@@ -75,19 +76,19 @@ namespace Aeon.Emulator.Instructions
         [Opcode("0FA2", Name = "cpuid", OperandSize = 16 | 32, AddressSize = 16 | 32)]
         public static void CPUID(VirtualMachine vm)
         {
-            switch(vm.Processor.EAX)
+            switch (vm.Processor.EAX)
             {
-            case 0:
-                vm.Processor.EAX = 1;
-                vm.Processor.EBX = 0x756E6547;
-                vm.Processor.EDX = 0x49656E69;
-                vm.Processor.ECX = 0x6C65746E;
-                break;
+                case 0:
+                    vm.Processor.EAX = 1;
+                    vm.Processor.EBX = 0x756E6547;
+                    vm.Processor.EDX = 0x49656E69;
+                    vm.Processor.ECX = 0x6C65746E;
+                    break;
 
-            case 1:
-                vm.Processor.EAX = 0x00000400; // This should be a 486DX
-                vm.Processor.EDX = 0x00000001; // FPU is present
-                break;
+                case 1:
+                    vm.Processor.EAX = 0x00000400; // This should be a 486DX
+                    vm.Processor.EDX = 0x00000001; // FPU is present
+                    break;
             }
 
             vm.Processor.InstructionEpilog();
@@ -98,10 +99,10 @@ namespace Aeon.Emulator.Instructions
         {
             throw new NotSupportedException();
         }
-        [Alternate("ByteSwap", OperandSize = 32, AddressSize = 16 | 32)]
+        [Alternate(nameof(ByteSwap), OperandSize = 32, AddressSize = 16 | 32)]
         public static void ByteSwap32(VirtualMachine vm, ref uint value)
         {
-            value = (uint)System.Net.IPAddress.HostToNetworkOrder((int)value);
+            value = BinaryPrimitives.ReverseEndianness(value);
         }
     }
 }

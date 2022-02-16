@@ -28,19 +28,19 @@ namespace Aeon.Emulator.Input
         /// <summary>
         /// Gets the device name.
         /// </summary>
-        public string Name { get; private set; }
+        public string Name { get; private init; }
         /// <summary>
         /// Gets the device product name.
         /// </summary>
-        public string Product { get; private set; }
+        public string Product { get; private init; }
         /// <summary>
         /// Gets the device instance ID.
         /// </summary>
-        public Guid InstanceId { get; private set; }
+        public Guid InstanceId { get; private init; }
         /// <summary>
         /// Gets the device product ID.
         /// </summary>
-        public Guid ProductId { get; private set; }
+        public Guid ProductId { get; private init; }
 
         /// <summary>
         /// Returns a DeviceInfo instance representing an unknown device.
@@ -49,7 +49,7 @@ namespace Aeon.Emulator.Input
         /// <returns>DeviceInfo instance representing the unknown device.</returns>
         internal static DeviceInfo GetUnknownDeviceInfo(Guid instanceId)
         {
-            return new DeviceInfo()
+            return new DeviceInfo
             {
                 Name = "Unknown Device",
                 Product = "Unknown",
@@ -63,20 +63,14 @@ namespace Aeon.Emulator.Input
         /// <returns>
         /// A <see cref="System.String"/> that represents this instance.
         /// </returns>
-        public override string ToString()
-        {
-            return this.Name;
-        }
+        public override string ToString() => this.Name;
         /// <summary>
         /// Returns a hash code for this instance.
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
         /// </returns>
-        public override int GetHashCode()
-        {
-            return this.InstanceId.GetHashCode();
-        }
+        public override int GetHashCode() => this.InstanceId.GetHashCode();
         /// <summary>
         /// Equalses the specified other.
         /// </summary>
@@ -84,7 +78,7 @@ namespace Aeon.Emulator.Input
         /// <returns></returns>
         public bool Equals(DeviceInfo other)
         {
-            if(object.ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.InstanceId == other.InstanceId && this.ProductId == other.ProductId;
@@ -96,9 +90,6 @@ namespace Aeon.Emulator.Input
         /// <returns>
         /// 	<c>true</c> if the specified <see cref="System.Object"/> is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as DeviceInfo);
-        }
+        public override bool Equals(object obj) => this.Equals(obj as DeviceInfo);
     }
 }

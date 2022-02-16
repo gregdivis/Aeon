@@ -1,24 +1,24 @@
 ﻿using System;
 using System.IO;
-using YamlDotNet.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Aeon.Emulator.Launcher.Configuration
 {
     public sealed class GlobalConfiguration
     {
-        [YamlMember(Alias = "mt32-roms-path")]
+        [JsonPropertyName("mt32-roms-path")]
         public string Mt32RomsPath { get; set; }
-        [YamlMember(Alias = "mt32-enabled")]
+        [JsonPropertyName("mt32-enabled")]
         public bool Mt32Enabled { get; set; }
 
         public static GlobalConfiguration Load()
         {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Aeon Emulator", "AeonConfig.yaml");
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Aeon Emulator", "AeonConfig.json");
             if (File.Exists(path))
             {
-                using var reader = File.OpenText(path);
-                var deserializer = new Deserializer();
-                return deserializer.Deserialize<GlobalConfiguration>(reader);
+                using var stream = File.OpenRead(path);
+                return JsonSerializer.Deserialize<GlobalConfiguration>(stream);
             }
             else
             {

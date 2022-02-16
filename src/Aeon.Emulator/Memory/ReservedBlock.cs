@@ -18,7 +18,7 @@ namespace Aeon.Emulator.Memory
             if (ReferenceEquals(blockA, blockB))
                 return true;
 
-            if (ReferenceEquals(blockA, null))
+            if (blockA is null)
                 return false;
 
             return blockA.Equals(blockB);
@@ -28,7 +28,7 @@ namespace Aeon.Emulator.Memory
             if (ReferenceEquals(blockA, blockB))
                 return false;
 
-            if (ReferenceEquals(blockA, null))
+            if (blockA is null)
                 return true;
 
             return !blockA.Equals(blockB);
@@ -50,7 +50,7 @@ namespace Aeon.Emulator.Memory
         /// <returns>True if blocks are equal; otherwise false.</returns>
         public bool Equals(ReservedBlock other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
 
             return this.Segment == other.Segment && this.Length == other.Length;

@@ -8,7 +8,7 @@ namespace Aeon.Emulator.Sound
 {
     internal sealed class Mt32Player : IDisposable
     {
-        private readonly Mt32Context context = new Mt32Context();
+        private readonly Mt32Context context = new();
         private readonly AudioPlayer audioPlayer = Audio.CreatePlayer(true);
         private bool disposed;
 

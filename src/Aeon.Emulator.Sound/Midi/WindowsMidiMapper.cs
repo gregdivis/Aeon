@@ -11,20 +11,20 @@ namespace Aeon.Emulator.Sound
 
         public WindowsMidiMapper()
         {
-            NativeMethods.midiOutOpen(out this.midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
+            _ = NativeMethods.midiOutOpen(out this.midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }
         ~WindowsMidiMapper() => this.Dispose(false);
 
-        protected override void PlayShortMessage(uint message) => NativeMethods.midiOutShortMsg(this.midiOutHandle, message);
+        protected override void PlayShortMessage(uint message) => _ = NativeMethods.midiOutShortMsg(this.midiOutHandle, message);
         protected override void PlaySysex(ReadOnlySpan<byte> data) { }
-        public override void Pause() => NativeMethods.midiOutReset(this.midiOutHandle);
+        public override void Pause() => _ = NativeMethods.midiOutReset(this.midiOutHandle);
         public override void Resume() { }
 
         protected override void Dispose(bool disposing)
         {
             if (midiOutHandle != IntPtr.Zero)
             {
-                NativeMethods.midiOutClose(midiOutHandle);
+                _ = NativeMethods.midiOutClose(midiOutHandle);
                 midiOutHandle = IntPtr.Zero;
             }
         }

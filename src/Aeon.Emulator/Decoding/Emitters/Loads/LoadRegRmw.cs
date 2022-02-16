@@ -12,7 +12,7 @@ namespace Aeon.Emulator.Decoding.Emitters
         protected LoadRegRmw(EmitStateInfo state, int valueSize, bool memoryOnly, bool floatingPoint, bool offsetOnly, bool linearAddressOnly)
             : base(state)
         {
-            if (valueSize != 1 && valueSize != 2 && valueSize != 4 && valueSize != 6 && valueSize != 8 && valueSize != 10)
+            if (valueSize is not 1 and not 2 and not 4 and not 6 and not 8 and not 10)
                 throw new ArgumentException("Invalid size.");
             if (!memoryOnly && offsetOnly)
                 throw new ArgumentException("Effective address invalid for registers.");

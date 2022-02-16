@@ -31,7 +31,7 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
             value ^= (ushort)mask;
         }
 
-        [Alternate("BitTestComplement16", AddressSize = 16 | 32)]
+        [Alternate(nameof(BitTestComplement16), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BitTestComplement32(Processor p, ref uint value, byte bit)
         {
@@ -54,7 +54,7 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
             value &= (ushort)~mask;
         }
 
-        [Alternate("BitTestReset16", AddressSize = 16 | 32)]
+        [Alternate(nameof(BitTestReset16), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BitTestReset32(Processor p, ref uint value, byte bit)
         {
@@ -76,7 +76,7 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
 
             value |= (ushort)mask;
         }
-        [Alternate("BitSet16", AddressSize = 16 | 32)]
+        [Alternate(nameof(BitSet16), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BitSet32(Processor p, ref uint value, byte bit)
         {

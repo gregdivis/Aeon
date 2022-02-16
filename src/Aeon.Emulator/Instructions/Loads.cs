@@ -8,15 +8,15 @@ namespace Aeon.Emulator.Instructions
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadDS(VirtualMachine vm, out ushort operand1, uint operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.DS, (ushort)(operand2 >> 16));
-            operand1 = (ushort)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.DS, Intrinsics.HighWord(operand2));
+            operand1 = Intrinsics.LowWord(operand2);
         }
         [Alternate(nameof(LoadDS), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadDS32(VirtualMachine vm, out uint operand1, ulong operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.DS, (ushort)(operand2 >> 32));
-            operand1 = (uint)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.DS, (ushort)Intrinsics.HighDWord(operand2));
+            operand1 = Intrinsics.LowDWord(operand2);
         }
     }
 
@@ -26,15 +26,15 @@ namespace Aeon.Emulator.Instructions
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadES(VirtualMachine vm, out ushort operand1, uint operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.ES, (ushort)(operand2 >> 16));
-            operand1 = (ushort)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.ES, Intrinsics.HighWord(operand2));
+            operand1 = Intrinsics.LowWord(operand2);
         }
         [Alternate(nameof(LoadES), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadES32(VirtualMachine vm, out uint operand1, ulong operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.ES, (ushort)(operand2 >> 32));
-            operand1 = (uint)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.ES, (ushort)Intrinsics.HighDWord(operand2));
+            operand1 = Intrinsics.LowDWord(operand2);
         }
     }
 
@@ -44,16 +44,16 @@ namespace Aeon.Emulator.Instructions
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadSS(VirtualMachine vm, out ushort operand1, uint operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.SS, (ushort)(operand2 >> 16));
-            operand1 = (ushort)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.SS, Intrinsics.HighWord(operand2));
+            operand1 = Intrinsics.LowWord(operand2);
         }
 
         [Alternate(nameof(LoadSS), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadSS32(VirtualMachine vm, out uint operand1, ulong operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.SS, (ushort)(operand2 >> 32));
-            operand1 = (uint)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.SS, (ushort)Intrinsics.HighDWord(operand2));
+            operand1 = Intrinsics.LowDWord(operand2);
         }
     }
 
@@ -63,16 +63,16 @@ namespace Aeon.Emulator.Instructions
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadFS(VirtualMachine vm, out ushort operand1, uint operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.FS, (ushort)(operand2 >> 16));
-            operand1 = (ushort)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.FS, Intrinsics.HighWord(operand2));
+            operand1 = Intrinsics.LowWord(operand2);
         }
 
         [Alternate(nameof(LoadFS), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadFS32(VirtualMachine vm, out uint operand1, ulong operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.FS, (ushort)(operand2 >> 32));
-            operand1 = (uint)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.FS, (ushort)Intrinsics.HighDWord(operand2));
+            operand1 = Intrinsics.LowDWord(operand2);
         }
     }
 
@@ -82,16 +82,16 @@ namespace Aeon.Emulator.Instructions
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadGS(VirtualMachine vm, out ushort operand1, uint operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.GS, (ushort)(operand2 >> 16));
-            operand1 = (ushort)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.GS, Intrinsics.HighWord(operand2));
+            operand1 = Intrinsics.LowWord(operand2);
         }
 
         [Alternate(nameof(LoadGS), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadGS32(VirtualMachine vm, out uint operand1, ulong operand2)
         {
-            vm.WriteSegmentRegister(SegmentIndex.GS, (ushort)(operand2 >> 32));
-            operand1 = (uint)operand2;
+            vm.WriteSegmentRegister(SegmentIndex.GS, (ushort)Intrinsics.HighDWord(operand2));
+            operand1 = Intrinsics.LowDWord(operand2);
         }
     }
 

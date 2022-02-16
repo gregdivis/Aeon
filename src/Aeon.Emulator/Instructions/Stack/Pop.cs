@@ -35,7 +35,7 @@ namespace Aeon.Emulator.Instructions.Stack
             p.InstructionEpilog();
 
             if (throwTrap)
-                throw new EnableInstructionTrapException();
+                ThrowHelper.ThrowEnableInstuctionTrapException();
         }
         [Alternate(nameof(PopFlags), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -54,7 +54,7 @@ namespace Aeon.Emulator.Instructions.Stack
             p.InstructionEpilog();
 
             if (throwTrap)
-                throw new EnableInstructionTrapException();
+                ThrowHelper.ThrowEnableInstuctionTrapException();
         }
 
         private const EFlags ModifiableFlags32 = EFlags.AlignmentCheck | EFlags.Auxiliary | EFlags.Carry | EFlags.Direction | EFlags.Identification | EFlags.InterruptEnable | EFlags.IOPrivilege1 | EFlags.IOPrivilege2 | EFlags.NestedTask | EFlags.Overflow | EFlags.Parity | EFlags.Resume | EFlags.Sign | EFlags.Trap | EFlags.Zero;

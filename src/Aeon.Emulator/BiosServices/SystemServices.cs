@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Aeon.Emulator.BiosServices
 {
@@ -43,15 +42,6 @@ namespace Aeon.Emulator.BiosServices
             vm.Processor.Flags.Carry = error;
             vm.PhysicalMemory.SetUInt16(vm.Processor.SS, (ushort)(vm.Processor.SP + 4), (ushort)vm.Processor.Flags.Value);
         }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
-        void IDisposable.Dispose()
-        {
-        }
     }
 }

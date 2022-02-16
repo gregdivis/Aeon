@@ -1,46 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Aeon.DiskImages.Archives;
-using YamlDotNet.Serialization;
 
 namespace Aeon.Emulator.Launcher.Configuration
 {
     public sealed class AeonConfiguration
     {
-        [YamlMember(Alias = "startup-path")]
+        [JsonPropertyName("startup-path")]
         public string StartupPath { get; set; }
-        [YamlMember(Alias = "launch")]
+        [JsonPropertyName("launch")]
         public string Launch { get; set; }
-        [YamlMember(Alias = "mouse-absolute")]
+        [JsonPropertyName("mouse-absolute")]
         public bool IsMouseAbsolute { get; set; }
-        [YamlMember(Alias = "speed")]
+        [JsonPropertyName("speed")]
         public int? EmulationSpeed { get; set; }
-        [YamlMember(Alias = "hide-ui")]
+        [JsonPropertyName("hide-ui")]
         public bool HideUserInterface { get; set; }
-        [YamlMember(Alias = "title")]
+        [JsonPropertyName("title")]
         public string Title { get; set; }
-        [YamlMember(Alias = "id")]
+        [JsonPropertyName("id")]
         public string Id { get; set; }
-        [YamlMember(Alias = "physical-memory")]
+        [JsonPropertyName("physical-memory")]
         public int? PhysicalMemorySize { get; set; }
 
-        [YamlMember(Alias = "drives")]
+        [JsonPropertyName("drives")]
         public Dictionary<string, AeonDriveConfiguration> Drives { get; set; } = new Dictionary<string, AeonDriveConfiguration>();
 
-        [YamlIgnore]
+        [JsonIgnore]
         public ArchiveFile Archive { get; private set; }
 
-        public static AeonConfiguration Load(TextReader reader)
-        {
-            var deserializer = new Deserializer();
-            return deserializer.Deserialize<AeonConfiguration>(reader);
-        }
         public static AeonConfiguration Load(Stream stream)
         {
-            using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
-            return Load(reader);
+            return JsonSerializer.Deserialize<AeonConfiguration>(stream);
         }
         public static AeonConfiguration Load(string fileName)
         {

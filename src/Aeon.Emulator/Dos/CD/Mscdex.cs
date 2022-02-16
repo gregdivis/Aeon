@@ -60,12 +60,6 @@ namespace Aeon.Emulator.Dos.CD
                     break;
             }
         }
-        void IVirtualDevice.Pause()
-        {
-        }
-        void IVirtualDevice.Resume()
-        {
-        }
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             this.vm = vm;
@@ -73,9 +67,6 @@ namespace Aeon.Emulator.Dos.CD
             vm.PhysicalMemory.SetUInt32(this.deviceHeader.Segment, 0, uint.MaxValue);
             vm.PhysicalMemory.SetUInt16(this.deviceHeader.Segment, 4, 0xC800);
             vm.PhysicalMemory.SetString(this.deviceHeader.Segment, 10, "AEONVMCD", false);
-        }
-        void IDisposable.Dispose()
-        {
         }
 
         /// <summary>

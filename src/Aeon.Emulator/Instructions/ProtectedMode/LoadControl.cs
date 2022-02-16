@@ -11,7 +11,7 @@ namespace Aeon.Emulator.Instructions.ProtectedMode
             vm.Processor.CR0 = (CR0)value;
 
             bool paging = false;
-            if((vm.Processor.CR0 & (CR0.Paging | CR0.ProtectedModeEnable)) == (CR0.Paging | CR0.ProtectedModeEnable))
+            if ((vm.Processor.CR0 & (CR0.Paging | CR0.ProtectedModeEnable)) == (CR0.Paging | CR0.ProtectedModeEnable))
                 paging = true;
 
             vm.PhysicalMemory.PagingEnabled = paging;
@@ -25,7 +25,7 @@ namespace Aeon.Emulator.Instructions.ProtectedMode
             vm.Processor.CR0 |= (CR0)value;
 
             bool paging = false;
-            if((vm.Processor.CR0 & (CR0.Paging | CR0.ProtectedModeEnable)) == (CR0.Paging | CR0.ProtectedModeEnable))
+            if ((vm.Processor.CR0 & (CR0.Paging | CR0.ProtectedModeEnable)) == (CR0.Paging | CR0.ProtectedModeEnable))
                 paging = true;
 
             vm.PhysicalMemory.PagingEnabled = paging;

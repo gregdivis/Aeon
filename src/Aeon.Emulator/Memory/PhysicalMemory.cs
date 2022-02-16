@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Aeon.Emulator.DebugSupport;
@@ -15,7 +18,7 @@ namespace Aeon.Emulator
     public sealed class PhysicalMemory : IMemorySource
     {
         /// <summary>
-        /// Size of the page address cache in bytes.
+        /// Size of the page address cache in dwords.
         /// </summary>
         private const int PageAddressCacheSize = 1 << 20;
         /// <summary>
@@ -26,12 +29,12 @@ namespace Aeon.Emulator
         /// <summary>
         /// Array of cached physical page addresses.
         /// </summary>
-        private unsafe readonly uint* pageCache;
+        private unsafe uint* pageCache;
 
         /// <summary>
         /// Pointer to emulated physical memory.
         /// </summary>
-        internal unsafe readonly byte* RawView;
+        internal unsafe byte* RawView;
 
         /// <summary>
         /// The linear address of the page table directory.
@@ -41,27 +44,32 @@ namespace Aeon.Emulator
         /// <summary>
         /// Address of the BIOS int15h C0 data table.
         /// </summary>
-        internal static readonly RealModeAddress BiosConfigurationAddress = new RealModeAddress(0xF000, 0x0100);
+        internal static readonly RealModeAddress BiosConfigurationAddress = new(0xF000, 0x0100);
         /// <summary>
         /// Address of the default interrupt handler.
         /// </summary>
-        internal static readonly RealModeAddress NullInterruptHandler = new RealModeAddress(HandlerSegment, 4095);
+        internal static readonly RealModeAddress NullInterruptHandler = new(HandlerSegment, 4095);
 
         private ushort nextHandlerOffset = 4096;
         private uint addressMask = 0x000FFFFFu;
-        private readonly UnsafeBuffer<byte> nativeMemory;
-        private readonly UnsafeBuffer<uint> pageCacheNativeMemory;
-        private readonly MetaAllocator metaAllocator = new MetaAllocator();
+        private readonly MetaAllocator metaAllocator = new();
 
         /// <summary>
         /// Starting physical address of video RAM.
         /// </summary>
-        internal const int VramAddress = 0xA000 << 4;
+        private const int VramAddress = 0xA000 << 4;
         /// <summary>
         /// Last physical address of video RAM.
         /// </summary>
-        internal const int VramUpperBound = (0xBFFF << 4);
-        internal const uint VramMask = 0xFFFE0000;
+
+        /// <summary>
+        /// The highest address which is mapped to <see cref="Video.VideoHandler"/>.
+        /// </summary>
+        /// <remarks>
+        /// Video RAM mapping is technically up to 0xBFFF0 normally.
+        /// </remarks>
+        private const int VramUpperBound = 0xBFFF << 4;
+
         /// <summary>
         /// Segment where font data is stored.
         /// </summary>
@@ -98,12 +106,10 @@ namespace Aeon.Emulator
                 throw new ArgumentException("Memory size must be at least 1 MB.");
 
             this.MemorySize = memorySize;
-            this.nativeMemory = new UnsafeBuffer<byte>(memorySize);
-            this.pageCacheNativeMemory = new UnsafeBuffer<uint>(PageAddressCacheSize);
             unsafe
             {
-                this.RawView = this.nativeMemory.ToPointer();
-                this.pageCache = pageCacheNativeMemory.ToPointer();
+                this.RawView = (byte*)NativeMemory.AllocZeroed((nuint)memorySize, 1);
+                this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize, 4);
             }
 
             // Reserve room for the real-mode interrupt table.
@@ -124,6 +130,8 @@ namespace Aeon.Emulator
             InitializeFonts();
             InitializeBiosData();
         }
+
+        ~PhysicalMemory() => this.InternalDispose();
 
         /// <summary>
         /// Gets the amount of emulated RAM in bytes.
@@ -176,7 +184,10 @@ namespace Aeon.Emulator
             {
                 this.directoryAddress = value;
                 // flush the page cache
-                this.pageCacheNativeMemory.Clear();
+                unsafe
+                {
+                    new Span<uint>(this.pageCache, PageAddressCacheSize).Clear();
+                }
             }
         }
         /// <summary>
@@ -198,7 +209,7 @@ namespace Aeon.Emulator
         /// <param name="minimumSegment">Minimum segment of requested memory block.</param>
         /// <param name="length">Size of memory block in bytes.</param>
         /// <returns>Information about the reserved block of memory.</returns>
-        public ReservedBlock Reserve(ushort minimumSegment, uint length) => new ReservedBlock(this.metaAllocator.Allocate(minimumSegment, (int)length), length);
+        public ReservedBlock Reserve(ushort minimumSegment, uint length) => new(this.metaAllocator.Allocate(minimumSegment, (int)length), length);
         /// <summary>
         /// Returns the descriptor for the specified segment.
         /// </summary>
@@ -287,9 +298,9 @@ namespace Aeon.Emulator
                 return new IntPtr(RawView + address);
             }
         }
-        public Span<byte> GetSpan(int address, int length)
+        public Span<byte> GetSpan(uint address, int length)
         {
-            address &= (int)addressMask;
+            address &= addressMask;
 
             unsafe
             {
@@ -300,9 +311,58 @@ namespace Aeon.Emulator
         {
             unsafe
             {
-                return new Span<byte>(RawView + GetRealModePhysicalAddress(segment, offset), length);
+                uint fullAddress = GetRealModePhysicalAddress(segment, offset);
+                if (fullAddress >= VramAddress && fullAddress < VramUpperBound)
+                    throw new ArgumentException("Not supported for video RAM mapped addresses.");
+
+                return new Span<byte>(RawView + fullAddress, length);
             }
         }
+        public int ReadFromStream(uint segment, uint offset, Stream source, int length)
+        {
+            uint fullAddress = GetRealModePhysicalAddress(segment, offset);
+            if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
+                return source.Read(this.GetSpan(segment, offset, length));
+
+            var buffer = ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                var span = buffer.AsSpan(0, length);
+                int bytesRead = source.Read(span);
+                for (int i = 0; i < span.Length; i++)
+                    this.SetByte(fullAddress + (uint)i, span[i]);
+
+                return bytesRead;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+        public void WriteToStream(uint segment, uint offset, Stream destination, int length)
+        {
+            uint fullAddress = GetRealModePhysicalAddress(segment, offset);
+            if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
+            {
+                destination.Write(this.GetSpan(segment, offset, length));
+                return;
+            }
+
+            var buffer = ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                var span = buffer.AsSpan(0, length);
+                for (int i = 0; i < span.Length; i++)
+                    span[i] = this.GetByte(fullAddress + (uint)i);
+
+                destination.Write(span);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
         /// <summary>
         /// Reads a byte from emulated memory.
         /// </summary>
@@ -568,7 +628,7 @@ namespace Aeon.Emulator
                 }
             }
 
-            return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(ptr, maxLength);
+            return Marshal.PtrToStringAnsi(ptr, maxLength);
         }
         /// <summary>
         /// Writes a string to memory as a null-terminated ANSI byte array.
@@ -582,7 +642,7 @@ namespace Aeon.Emulator
             var span = GetSpan(segment, offset, value.Length + (writeNull ? 1 : 0));
             Encoding.ASCII.GetBytes(value, span);
             if (writeNull)
-                span[span.Length - 1] = 0;
+                span[^1] = 0;
         }
         /// <summary>
         /// Writes a string to memory as a null-terminated ANSI byte array.
@@ -943,6 +1003,36 @@ namespace Aeon.Emulator
             }
         }
 
+        /// <summary>
+        /// Frees unmanaged memory.
+        /// </summary>
+        /// <remarks>
+        /// Implemented this way instead of with <see cref="IDisposable"/> because it's not
+        /// intended to be publicly exposed. <see cref="VirtualMachine"/> is responsible for
+        /// calling this.
+        /// </remarks>
+        internal void InternalDispose()
+        {
+            unsafe
+            {
+                if (this.pageCache != null)
+                {
+                    NativeMemory.Free(this.pageCache);
+                    this.pageCache = null;
+                }
+
+                if (this.RawView != null)
+                {
+                    NativeMemory.Free(this.RawView);
+                    this.RawView = null;
+                }
+
+#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
+                GC.SuppressFinalize(this);
+#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
+            }
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
         private unsafe void PagedFetchInstruction(uint address, byte* buffer)
         {
@@ -971,7 +1061,7 @@ namespace Aeon.Emulator
 
             unsafe
             {
-                if (!checkVram || (fullAddress & VramMask) != VramAddress)
+                if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
                 {
                     return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
                 }
@@ -1002,7 +1092,7 @@ namespace Aeon.Emulator
 
             unsafe
             {
-                if ((fullAddress & VramMask) != VramAddress)
+                if (fullAddress is < VramAddress or > VramUpperBound)
                 {
                     Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
                 }
@@ -1018,6 +1108,7 @@ namespace Aeon.Emulator
             }
         }
 
+        [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private T PagedRead<T>(uint logicalAddress, PageFaultCause mode = PageFaultCause.Read, bool checkVram = true) where T : unmanaged
         {
@@ -1153,7 +1244,7 @@ namespace Aeon.Emulator
             SetInterruptAddress(0x43, 0xF000, 0xFA6E);
 
             // Only the first half of the 8x8 font should go here.
-            ibm8x8.Slice(0, ibm8x8.Length / 2).CopyTo(this.GetSpan(0xF000, 0xFA6E, ibm8x8.Length / 2));
+            ibm8x8[..(ibm8x8.Length / 2)].CopyTo(this.GetSpan(0xF000, 0xFA6E, ibm8x8.Length / 2));
 
             Fonts.VGA8x16.CopyTo(this.GetSpan(FontSegment, Font8x16Offset, Fonts.VGA8x16.Length));
 

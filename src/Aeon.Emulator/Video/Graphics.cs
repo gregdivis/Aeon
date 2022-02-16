@@ -1,54 +1,28 @@
-﻿using System;
-
-namespace Aeon.Emulator.Video
+﻿namespace Aeon.Emulator.Video
 {
     /// <summary>
     /// Emulates the VGA Graphics registers.
     /// </summary>
     internal sealed class Graphics : VideoComponent
     {
-        public unsafe readonly byte* ExpandedColorCompare;
-        public unsafe readonly byte* ExpandedColorDontCare;
-        public unsafe readonly byte* ExpandedSetReset;
-        public unsafe readonly bool* ExpandedEnableSetReset;
-
-        private readonly UnsafeBuffer<byte> colorCompareBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<byte> colorDontCareBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<byte> setResetBuffer = new UnsafeBuffer<byte>(4);
-        private readonly UnsafeBuffer<bool> enableSetResetBuffer = new UnsafeBuffer<bool>(4);
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="Graphics"/> class.
+        /// Gets the Set/Reset register.
         /// </summary>
-        public Graphics()
-        {
-            unsafe
-            {
-                this.ExpandedColorCompare = this.colorCompareBuffer.ToPointer();
-                this.ExpandedColorDontCare = this.colorDontCareBuffer.ToPointer();
-                this.ExpandedSetReset = this.setResetBuffer.ToPointer();
-                this.ExpandedEnableSetReset = this.enableSetResetBuffer.ToPointer();
-            }
-        }
-
+        public MaskValue SetReset { get; private set; }
         /// <summary>
-        /// Gets or sets the Set/Reset register.
+        /// Gets the Enable Set/Reset register.
         /// </summary>
-        public byte SetReset { get; private set; }
+        public MaskValue EnableSetReset { get; private set; }
         /// <summary>
-        /// Gets or sets the Enable Set/Reset register.
-        /// </summary>
-        public byte EnableSetReset { get; private set; }
-        /// <summary>
-        /// Gets or sets the Color Compare register.
+        /// Gets the Color Compare register.
         /// </summary>
         public byte ColorCompare { get; private set; }
         /// <summary>
-        /// Gets or sets the Data Rotate register.
+        /// Gets the Data Rotate register.
         /// </summary>
         public byte DataRotate { get; private set; }
         /// <summary>
-        /// Gets or sets the Read Map Select register.
+        /// Gets the Read Map Select register.
         /// </summary>
         public byte ReadMapSelect { get; private set; }
         /// <summary>
@@ -60,9 +34,9 @@ namespace Aeon.Emulator.Video
         /// </summary>
         public byte MiscellaneousGraphics { get; set; }
         /// <summary>
-        /// Gets or sets the Color Don't Care register.
+        /// Gets the Color Don't Care register.
         /// </summary>
-        public byte ColorDontCare { get; private set; }
+        public MaskValue ColorDontCare { get; private set; }
         /// <summary>
         /// Gets or sets the Bit Mask register.
         /// </summary>
@@ -77,14 +51,14 @@ namespace Aeon.Emulator.Video
         {
             return address switch
             {
-                GraphicsRegister.SetReset => this.SetReset,
-                GraphicsRegister.EnableSetReset => this.EnableSetReset,
+                GraphicsRegister.SetReset => this.SetReset.Packed,
+                GraphicsRegister.EnableSetReset => this.EnableSetReset.Packed,
                 GraphicsRegister.ColorCompare => this.ColorCompare,
                 GraphicsRegister.DataRotate => this.DataRotate,
                 GraphicsRegister.ReadMapSelect => ReadMapSelect,
                 GraphicsRegister.GraphicsMode => this.GraphicsMode,
                 GraphicsRegister.MiscellaneousGraphics => this.MiscellaneousGraphics,
-                GraphicsRegister.ColorDontCare => this.ColorDontCare,
+                GraphicsRegister.ColorDontCare => this.ColorDontCare.Packed,
                 GraphicsRegister.BitMask => this.BitMask,
                 _ => 0
             };
@@ -96,53 +70,46 @@ namespace Aeon.Emulator.Video
         /// <param name="value">Value to write to register.</param>
         public void WriteRegister(GraphicsRegister address, byte value)
         {
-            unsafe
+            switch (address)
             {
-                switch (address)
-                {
-                    case GraphicsRegister.SetReset:
-                        this.SetReset = value;
-                        ExpandRegister(value, new Span<byte>(this.ExpandedSetReset, 4));
-                        break;
+                case GraphicsRegister.SetReset:
+                    this.SetReset = value;
+                    break;
 
-                    case GraphicsRegister.EnableSetReset:
-                        this.EnableSetReset = value;
-                        ExpandRegister(value, new Span<byte>(this.ExpandedEnableSetReset, 4));
-                        break;
+                case GraphicsRegister.EnableSetReset:
+                    this.EnableSetReset = value;
+                    break;
 
-                    case GraphicsRegister.ColorCompare:
-                        this.ColorCompare = value;
-                        ExpandRegister(value, new Span<byte>(this.ExpandedColorCompare, 4));
-                        break;
+                case GraphicsRegister.ColorCompare:
+                    this.ColorCompare = value;
+                    break;
 
-                    case GraphicsRegister.DataRotate:
-                        this.DataRotate = value;
-                        break;
+                case GraphicsRegister.DataRotate:
+                    this.DataRotate = value;
+                    break;
 
-                    case GraphicsRegister.ReadMapSelect:
-                        this.ReadMapSelect = value;
-                        break;
+                case GraphicsRegister.ReadMapSelect:
+                    this.ReadMapSelect = value;
+                    break;
 
-                    case GraphicsRegister.GraphicsMode:
-                        this.GraphicsMode = value;
-                        break;
+                case GraphicsRegister.GraphicsMode:
+                    this.GraphicsMode = value;
+                    break;
 
-                    case GraphicsRegister.MiscellaneousGraphics:
-                        this.MiscellaneousGraphics = value;
-                        break;
+                case GraphicsRegister.MiscellaneousGraphics:
+                    this.MiscellaneousGraphics = value;
+                    break;
 
-                    case GraphicsRegister.ColorDontCare:
-                        this.ColorDontCare = value;
-                        ExpandRegister(value, new Span<byte>(this.ExpandedColorDontCare, 4));
-                        break;
+                case GraphicsRegister.ColorDontCare:
+                    this.ColorDontCare = value;
+                    break;
 
-                    case GraphicsRegister.BitMask:
-                        this.BitMask = value;
-                        break;
+                case GraphicsRegister.BitMask:
+                    this.BitMask = value;
+                    break;
 
-                    default:
-                        break;
-                }
+                default:
+                    break;
             }
         }
     }

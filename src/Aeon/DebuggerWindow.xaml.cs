@@ -1,7 +1,6 @@
-﻿using System.Linq;
-using System.Windows;
+﻿using System.Windows;
 using Aeon.Emulator.DebugSupport;
-using Aeon.Presentation.Debugger;
+using Aeon.Emulator.Launcher.Debugger;
 
 namespace Aeon.Emulator.Launcher
 {

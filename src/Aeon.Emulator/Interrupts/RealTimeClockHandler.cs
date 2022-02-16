@@ -7,7 +7,7 @@ namespace Aeon.Emulator.Interrupts
     /// <summary>
     /// Provides real-time-clock services (int 1Ah).
     /// </summary>
-    internal sealed class RealTimeClockHandler : IInterruptHandler
+    internal sealed class RealTimeClockHandler : IInterruptHandler, IDisposable
     {
         private const byte ReadClock = 0;
         private const byte SetClock = 1;
@@ -78,7 +78,7 @@ namespace Aeon.Emulator.Interrupts
         /// </summary>
         /// <param name="value">Integer value to convert.</param>
         /// <returns>BCD representation of the value.</returns>
-        private int ConvertToBCD(int value)
+        private static int ConvertToBCD(int value)
         {
             int result = 0;
             int byteCount = 0;
