@@ -93,7 +93,7 @@ namespace Aeon.Emulator.Dos.Programs
             vm.Processor.BP = 0x091C;
             vm.Processor.CX = 0x00FF;
             vm.Processor.DX = (short)dataSegment;
-            vm.Processor.Flags.Value = EFlags.Reserved1 | EFlags.InterruptEnable;
+            vm.Processor.Flags.Clear(~(EFlags.InterruptEnable | EFlags.Virtual8086Mode | EFlags.IOPrivilege1 | EFlags.IOPrivilege2 | EFlags.NestedTask));
 
             var ptr = vm.PhysicalMemory.GetPointer(codeSegment, 0);
             Marshal.Copy(imageData, 0, ptr, Math.Min(this.ImageSize, imageData.Length));

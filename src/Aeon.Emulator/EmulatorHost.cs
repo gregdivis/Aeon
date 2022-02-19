@@ -40,7 +40,7 @@ namespace Aeon.Emulator
         {
         }
         public EmulatorHost(int physicalMemory)
-            : this(new VirtualMachine(physicalMemory), null)
+            : this(new VirtualMachine(new VirtualMachineStartupOptions(physicalMemory, true)), null)
         {
         }
         /// <summary>

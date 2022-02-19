@@ -1,4 +1,5 @@
-﻿using Aeon.Emulator.Memory;
+﻿using System;
+using Aeon.Emulator.Memory;
 
 namespace Aeon.Emulator
 {
@@ -20,5 +21,12 @@ namespace Aeon.Emulator
         /// Performs the callback action.
         /// </summary>
         void InvokeCallback();
+        /// <summary>
+        /// Notifies the handler what machine code can be used to invoke itself.
+        /// </summary>
+        /// <param name="machineCode">Machine code sequence used to invoke the handler.</param>
+        void SetRaiseCallbackInstruction(ReadOnlySpan<byte> machineCode)
+        {
+        }
     }
 }

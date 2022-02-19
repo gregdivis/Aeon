@@ -53,7 +53,7 @@
         /// <param name="vm">VirtualMachine instance which is raising the exception.</param>
         internal override void OnRaised(VirtualMachine vm)
         {
-            uint cpl = vm.Processor.CS & 0x3u;
+            uint cpl = vm.Processor.CPL;
             this.userMode = cpl != 0;
             vm.Processor.CR2 = this.FaultAddress;
             System.Diagnostics.Debug.WriteLine($"Fault address: {this.FaultAddress:X8}, Code: {this.ErrorCode:X2}");

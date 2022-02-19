@@ -1,13 +1,13 @@
-﻿namespace Aeon.Emulator.Video.Modes
+﻿using System;
+
+namespace Aeon.Emulator.Video.Modes
 {
-    /// <summary>
-    /// Implements functionality for chained 8-bit 256-color VGA modes.
-    /// </summary>
-    internal sealed class Vga256 : VideoMode
+    internal sealed class CgaMode4 : VideoMode
     {
+        private const uint BaseAddress = 0x18000;
         private unsafe readonly byte* videoRam;
 
-        public Vga256(int width, int height, VideoHandler video) : base(width, height, 8, false, 8, VideoModeType.Graphics, video)
+        public CgaMode4(VideoHandler video) : base(320, 200, 2, false, 8, VideoModeType.Graphics, video)
         {
             unsafe
             {
@@ -15,10 +15,11 @@
             }
         }
 
-        public override int MouseWidth => this.PixelWidth * 2;
+        public override int Stride => 80;
 
         internal override byte GetVramByte(uint offset)
         {
+            offset -= BaseAddress;
             unsafe
             {
                 return videoRam[offset];
@@ -26,6 +27,7 @@
         }
         internal override void SetVramByte(uint offset, byte value)
         {
+            offset -= BaseAddress;
             unsafe
             {
                 videoRam[offset] = value;
@@ -33,6 +35,7 @@
         }
         internal override ushort GetVramWord(uint offset)
         {
+            offset -= BaseAddress;
             unsafe
             {
                 return *(ushort*)(videoRam + offset);
@@ -40,6 +43,7 @@
         }
         internal override void SetVramWord(uint offset, ushort value)
         {
+            offset -= BaseAddress;
             unsafe
             {
                 *(ushort*)(videoRam + offset) = value;
@@ -47,6 +51,7 @@
         }
         internal override uint GetVramDWord(uint offset)
         {
+            offset -= BaseAddress;
             unsafe
             {
                 return *(uint*)(videoRam + offset);
@@ -54,6 +59,7 @@
         }
         internal override void SetVramDWord(uint offset, uint value)
         {
+            offset -= BaseAddress;
             unsafe
             {
                 *(uint*)(videoRam + offset) = value;
@@ -61,21 +67,7 @@
         }
         internal override void WriteCharacter(int x, int y, int index, byte foreground, byte background)
         {
-            unsafe
-            {
-                int stride = this.Stride;
-                int startPos = (y * stride * 8) + x * 8;
-                byte[] font = this.Font;
-
-                for (int row = 0; row < 8; row++)
-                {
-                    uint value = font[index * 8 + row];
-                    int pos = startPos + (row * stride);
-
-                    for (int column = 0; column < 8; column++)
-                        this.videoRam[pos + column] = (value & (0x80 >> column)) != 0 ? foreground : background;
-                }
-            }
+            throw new NotImplementedException("WriteCharacter in CGA.");
         }
     }
 }

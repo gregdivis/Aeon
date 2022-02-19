@@ -10,7 +10,10 @@
     <DockPanel>
         <ToolBarTray DockPanel.Dock="Top" IsLocked="True">
             <ToolBar Background="Transparent">
-                <TextBox Name="gotoAddressBox" Width="100" TextChanged="GotoAddressBox_TextChanged" />
+                <TextBox Name="gotoAddressBox" Width="100" />
+                <Button Content="Next" Click="NextAddress_Click" />
+                <Button Content="Prev" />
+                <Separator />
                 <Button Content="Find Next Error" Click="FindNextError_Click" />
             </ToolBar>
         </ToolBarTray>

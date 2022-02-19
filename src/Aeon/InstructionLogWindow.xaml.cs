@@ -1,5 +1,8 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Buffers.Binary;
+using System.Globalization;
 using System.Windows;
+using Aeon.Emulator.Memory;
 
 namespace Aeon.Emulator.Launcher
 {
@@ -12,6 +15,24 @@ namespace Aeon.Emulator.Launcher
             var window = new InstructionLogWindow { Owner = App.Current.MainWindow };
             window.historyList.ItemsSource = log;
             window.Show();
+        }
+
+        private bool TryReadAddress(out ushort segment, out uint offset)
+        {
+            segment = 0;
+            offset = 0;
+
+            var parts = this.gotoAddressBox.Text.Trim().Split(':');
+            if (parts.Length != 2)
+                return false;
+
+            if (!ushort.TryParse(parts[0], NumberStyles.HexNumber, null, out segment))
+                return false;
+
+            if (!uint.TryParse(parts[1], NumberStyles.HexNumber, null, out offset))
+                return false;
+
+            return true;
         }
 
         private void HistoryList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -32,26 +53,25 @@ namespace Aeon.Emulator.Launcher
             }
         }
 
-        private void GotoAddressBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        private void NextAddress_Click(object sender, RoutedEventArgs e)
         {
-            var parts = this.gotoAddressBox.Text.Trim().Split(':');
-            if (parts.Length == 2)
-            {
-                var segment = ushort.Parse(parts[0], NumberStyles.HexNumber);
-                uint offset = uint.Parse(parts[1], NumberStyles.HexNumber);
-                var log = (LogAccessor)this.historyList.ItemsSource;
-                int i = 0;
-                foreach (var item in log)
-                {
-                    if (item.CS == segment && item.EIP == offset)
-                    {
-                        this.historyList.SelectedIndex = i;
-                        this.historyList.ScrollIntoView(item);
-                        return;
-                    }
+            if (!this.TryReadAddress(out ushort segment, out uint offset))
+                return;
 
-                    i++;
+            var log = (LogAccessor)this.historyList.ItemsSource;
+            int i = 0;
+            int selectedIndex = this.historyList.SelectedIndex;
+
+            foreach (var item in log)
+            {
+                if (i > selectedIndex && item.CS == segment && item.EIP == offset)
+                {
+                    this.historyList.SelectedIndex = i;
+                    this.historyList.ScrollIntoView(item);
+                    return;
                 }
+
+                i++;
             }
         }
     }

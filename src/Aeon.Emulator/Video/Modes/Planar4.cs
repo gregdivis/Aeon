@@ -77,7 +77,7 @@ namespace Aeon.Emulator.Video.Modes
             }
             else
             {
-                ThrowHelper.ThrowNotImplementedException();
+                this.SetByteMode3(offset, value);
             }
         }
         internal override ushort GetVramWord(uint offset)
@@ -259,6 +259,21 @@ namespace Aeon.Emulator.Video.Modes
                     current |= values & mapMask; // set value bits
                     this.videoRam[offset] = current;
                 }
+            }
+        }
+        private void SetByteMode3(uint offset, byte input)
+        {
+            unsafe
+            {
+                int rotateCount = graphics.DataRotate & 0x07;
+                uint source = (byte)(((uint)input >> rotateCount) | ((uint)input << (8 - rotateCount)));
+                source &= graphics.BitMask;
+                source *= 0x01010101;
+
+                uint result = source & this.graphics.SetReset.Expanded;
+                result |= Intrinsics.AndNot(this.latches, source);
+
+                this.videoRam[offset] = result;
             }
         }
         private static uint RotateBytes(uint value, int count)

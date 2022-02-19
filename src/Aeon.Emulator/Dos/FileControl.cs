@@ -15,8 +15,8 @@ namespace Aeon.Emulator.Dos
         private const short StdPrnHandle = 4;
 
         private readonly VirtualMachine vm;
-        private readonly OpenFileDictionary fileHandles = new OpenFileDictionary();
-        private readonly Random random = new Random();
+        private readonly OpenFileDictionary fileHandles = new();
+        private readonly Random random = new();
         private Queue<VirtualFileInfo> findFiles;
         private short emmHandle;
 
@@ -73,6 +73,10 @@ namespace Aeon.Emulator.Dos
                     return 0;
             }
         }
+        /// <summary>
+        /// Gets or sets a value indicating whether to auto create the EMMXXXX0 file handle.
+        /// </summary>
+        public bool EmmHack { get; set; }
 
         public void SetStdOut(string target)
         {
@@ -110,7 +114,7 @@ namespace Aeon.Emulator.Dos
             System.Diagnostics.Debug.WriteLine($"Open file: {fileName}");
 
             // Hack to detect expanded memory manager.
-            if (fileName == "EMMXXXX0")
+            if (this.EmmHack && fileName == "EMMXXXX0")
             {
                 vm.Processor.Flags.Carry = false;
                 emmHandle = GetNextFileHandle();
@@ -276,7 +280,6 @@ namespace Aeon.Emulator.Dos
                 {
                     int bytesToRead = (ushort)vm.Processor.CX;
                     int bytesRead = vm.PhysicalMemory.ReadFromStream(vm.Processor.DS, (ushort)vm.Processor.DX, s.BaseStream, bytesToRead);
-
                     vm.Processor.Flags.Carry = false;
                     vm.Processor.AX = (short)(ushort)bytesRead;
                 }
@@ -618,7 +621,7 @@ namespace Aeon.Emulator.Dos
             if (firstBlank == -1)
                 firstBlank = text.Length;
             else
-                parsedItem = trimmedText.Substring(0, firstBlank);
+                parsedItem = trimmedText[..firstBlank];
 
             string[] nameParts = parsedItem.Split(new char[] { '.' }, 2);
             string fileName = nameParts[0].PadRight(8, ' ');

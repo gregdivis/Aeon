@@ -45,6 +45,11 @@ namespace Aeon.Emulator.Dos
         public Stream StdIn => this.fileControl.StdIn;
         public DosProcess CurrentProcess => this.memoryAllocator.CurrentProcess;
         public byte ErrorLevel => this.memoryAllocator.ErrorLevel;
+        public bool EmmHack
+        {
+            get => this.fileControl.EmmHack;
+            set => this.fileControl.EmmHack = value;
+        }
 
         public void LoadImage(ProgramImage image, ushort environmentSegment = 0, string commandLineArgs = null, string stdOut = null)
         {

@@ -260,12 +260,24 @@ namespace Aeon.Emulator.Video
                             break;
 
                         default:
-                            throw new NotImplementedException(string.Format("Video command 11{0:X2}h not implemented.", VirtualMachine.Processor.AL));
+                            throw new NotImplementedException($"Video command 11{this.VirtualMachine.Processor.AL:X2}h not implemented.");
+                    }
+                    break;
+
+                case Functions.Video:
+                    switch (this.VirtualMachine.Processor.BL)
+                    {
+                        case Functions.Video_SetBackgroundColor:
+                            break;
+
+                        case Functions.Video_SetPalette:
+                            System.Diagnostics.Debug.WriteLine("CGA set palette not implemented.");
+                            break;
                     }
                     break;
 
                 default:
-                    System.Diagnostics.Debug.WriteLine(string.Format("Video command {0:X2}h not implemented.", VirtualMachine.Processor.AH));
+                    System.Diagnostics.Debug.WriteLine($"Video command {this.VirtualMachine.Processor.AH:X2}h not implemented.");
                     break;
             }
         }
@@ -489,19 +501,21 @@ namespace Aeon.Emulator.Video
                     break;
 
                 case VideoMode10.ColorText80x25x4:
+                case VideoMode10.MonochromeText80x25x4:
                     mode = new Modes.TextMode(80, 25, this.verticalTextResolution, this);
                     break;
 
                 case VideoMode10.ColorGraphics320x200x2A:
                 case VideoMode10.ColorGraphics320x200x2B:
-                    throw new NotImplementedException("CGA graphics not implemented.");
+                    mode = new Modes.CgaMode4(this);
+                    break;
 
                 case VideoMode10.ColorGraphics320x200x4:
                     mode = new Modes.EgaVga16(320, 200, 8, this);
                     break;
 
                 case VideoMode10.ColorGraphics640x200x4:
-                    mode = new Modes.EgaVga16(640, 200, 8, this);
+                    mode = new Modes.EgaVga16(640, 400, 8, this);
                     break;
 
                 case VideoMode10.ColorGraphics640x350x4:
@@ -521,7 +535,7 @@ namespace Aeon.Emulator.Video
                     throw new NotSupportedException();
             }
 
-            SetDisplayMode(mode);
+            this.SetDisplayMode(mode);
         }
         /// <summary>
         /// Initializes a new display mode.

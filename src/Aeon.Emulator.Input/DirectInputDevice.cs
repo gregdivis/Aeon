@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Aeon.Emulator.Input
 {
@@ -8,13 +8,9 @@ namespace Aeon.Emulator.Input
     /// </summary>
     public sealed class DirectInputDevice : IDisposable
     {
-        private readonly IntPtr device;
+        private readonly unsafe DirectInputDevice8Inst* device;
         private readonly DirectInput input;
-        private readonly NoParamProc release;
-        private readonly GetDeviceStateProc getDeviceState;
-        private readonly NoParamProc acquire;
-        private readonly NoParamProc unacquire;
-        private GCHandle releaseHandle;
+        private readonly Lazy<DeviceInfo> deviceInfo;
         private bool disposed;
 
         /// <summary>
@@ -22,22 +18,17 @@ namespace Aeon.Emulator.Input
         /// </summary>
         /// <param name="device">The native device interface.</param>
         /// <param name="input">The DirectInput instance which owns this device.</param>
-        internal DirectInputDevice(IntPtr device, DirectInput input)
+        internal unsafe DirectInputDevice(DirectInputDevice8Inst* device, DirectInput input)
         {
             this.device = device;
             this.input = input;
 
             unsafe
             {
-                var inst = (DirectInputDevice8Inst*)device.ToPointer();
+                this.device = device;
+                uint res = this.device->Vtbl->SetCooperativeLevel(device, input.WindowHandle, 6);
 
-                this.release = (NoParamProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->Release, typeof(NoParamProc));
-
-                var setCoopLevel = (SetCooperativeLevelProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->SetCooperativeLevel, typeof(SetCooperativeLevelProc));
-                var res = setCoopLevel(device, input.WindowHandle, 6);
-
-                var setDataFormat = (SetDataFormatProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->SetDataFormat, typeof(SetDataFormatProc));
-                var dataFormat = new DIDATAFORMAT()
+                var dataFormat = new DIDATAFORMAT
                 {
                     dwSize = (uint)sizeof(DIDATAFORMAT),
                     dwObjSize = (uint)sizeof(DIOBJECTDATAFORMAT),
@@ -47,14 +38,10 @@ namespace Aeon.Emulator.Input
                     rgodf = DeviceObjectTypes.DataFormat
                 };
 
-                setDataFormat(device, new IntPtr(&dataFormat));
-
-                this.getDeviceState = (GetDeviceStateProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->GetDeviceState, typeof(GetDeviceStateProc));
-                this.acquire = (NoParamProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->Acquire, typeof(NoParamProc));
-                this.unacquire = (NoParamProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->Unacquire, typeof(NoParamProc));
+                res = this.device->Vtbl->SetDataFormat(device, &dataFormat);
             }
 
-            this.releaseHandle = GCHandle.Alloc(release, GCHandleType.Normal);
+            this.deviceInfo = new Lazy<DeviceInfo>(this.GetDeviceInfo, LazyThreadSafetyMode.PublicationOnly);
         }
         ~DirectInputDevice() => this.InternalDispose();
 
@@ -82,20 +69,24 @@ namespace Aeon.Emulator.Input
         /// Gets the state of button 4.
         /// </summary>
         public bool Button4 { get; private set; }
+        /// <summary>
+        /// Gets information about the device.
+        /// </summary>
+        public DeviceInfo Info => this.deviceInfo.Value;
 
         /// <summary>
         /// Updates the current device state.
         /// </summary>
-        public void Update()
+        public bool Update()
         {
             unsafe
             {
                 var state = new DIJOYSTATE();
-                var res = this.getDeviceState(this.device, (uint)sizeof(DIJOYSTATE), &state);
+                var res = this.device->Vtbl->GetDeviceState(this.device, (uint)sizeof(DIJOYSTATE), &state);
                 if (res != 0)
                 {
-                    this.acquire(this.device);
-                    res = this.getDeviceState(this.device, (uint)sizeof(DIJOYSTATE), &state);
+                    this.device->Vtbl->Acquire(this.device);
+                    res = this.device->Vtbl->GetDeviceState(this.device, (uint)sizeof(DIJOYSTATE), &state);
                 }
 
                 if (res == 0)
@@ -106,12 +97,12 @@ namespace Aeon.Emulator.Input
                     this.Button2 = (state.rgbButtons[1] & 0x80) != 0;
                     this.Button3 = (state.rgbButtons[2] & 0x80) != 0;
                     this.Button4 = (state.rgbButtons[3] & 0x80) != 0;
+                    return true;
                 }
+
+                return false;
             }
         }
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
         public void Dispose()
         {
             this.InternalDispose();
@@ -120,11 +111,25 @@ namespace Aeon.Emulator.Input
 
         private void InternalDispose()
         {
-            if (!disposed)
+            if (!this.disposed)
             {
-                disposed = true;
-                this.release(device);
-                this.releaseHandle.Free();
+                unsafe
+                {
+                    this.device->Vtbl->Release(this.device);
+                }
+
+                this.disposed = true;
+            }
+        }
+        private DeviceInfo GetDeviceInfo()
+        {
+            unsafe
+            {
+                DIDEVICEINSTANCE info;
+                if (this.device->Vtbl->GetDeviceInfo(this.device, &info) == 0)
+                    return new DeviceInfo(&info);
+                else
+                    return null;
             }
         }
     }

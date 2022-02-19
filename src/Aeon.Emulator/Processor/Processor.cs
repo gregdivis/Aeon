@@ -628,6 +628,10 @@ namespace Aeon.Emulator
                 return bit == 0 ? 16 : 32;
             }
         }
+        /// <summary>
+        /// Gets or sets the current privilege level.
+        /// </summary>
+        public uint CPL { get; set; }
         #endregion
 
         /// <summary>

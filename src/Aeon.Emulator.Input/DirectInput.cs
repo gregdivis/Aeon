@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Input
 {
@@ -14,11 +15,7 @@ namespace Aeon.Emulator.Input
         private static readonly object getInstanceLock = new();
 
         private IntPtr hwnd;
-        private readonly IntPtr directInput;
-        private readonly NoParamProc release;
-        private readonly EnumDevicesProc enumDevices;
-        private readonly CreateDeviceProc createDevice;
-        private GCHandle releaseHandle;
+        private readonly unsafe DirectInput8Inst* directInput;
         private bool disposed;
 
         /// <summary>
@@ -26,26 +23,20 @@ namespace Aeon.Emulator.Input
         /// </summary>
         private DirectInput(IntPtr hwnd)
         {
-            var iid = SafeNativeMethods.IID_IDirectInput8W;
-            var clsid = SafeNativeMethods.CLSID_DirectInput8;
-            var hinst = SafeNativeMethods.GetModuleHandleW(IntPtr.Zero);
-            _ = SafeNativeMethods.CoCreateInstance(ref clsid, IntPtr.Zero, 1, ref iid, out var dinput8);
-            this.directInput = dinput8;
-            this.hwnd = hwnd;
-
             unsafe
             {
-                DirectInput8Inst* inst = (DirectInput8Inst*)dinput8.ToPointer();
+                var iid = NativeMethods.IID_IDirectInput8W;
+                var clsid = NativeMethods.CLSID_DirectInput8;
+                var hinst = NativeMethods.GetModuleHandleW(IntPtr.Zero);
+                DirectInput8Inst* dinput8 = null;
+                _ = NativeMethods.CoCreateInstance(&clsid, null, 1, &iid, (void**)&dinput8);
 
-                var initialize = (InitializeInputProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->Initialize, typeof(InitializeInputProc));
-                var res = initialize(dinput8, hinst, 0x0800);
+                dinput8->Vtbl->Initialize(dinput8, hinst, 0x0800);
 
-                this.release = (NoParamProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->Release, typeof(NoParamProc));
-                this.enumDevices = (EnumDevicesProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->EnumDevices, typeof(EnumDevicesProc));
-                this.createDevice = (CreateDeviceProc)Marshal.GetDelegateForFunctionPointer(inst->Vtbl->CreateDevice, typeof(CreateDeviceProc));
+
+                this.directInput = dinput8;
+                this.hwnd = hwnd;
             }
-
-            this.releaseHandle = GCHandle.Alloc(this.release, GCHandleType.Normal);
         }
         ~DirectInput() => this.Dispose();
 
@@ -99,15 +90,17 @@ namespace Aeon.Emulator.Input
         public IEnumerable<DeviceInfo> GetDevices(DeviceClass deviceClass, DeviceEnumFlags filter)
         {
             var devices = new List<DeviceInfo>();
-            unsafe
+            var gcHandle = GCHandle.Alloc(devices);
+            try
             {
-                var res = this.enumDevices(this.directInput, (uint)deviceClass, callback, IntPtr.Zero, (uint)filter);
-
-                uint callback(IntPtr i, IntPtr p)
+                unsafe
                 {
-                    devices.Add(new DeviceInfo((DIDEVICEINSTANCE*)i.ToPointer()));
-                    return 1;
+                    _ = this.directInput->Vtbl->EnumDevices(this.directInput, (uint)deviceClass, &EnumDevicesCallback, GCHandle.ToIntPtr(gcHandle), (uint)filter);
                 }
+            }
+            finally
+            {
+                gcHandle.Free();
             }
 
             return devices;
@@ -117,10 +110,7 @@ namespace Aeon.Emulator.Input
         /// </summary>
         /// <param name="instanceId">Instance ID of the device.</param>
         /// <returns>DeviceInfo instance describing the input device.</returns>
-        public DeviceInfo GetDeviceInfo(Guid instanceId)
-        {
-            return GetDevices(DeviceClass.All, DeviceEnumFlags.All).FirstOrDefault(d => d.InstanceId == instanceId) ?? DeviceInfo.GetUnknownDeviceInfo(instanceId);
-        }
+        public DeviceInfo GetDeviceInfo(Guid instanceId) => this.GetDevices(DeviceClass.All, DeviceEnumFlags.All).FirstOrDefault(d => d.InstanceId == instanceId) ?? DeviceInfo.GetUnknownDeviceInfo(instanceId);
         /// <summary>
         /// Returns an instance of an input device.
         /// </summary>
@@ -132,10 +122,10 @@ namespace Aeon.Emulator.Input
             {
                 DirectInputDevice8Inst* device;
 
-                if (this.createDevice(this.directInput, &deviceId, &device, IntPtr.Zero) != 0)
+                if (this.directInput->Vtbl->CreateDevice(this.directInput, &deviceId, &device, null) != 0)
                     throw new ArgumentException("Unable to create input device.");
 
-                return new DirectInputDevice(new IntPtr(device), this);
+                return new DirectInputDevice(device, this);
             }
         }
 
@@ -144,14 +134,25 @@ namespace Aeon.Emulator.Input
             this.Dispose();
             GC.SuppressFinalize(this);
         }
+
         private void Dispose()
         {
             if (!disposed)
             {
                 this.disposed = true;
-                this.release(directInput);
-                this.releaseHandle.Free();
+                unsafe
+                {
+                    this.directInput->Vtbl->Release(this.directInput);
+                }
             }
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvStdcall) })]
+        private static unsafe uint EnumDevicesCallback(DIDEVICEINSTANCE* lpddi, IntPtr pvRef)
+        {
+            var devices = (List<DeviceInfo>)GCHandle.FromIntPtr(pvRef).Target;
+            devices.Add(new DeviceInfo(lpddi));
+            return 1;
         }
     }
 }

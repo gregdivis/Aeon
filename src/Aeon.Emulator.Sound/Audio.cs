@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-
 using TinyAudio;
 
 namespace Aeon.Emulator.Sound
@@ -41,18 +40,9 @@ namespace Aeon.Emulator.Sound
         {
             var writeBuffer = buffer;
 
-            var floatArray = new float[writeBuffer.Length];
-
-            for (int i = 0; i < writeBuffer.Length; i++)
-            {
-                floatArray[i] = writeBuffer[i];
-            }
-
-            var span = new ReadOnlySpan<float>(floatArray);
-
             while (true)
             {
-                int count = (int)player.WriteData(span);
+                int count = (int)player.WriteData(writeBuffer);
                 writeBuffer = writeBuffer[count..];
                 if (writeBuffer.IsEmpty)
                     return;

@@ -335,6 +335,7 @@ namespace Aeon.Emulator.Launcher
             {
                 return videoMode.BitsPerPixel switch
                 {
+                    2 => new GraphicsPresenter2(videoMode),
                     4 => new GraphicsPresenter4(videoMode),
                     8 when videoMode.IsPlanar => new GraphicsPresenterX(videoMode),
                     8 when !videoMode.IsPlanar => new GraphicsPresenter8(videoMode),

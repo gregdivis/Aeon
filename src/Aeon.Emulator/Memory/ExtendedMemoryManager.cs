@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace Aeon.Emulator.Memory
 {
@@ -18,7 +19,7 @@ namespace Aeon.Emulator.Memory
         /// <summary>
         /// Specifies the starting physical address of XMS.
         /// </summary>
-        private const uint XmsBaseAddress = PhysicalMemory.ConvMemorySize + 65536 + 0x4000 + 1024 * 1024;
+        public const uint XmsBaseAddress = PhysicalMemory.ConvMemorySize + 65536 + 0x4000 + 1024 * 1024;
         /// <summary>
         /// Total number of handles available at once.
         /// </summary>
@@ -174,6 +175,67 @@ namespace Aeon.Emulator.Memory
         }
 
         /// <summary>
+        /// Attempts to allocate a block of extended memory.
+        /// </summary>
+        /// <param name="length">Number of bytes to allocate.</param>
+        /// <param name="handle">If successful, contains the allocation handle.</param>
+        /// <returns>Zero on success. Nonzero indicates error code.</returns>
+        public byte TryAllocate(uint length, out short handle)
+        {
+            handle = (short)this.GetNextHandle();
+            if (handle == 0)
+                return 0xA1; // All handles are used.
+
+            // Round up to next kbyte if necessary.
+            if ((length % 1024) != 0)
+                length = (length & 0xFFFFFC00u) + 1024u;
+            else
+                length &= 0xFFFFFC00u;
+
+            // Zero-length allocations are allowed.
+            if (length == 0)
+            {
+                this.handles.Add(handle, 0);
+                return 0;
+            }
+
+            var smallestFreeBlock = this.GetFreeBlocks()
+                .Where(b => b.Length >= length)
+                .Select(b => new XmsBlock?(b)).FirstOrDefault();
+
+            if (smallestFreeBlock == null)
+                return 0xA0; // Not enough free memory.
+
+            var freeNode = this.xms.Find(smallestFreeBlock.Value);
+
+            var newNodes = freeNode.Value.Allocate(handle, length);
+            this.xms.Replace((XmsBlock)smallestFreeBlock, newNodes);
+
+            this.handles.Add(handle, 0);
+            return 0;
+        }
+        /// <summary>
+        /// Returns the block with the specified handle if found; otherwise returns null.
+        /// </summary>
+        /// <param name="handle">Handle of block to search for.</param>
+        /// <param name="block">On success, contains information about the block.</param>
+        /// <returns>True if handle was found; otherwise false.</returns>
+        public bool TryGetBlock(int handle, out XmsBlock block)
+        {
+            foreach (var b in this.xms)
+            {
+                if (b.IsUsed && b.Handle == handle)
+                {
+                    block = b;
+                    return true;
+                }
+            }
+
+            block = default;
+            return false;
+        }
+
+        /// <summary>
         /// Increments the A20 enable count.
         /// </summary>
         private void EnableLocalA20()
@@ -217,17 +279,6 @@ namespace Aeon.Emulator.Memory
                    select b;
         }
         /// <summary>
-        /// Returns the block with the specified handle if found; otherwise returns null.
-        /// </summary>
-        /// <param name="handle">Handle of block to search for.</param>
-        /// <returns>Block with the specified handle if found; otherwise returns null.</returns>
-        private XmsBlock? TryGetBlock(int handle)
-        {
-            return (from b in this.xms
-                    where b.IsUsed && b.Handle == handle
-                    select new XmsBlock?(b)).FirstOrDefault();
-        }
-        /// <summary>
         /// Returns the next available handle for an allocation on success; returns 0 if no handles are available.
         /// </summary>
         /// <returns>New handle if available; otherwise returns null.</returns>
@@ -266,45 +317,17 @@ namespace Aeon.Emulator.Memory
         /// <param name="kbytes">Number of kilobytes requested.</param>
         private void AllocateBlock(uint kbytes)
         {
-            int handle = GetNextHandle();
-            if (handle == 0)
+            byte res = this.TryAllocate(kbytes * 1024u, out short handle);
+            if (res == 0)
             {
-                vm.Processor.AX = 0; // Didn't work.
-                vm.Processor.BL = 0xA1; // All handles are used.
-                return;
-            }
-
-            uint length = kbytes * 1024u;
-
-            // Zero-length allocations are allowed.
-            if (length == 0)
-            {
-                this.handles.Add(handle, 0);
                 vm.Processor.AX = 1; // Success.
-                vm.Processor.DX = (short)handle;
-                return;
+                vm.Processor.DX = handle;
             }
-
-            var smallestFreeBlock = (from b in this.GetFreeBlocks()
-                                     where b.Length >= length
-                                     select new Nullable<XmsBlock>(b)).FirstOrDefault();
-
-            if (smallestFreeBlock == null)
+            else
             {
                 vm.Processor.AX = 0; // Didn't work.
-                vm.Processor.BL = 0xA0; // Not enough free memory.
-                return;
+                vm.Processor.BL = res;
             }
-
-            var freeNode = this.xms.Find(smallestFreeBlock.Value);
-
-            var newNodes = freeNode.Value.Allocate(handle, length);
-            this.xms.Replace((XmsBlock)smallestFreeBlock, newNodes);
-
-            this.handles.Add(handle, 0);
-
-            vm.Processor.AX = 1; // Success.
-            vm.Processor.DX = (short)handle;
         }
         /// <summary>
         /// Frees a block of memory.
@@ -327,10 +350,8 @@ namespace Aeon.Emulator.Memory
                 return;
             }
 
-            var maybeBlock = this.TryGetBlock(handle);
-            if (maybeBlock != null)
+            if (this.TryGetBlock(handle, out var block))
             {
-                var block = (XmsBlock)maybeBlock;
                 var freeBlock = block.Free();
                 this.xms.Replace(block, freeBlock);
                 this.MergeFreeBlocks(freeBlock);
@@ -355,7 +376,7 @@ namespace Aeon.Emulator.Memory
 
             this.handles[handle] = lockCount + 1;
 
-            var block = (XmsBlock)TryGetBlock(handle);
+            _ = this.TryGetBlock(handle, out var block);
             uint fullAddress = XmsBaseAddress + block.Offset;
 
             vm.Processor.AX = 1; // Success.
@@ -404,11 +425,10 @@ namespace Aeon.Emulator.Memory
             vm.Processor.BH = (byte)lockCount;
             vm.Processor.BL = (byte)(MaxHandles - this.handles.Count);
 
-            var block = this.TryGetBlock(handle);
-            if (block == null)
+            if (!this.TryGetBlock(handle, out var block))
                 vm.Processor.DX = 0;
             else
-                vm.Processor.DX = (short)(((XmsBlock)block).Length / 1024u);
+                vm.Processor.DX = (short)((block).Length / 1024u);
 
             vm.Processor.AX = 1; // Success.
         }
@@ -436,9 +456,8 @@ namespace Aeon.Emulator.Memory
             }
             else
             {
-                var srcBlock = this.TryGetBlock(moveData.SourceHandle);
-                if (srcBlock != null)
-                    srcPtr = this.vm.PhysicalMemory.GetPointer((int)(XmsBaseAddress + ((XmsBlock)srcBlock).Offset + moveData.SourceOffset));
+                if (this.TryGetBlock(moveData.SourceHandle, out var srcBlock))
+                    srcPtr = this.vm.PhysicalMemory.GetPointer((int)(XmsBaseAddress + (srcBlock).Offset + moveData.SourceOffset));
             }
 
             if (moveData.DestHandle == 0)
@@ -448,9 +467,8 @@ namespace Aeon.Emulator.Memory
             }
             else
             {
-                var destBlock = this.TryGetBlock(moveData.DestHandle);
-                if (destBlock != null)
-                    destPtr = this.vm.PhysicalMemory.GetPointer((int)(XmsBaseAddress + ((XmsBlock)destBlock).Offset + moveData.DestOffset));
+                if (this.TryGetBlock(moveData.DestHandle, out var destBlock))
+                    destPtr = this.vm.PhysicalMemory.GetPointer((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset));
             }
 
             if (srcPtr == IntPtr.Zero)

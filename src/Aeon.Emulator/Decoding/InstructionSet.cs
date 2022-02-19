@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Aeon.Emulator.DebugSupport;
 
 namespace Aeon.Emulator.Decoding
@@ -11,6 +14,8 @@ namespace Aeon.Emulator.Decoding
     /// </summary>
     public static class InstructionSet
     {
+        private static bool initialized;
+
         /// <summary>
         /// Gets the collection of defined opcodes.
         /// </summary>
@@ -134,10 +139,10 @@ namespace Aeon.Emulator.Decoding
                 }
             }
         }
+
         internal static void Emulate(VirtualMachine vm, InstructionLog log)
         {
             var info = FindOpcode(vm.PhysicalMemory, vm.Processor);
-
             if (!info.IsPrefix)
                 log.Write(vm.Processor);
 
@@ -148,8 +153,13 @@ namespace Aeon.Emulator.Decoding
                 throw GetPartiallyNotImplementedException(vm, info);
         }
 
-        internal static void Initialize()
+        public static void Initialize()
         {
+            if (initialized)
+                return;
+
+            initialized = true;
+
             var isb = new InstructionSetBuilder();
             isb.BuildSet();
 

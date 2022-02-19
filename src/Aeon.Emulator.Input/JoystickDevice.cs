@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Aeon.Emulator.Input
 {
@@ -10,170 +11,115 @@ namespace Aeon.Emulator.Input
     public sealed class JoystickDevice : IInputPort, IOutputPort, IDisposable
     {
         /// <summary>
-        /// The number of cycles that represents the maximum value of an axis.
+        /// 100 kilohms when the value is at its maximum.
         /// </summary>
-        private const int MaximumCount = 300;
+        private const double MaxResistance = 100_000;
         /// <summary>
-        /// The value to divide the joystick axis position by to get the number of cycles.
+        /// Delay is always at least 24.2 microseconds.
         /// </summary>
-        private const int CountFactor = ushort.MaxValue / MaximumCount;
+        private const double MinTime = 24.2;
+        /// <summary>
+        /// Multiplied with the variable resistance to get the delay.
+        /// </summary>
+        private const double ResistanceFactor = 0.011;
+        /// <summary>
+        /// Value of <see cref="ResistanceFactor"/> * <see cref="MaxResistance"/>.
+        /// </summary>
+        private const double Factor = ResistanceFactor * MaxResistance;
 
-        private readonly DirectInputDevice deviceA;
-        private readonly DirectInputDevice deviceB;
-        private int xCounterA;
-        private int yCounterA;
-        private int xCounterB;
-        private int yCounterB;
+        private VirtualMachine vm;
+        private readonly IGameController controller = IGameController.GetDefault();
+        private long xAxisDischargeTicks;
+        private long yAxisDischargeTicks;
+        private readonly Stopwatch dischargeStart = new();
+        private string controllerName;
+
         private bool disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JoystickDevice"/> class.
         /// </summary>
-        /// <param name="hwnd">The handle to the main application window.</param>
-        /// <param name="deviceA">The instance ID of the first input device.</param>
-        /// <param name="deviceB">The instance ID of the second input device.</param>
-        public JoystickDevice(IntPtr hwnd, Guid? deviceA, Guid? deviceB)
+        public JoystickDevice()
         {
-            if (deviceA == null && deviceB == null)
-                return;
-
-            var input = DirectInput.GetInstance(hwnd);
-            if (deviceA != null)
-                this.deviceA = input.CreateDevice((Guid)deviceA);
-            if (deviceB != null)
-                this.deviceB = input.CreateDevice((Guid)deviceB);
         }
 
-        /// <summary>
-        /// Gets the input ports implemented by the device.
-        /// </summary>
         public IEnumerable<int> InputPorts => new[] { 0x201 };
-        /// <summary>
-        /// Gets the output ports implemented by the device.
-        /// </summary>
         public IEnumerable<int> OutputPorts => new[] { 0x201 };
 
-        /// <summary>
-        /// Reads a single byte from one of the device's supported ports.
-        /// </summary>
-        /// <param name="port">Port from which byte is read.</param>
-        /// <returns>Byte read from the specified port.</returns>
         byte IInputPort.ReadByte(int port)
         {
             int portValue = 0;
 
-            if (this.deviceA == null && this.deviceB == null)
+            if (!this.controller.TryGetState(out var state))
                 return 0xF0;
 
-            if (this.deviceA != null)
-            {
-                this.deviceA.Update();
-                if (!this.deviceA.Button1)
-                    portValue |= 0x10;
-                if (!this.deviceA.Button2)
-                    portValue |= 0x20;
+            if (!state.Buttons.HasFlag(GameControllerButtons.Button1))
+                portValue |= 0x10;
+            if (!state.Buttons.HasFlag(GameControllerButtons.Button2))
+                portValue |= 0x20;
 
-                if (this.deviceB == null)
-                {
-                    if (!this.deviceA.Button3)
-                        portValue |= 0x40;
-                    if (!this.deviceA.Button4)
-                        portValue |= 0x80;
-                }
+            if (!state.Buttons.HasFlag(GameControllerButtons.Button3))
+                portValue |= 0x40;
+            if (!state.Buttons.HasFlag(GameControllerButtons.Button4))
+                portValue |= 0x80;
 
-                if (this.xCounterA > 0)
-                {
-                    this.xCounterA--;
-                    if (this.xCounterA > 0)
-                        portValue |= 0x01;
-                }
+            long ticks = this.dischargeStart.ElapsedTicks;
+            if (ticks < this.xAxisDischargeTicks)
+                portValue |= 0x01;
 
-                if (this.yCounterA > 0)
-                {
-                    this.yCounterA--;
-                    if (this.yCounterA > 0)
-                        portValue |= 0x02;
-                }
-            }
-
-            if (this.deviceB != null)
-            {
-                this.deviceB.Update();
-                if (!this.deviceB.Button1)
-                    portValue |= 0x40;
-                if (!this.deviceB.Button2)
-                    portValue |= 0x80;
-
-                if (this.xCounterB > 0)
-                {
-                    this.xCounterB--;
-                    if (this.xCounterB > 0)
-                        portValue |= 0x04;
-                }
-
-                if (this.yCounterB > 0)
-                {
-                    this.yCounterB--;
-                    if (this.yCounterB > 0)
-                        portValue |= 0x08;
-                }
-
-                if (this.deviceA == null)
-                {
-                    portValue |= 0x30;
-                }
-            }
+            if (ticks < this.yAxisDischargeTicks)
+                portValue |= 0x02;
 
             return (byte)portValue;
         }
-        /// <summary>
-        /// Reads two bytes from one of the device's supported ports.
-        /// </summary>
-        /// <param name="port">Port from which bytes are read.</param>
-        /// <returns>Bytes read from the specified port.</returns>
-        ushort IInputPort.ReadWord(int port)
-        {
-            return ((IInputPort)this).ReadByte(port);
-        }
-        /// <summary>
-        /// Writes a single byte to one of the device's supported ports.
-        /// </summary>
-        /// <param name="port">Port where byte will be written.</param>
-        /// <param name="value">Value to write to the port.</param>
+        ushort IInputPort.ReadWord(int port) => ((IInputPort)this).ReadByte(port);
         void IOutputPort.WriteByte(int port, byte value)
         {
-            if (this.deviceA != null)
+            if (this.controller.TryGetState(out var state))
             {
-                this.deviceA.Update();
-                this.xCounterA = this.deviceA.XAxisPosition / CountFactor;
-                this.yCounterA = this.deviceA.YAxisPosition / CountFactor;
-            }
+                var name = this.controller.Name;
+                if (this.controllerName != name)
+                {
+                    this.controllerName = name;
+                    this.vm.WriteMessage($"Using {name} as joystick 1.", MessageLevel.Info);
+                }
 
-            if (this.deviceB != null)
-            {
-                this.deviceB.Update();
-                this.xCounterB = this.deviceB.XAxisPosition / CountFactor;
-                this.yCounterB = this.deviceB.YAxisPosition / CountFactor;
+                this.xAxisDischargeTicks = ComputeDischargeTime(((double)state.XAxis + 1) / 2);
+                this.yAxisDischargeTicks = ComputeDischargeTime(((double)state.YAxis + 1) / 2);
+                this.dischargeStart.Restart();
             }
         }
-        /// <summary>
-        /// Writes two bytes to one or two of the device's supported ports.
-        /// </summary>
-        /// <param name="port">Port where first byte will be written.</param>
-        /// <param name="value">Value to write to the ports.</param>
         void IOutputPort.WriteWord(int port, ushort value) => ((IOutputPort)this).WriteByte(port, (byte)value);
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose()
+        Task IVirtualDevice.PauseAsync()
+        {
+            this.dischargeStart.Stop();
+            return Task.CompletedTask;
+        }
+        Task IVirtualDevice.ResumeAsync()
+        {
+            this.dischargeStart.Start();
+            return Task.CompletedTask;
+        }
+        void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
+        {
+            this.vm = vm;
+        }
+
+        void IDisposable.Dispose()
         {
             if (!this.disposed)
             {
                 this.disposed = true;
-                this.deviceA?.Dispose();
-                this.deviceB?.Dispose();
+                this.controller.Dispose();
             }
         }
+
+        /// <summary>
+        /// Returns the amount of time required for <paramref name="value"/> to discharge in <see cref="TimeSpan"/> ticks.
+        /// </summary>
+        /// <param name="value">Value from 0 to 1.</param>
+        /// <returns><see cref="TimeSpan"/> ticks to wait for discharge to complete.</returns>
+        private static long ComputeDischargeTime(double value) => (long)(Math.FusedMultiplyAdd(Factor, value, MinTime) * 10);
     }
 }

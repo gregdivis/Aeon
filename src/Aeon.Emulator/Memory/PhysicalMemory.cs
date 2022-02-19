@@ -141,7 +141,19 @@ namespace Aeon.Emulator
         /// Gets the location and size of base memory in the system.
         /// </summary>
         public ReservedBlock BaseMemory { get; private set; }
-
+        /// <summary>
+        /// Gets the entire emulated RAM as a <see cref="Span{byte}"/>.
+        /// </summary>
+        public Span<byte> Span
+        {
+            get
+            {
+                unsafe
+                {
+                    return new Span<byte>(this.RawView, this.MemorySize);
+                }
+            }
+        }
         /// <summary>
         /// Gets the BIOS mapped regions of memory.
         /// </summary>
@@ -202,6 +214,10 @@ namespace Aeon.Emulator
         /// Gets or sets a value indicating whether paging is enabled.
         /// </summary>
         internal bool PagingEnabled { get; set; }
+        /// <summary>
+        /// Gets or sets the EMS handler.
+        /// </summary>
+        internal ExpandedMemoryManager Ems { get; set; }
 
         /// <summary>
         /// Reserves a block of conventional memory.
@@ -321,13 +337,19 @@ namespace Aeon.Emulator
         public int ReadFromStream(uint segment, uint offset, Stream source, int length)
         {
             uint fullAddress = GetRealModePhysicalAddress(segment, offset);
-            if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
-                return source.Read(this.GetSpan(segment, offset, length));
+#warning optimize this
+            //if (fullAddress is not >= (ExpandedMemoryManager.PageFrameSegment << 4) or not < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
+            //    return source.Read(this.GetSpan(segment, offset, length));
+
+            //if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
+            //    return source.Read(this.GetSpan(segment, offset, length));
 
             var buffer = ArrayPool<byte>.Shared.Rent(length);
             try
             {
                 var span = buffer.AsSpan(0, length);
+                if (span.IsEmpty)
+                    return 0;
                 int bytesRead = source.Read(span);
                 for (int i = 0; i < span.Length; i++)
                     this.SetByte(fullAddress + (uint)i, span[i]);
@@ -614,21 +636,25 @@ namespace Aeon.Emulator
         /// <returns>String read from the specified segment and offset.</returns>
         public string GetString(uint segment, uint offset, int maxLength, byte sentinel)
         {
-            var ptr = GetPointer(segment, offset);
-            unsafe
+            var buffer = ArrayPool<byte>.Shared.Rent(maxLength);
+            try
             {
-                byte* bytePtr = (byte*)ptr.ToPointer();
-                for (int i = 0; i < maxLength; i++)
-                {
-                    if (bytePtr[i] == sentinel)
-                    {
-                        maxLength = i;
-                        break;
-                    }
-                }
-            }
+                uint i;
 
-            return Marshal.PtrToStringAnsi(ptr, maxLength);
+                for (i = 0; i < maxLength; i++)
+                {
+                    byte value = this.GetByte(segment, offset + i);
+                    if (value == sentinel)
+                        break;
+                    buffer[i] = value;
+                }
+
+                return Encoding.Latin1.GetString(buffer.AsSpan(0, (int)i));
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
         /// <summary>
         /// Writes a string to memory as a null-terminated ANSI byte array.
@@ -639,10 +665,20 @@ namespace Aeon.Emulator
         /// <param name="writeNull">Value indicating whether a null should be written after the string.</param>
         public void SetString(uint segment, uint offset, string value, bool writeNull)
         {
-            var span = GetSpan(segment, offset, value.Length + (writeNull ? 1 : 0));
-            Encoding.ASCII.GetBytes(value, span);
-            if (writeNull)
-                span[^1] = 0;
+            var buffer = ArrayPool<byte>.Shared.Rent(value.Length);
+            try
+            {
+                uint length = (uint)Encoding.Latin1.GetBytes(value, buffer);
+                for (uint i = 0; i < length; i++)
+                    this.SetByte(segment, offset + i, buffer[(int)i]);
+
+                if (writeNull)
+                    this.SetByte(segment, offset + length, 0);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
         /// <summary>
         /// Writes a string to memory as a null-terminated ANSI byte array.
@@ -1052,16 +1088,20 @@ namespace Aeon.Emulator
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private T RealModeRead<T>(uint segment, uint offset) where T : unmanaged => PhysicalRead<T>(GetRealModePhysicalAddress(segment, offset));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void RealModeWrite<T>(uint segment, uint offset, T value) where T : unmanaged => this.PhysicalWrite(GetRealModePhysicalAddress(segment, offset), value);
+        private void RealModeWrite<T>(uint segment, uint offset, T value) where T : unmanaged => this.PhysicalWrite(this.GetRealModePhysicalAddress(segment, offset), value);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private T PhysicalRead<T>(uint address, bool mask = true, bool checkVram = true) where T : unmanaged
         {
             uint fullAddress = mask ? (address & this.addressMask) : address;
 
             unsafe
             {
-                if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
+                if (this.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
+                {
+                    return Unsafe.ReadUnaligned<T>(this.RawView + this.Ems.GetMappedAddress(address));
+                }
+                else if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
                 {
                     return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
                 }
@@ -1085,14 +1125,18 @@ namespace Aeon.Emulator
                 }
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
         private void PhysicalWrite<T>(uint address, T value, bool mask = true) where T : unmanaged
         {
             uint fullAddress = mask ? (address & this.addressMask) : address;
 
             unsafe
             {
-                if (fullAddress is < VramAddress or > VramUpperBound)
+                if (this.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
+                {
+                    Unsafe.WriteUnaligned(this.RawView + this.Ems.GetMappedAddress(address), value);
+                }
+                else if (fullAddress is < VramAddress or > VramUpperBound)
                 {
                     Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
                 }
@@ -1200,6 +1244,7 @@ namespace Aeon.Emulator
                 uint* dirPtr = (uint*)(RawView + directoryAddress);
                 if ((dirPtr[dir] & PagePresent) == 0)
                     throw new PageFaultException(linearAddress, operation);
+
 
                 uint pageAddress = dirPtr[dir] & 0xFFFFF000u;
                 uint* pagePtr = (uint*)(RawView + pageAddress);

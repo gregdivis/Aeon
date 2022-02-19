@@ -29,5 +29,12 @@
 
         public const byte MoveExchange = 0x57;
         public const byte MoveExchange_Move = 0x00;
+
+        public const byte VCPI = 0xDE;
+        public const byte VCPI_InstallationCheck = 0x00;
+        public const byte VCPI_GetProtectedModeInterface = 0x01;
+        public const byte VCPI_GetPhysicalPageAddressInFirstMegabyte = 0x06;
+        public const byte VCPI_GetInterruptVectorMappings = 0x0A;
+        public const byte VCPI_SwitchToProtectedMode = 0x0C;
     }
 }

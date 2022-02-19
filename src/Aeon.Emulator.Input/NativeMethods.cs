@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Security;
 
 namespace Aeon.Emulator.Input
 {
-    [SuppressUnmanagedCodeSecurity]
-    internal static class SafeNativeMethods
+    internal static class NativeMethods
     {
         /// <summary>
         /// Interface ID for the DirectInput8 (Unicode) interface.
@@ -17,9 +15,14 @@ namespace Aeon.Emulator.Input
         public static readonly Guid CLSID_DirectInput8 = new(0x25E609E4, 0xB259, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
 
         [DllImport("ole32.dll", CallingConvention = CallingConvention.Winapi)]
-        public static extern uint CoCreateInstance(ref Guid rclsid, IntPtr pUnkOuter, uint dwClsContext, ref Guid riid, out IntPtr ppv);
+        public static extern unsafe uint CoCreateInstance(Guid* rclsid, void* pUnkOuter, uint dwClsContext, Guid* riid, void** ppv);
 
         [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi)]
         public static extern IntPtr GetModuleHandleW(IntPtr moduleName);
+
+        [DllImport("Xinput1_4.dll")]
+        public static extern void XInputEnable([MarshalAs(UnmanagedType.Bool)] bool enable);
+        [DllImport("Xinput1_4.dll")]
+        public static extern unsafe uint XInputGetState(uint dwUserIndex, XINPUT_STATE* pState);
     }
 }

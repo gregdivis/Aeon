@@ -12,6 +12,9 @@
         public const byte ReadCharacterAndAttributeAtCursor = 0x08;
         public const byte WriteCharacterAndAttributeAtCursor = 0x09;
         public const byte WriteCharacterAtCursor = 0x0A;
+        public const byte Video = 0x0B;
+        public const byte Video_SetBackgroundColor = 0x00;
+        public const byte Video_SetPalette = 0x01;
         public const byte TeletypeOutput = 0x0E;
         public const byte GetDisplayMode = 0x0F;
         public const byte EGA = 0x12;

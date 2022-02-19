@@ -10,25 +10,35 @@ namespace Aeon.Emulator.Input
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct DirectInputDevice8V
+    internal unsafe struct DirectInputDevice8V
     {
-        public IntPtr QueryInterface;
-        public IntPtr AddRef;
-        public IntPtr Release;
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, Guid*, void**, uint> QueryInterface;
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, uint> AddRef;
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, uint> Release;
 
         public IntPtr GetCapabilities;
         public IntPtr EnumObjects;
         public IntPtr GetProperty;
         public IntPtr SetProperty;
-        public IntPtr Acquire;
-        public IntPtr Unacquire;
-        public IntPtr GetDeviceState;
+
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, uint> Acquire;
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, uint> Unacquire;
+
+        //internal unsafe delegate uint GetDeviceStateProc(IntPtr pThis, uint cbData, DIJOYSTATE* lpvData);
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, uint, DIJOYSTATE*, uint> GetDeviceState;
+
         public IntPtr GetDeviceData;
-        public IntPtr SetDataFormat;
+
+        //internal delegate uint SetDataFormatProc(IntPtr pThis, IntPtr lpdf);
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, DIDATAFORMAT*, uint> SetDataFormat;
+
         public IntPtr SetEventNotification;
-        public IntPtr SetCooperativeLevel;
+
+        //internal unsafe delegate uint SetCooperativeLevelProc(IntPtr pThis, IntPtr hwnd, uint dwFlags);
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, IntPtr, uint, uint> SetCooperativeLevel;
+
         public IntPtr GetObjectInfo;
-        public IntPtr GetDeviceInfo;
+        public delegate* unmanaged[Stdcall]<DirectInputDevice8Inst*, DIDEVICEINSTANCE*, uint> GetDeviceInfo;
         public IntPtr RunControlPanel;
         public IntPtr Initialize;
         public IntPtr CreateEffect;
@@ -47,14 +57,14 @@ namespace Aeon.Emulator.Input
         public IntPtr GetImageInfo;
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal delegate uint SetDataFormatProc(IntPtr pThis, IntPtr lpdf);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal delegate uint SetDataFormatProc(IntPtr pThis, IntPtr lpdf);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal unsafe delegate uint GetDeviceStateProc(IntPtr pThis, uint cbData, DIJOYSTATE* lpvData);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal unsafe delegate uint GetDeviceStateProc(IntPtr pThis, uint cbData, DIJOYSTATE* lpvData);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal unsafe delegate uint SetCooperativeLevelProc(IntPtr pThis, IntPtr hwnd, uint dwFlags);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal unsafe delegate uint SetCooperativeLevelProc(IntPtr pThis, IntPtr hwnd, uint dwFlags);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct DIJOYSTATE

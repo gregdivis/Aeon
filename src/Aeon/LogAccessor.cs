@@ -14,9 +14,14 @@ namespace Aeon.Emulator.Launcher
     {
         private readonly ReadOnlyMemory<byte> buffer;
 
+        static LogAccessor()
+        {
+            InstructionSet.Initialize();
+        }
+
         public LogAccessor(ReadOnlyMemory<byte> buffer) => this.buffer = buffer;
 
-        public DebugLogItem this[int index] => new DebugLogItem(this.buffer.Slice(index * InstructionLog.EntrySize, InstructionLog.EntrySize));
+        public DebugLogItem this[int index] => new(this.buffer.Slice(index * InstructionLog.EntrySize, InstructionLog.EntrySize));
 
         DebugLogItem IList<DebugLogItem>.this[int index]
         {
@@ -172,6 +177,7 @@ namespace Aeon.Emulator.Launcher
                     sb.Append(f.HasFlag(EFlags.InterruptEnable) ? 'I' : ' ');
                     sb.Append(f.HasFlag(EFlags.Direction) ? 'D' : ' ');
                     sb.Append(f.HasFlag(EFlags.Overflow) ? 'O' : ' ');
+                    sb.Append(f.HasFlag(EFlags.Virtual8086Mode) ? 'V' : ' ');
                     sb.AppendLine();
                 }
             }
@@ -179,7 +185,7 @@ namespace Aeon.Emulator.Launcher
 
         public bool HasError => !InstructionDecoder.TryDecode(this.Opcode, this.data.Span, this.Prefixes).HasValue;
 
-        private ReadOnlySpan<byte> OpcodeSpan => this.data.Span.Slice(InstructionLog.GprSize + InstructionLog.SrSize);
+        private ReadOnlySpan<byte> OpcodeSpan => this.data.Span[(InstructionLog.GprSize + InstructionLog.SrSize)..];
 
         public override string ToString()
         {
@@ -193,7 +199,7 @@ namespace Aeon.Emulator.Launcher
                 prefixes |= sizePrefixes ^ (PrefixState.OperandSize | PrefixState.AddressSize);
             }
 
-            var decoded = InstructionDecoder.TryDecode(opcode, this.OpcodeSpan.Slice(opcode.Length), prefixes);
+            var decoded = InstructionDecoder.TryDecode(opcode, this.OpcodeSpan[opcode.Length..], prefixes);
             var sb = new StringBuilder(100);
             sb.Append(this.CS.ToString("X4"));
             sb.Append(':');

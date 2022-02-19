@@ -1,5 +1,4 @@
-﻿using Aeon.Emulator.RuntimeExceptions;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Instructions.Stack
 {
@@ -30,7 +29,7 @@ namespace Aeon.Emulator.Instructions.Stack
             if (((EFlags)flags & EFlags.Trap) != 0 && (p.Flags.Value & EFlags.Trap) == 0)
                 throwTrap = true;
 
-            p.Flags.Value = (EFlags)flags;
+            p.Flags.SetWithMask((EFlags)flags, ModifiableFlags16);
 
             p.InstructionEpilog();
 
@@ -49,7 +48,7 @@ namespace Aeon.Emulator.Instructions.Stack
             if (((EFlags)flags & EFlags.Trap) != 0 && (p.Flags.Value & EFlags.Trap) == 0)
                 throwTrap = true;
 
-            p.Flags.Value = (EFlags)flags;
+            p.Flags.SetWithMask((EFlags)flags, ModifiableFlags32);
 
             p.InstructionEpilog();
 

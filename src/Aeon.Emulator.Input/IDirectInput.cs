@@ -10,30 +10,39 @@ namespace Aeon.Emulator.Input
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct DirectInput8V
+    internal unsafe struct DirectInput8V
     {
-        public IntPtr QueryInterface;
-        public IntPtr AddRef;
-        public IntPtr Release;
+        public delegate* unmanaged[Stdcall]<DirectInput8Inst*, Guid*, void**, uint> QueryInterface;
+        public delegate* unmanaged[Stdcall]<DirectInput8Inst*, uint> AddRef;
+        public delegate* unmanaged[Stdcall]<DirectInput8Inst*, uint> Release;
 
-        public IntPtr CreateDevice;
-        public IntPtr EnumDevices;
+        //internal unsafe delegate uint CreateDeviceProc(IntPtr pThis, Guid* rguid, DirectInputDevice8Inst** lplpDirectInputDevice, IntPtr pUnkOuter);
+        public delegate* unmanaged[Stdcall]<DirectInput8Inst*, Guid*, DirectInputDevice8Inst**, void*, uint> CreateDevice;
+
+        //internal delegate uint EnumDevicesProc(IntPtr pThis, uint dwDevType, [MarshalAs(UnmanagedType.FunctionPtr)] EnumDevicesCallback lpCallback, IntPtr pvRef, uint dwFlags);
+        public delegate* unmanaged[Stdcall]<DirectInput8Inst*, uint, delegate* unmanaged[Stdcall]<DIDEVICEINSTANCE*, IntPtr, uint>, IntPtr, uint, uint> EnumDevices;
+
+        //public IntPtr CreateDevice;
+        //public IntPtr EnumDevices;
         public IntPtr GetDeviceStatus;
         public IntPtr RunControlPanel;
-        public IntPtr Initialize;
+        //public IntPtr Initialize;
+
+        //internal delegate uint InitializeInputProc(IntPtr pThis, IntPtr hinst, uint dwVersion);
+        public delegate* unmanaged[Stdcall]<DirectInput8Inst*, IntPtr, uint, uint> Initialize;
     }
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     internal delegate uint NoParamProc(IntPtr pThis);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal delegate uint InitializeInputProc(IntPtr pThis, IntPtr hinst, uint dwVersion);
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal delegate uint EnumDevicesProc(IntPtr pThis, uint dwDevType, [MarshalAs(UnmanagedType.FunctionPtr)] EnumDevicesCallback lpCallback, IntPtr pvRef, uint dwFlags);
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal unsafe delegate uint EnumDevicesCallback(IntPtr lpddi, IntPtr pvRef);
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    internal unsafe delegate uint CreateDeviceProc(IntPtr pThis, Guid* rguid, DirectInputDevice8Inst** lplpDirectInputDevice, IntPtr pUnkOuter);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal delegate uint InitializeInputProc(IntPtr pThis, IntPtr hinst, uint dwVersion);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal delegate uint EnumDevicesProc(IntPtr pThis, uint dwDevType, [MarshalAs(UnmanagedType.FunctionPtr)] EnumDevicesCallback lpCallback, IntPtr pvRef, uint dwFlags);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal unsafe delegate uint EnumDevicesCallback(IntPtr lpddi, IntPtr pvRef);
+    //[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    //internal unsafe delegate uint CreateDeviceProc(IntPtr pThis, Guid* rguid, DirectInputDevice8Inst** lplpDirectInputDevice, IntPtr pUnkOuter);
 
     public enum DeviceClass
     {

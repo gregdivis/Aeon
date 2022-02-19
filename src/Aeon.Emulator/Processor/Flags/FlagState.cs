@@ -50,6 +50,7 @@ namespace Aeon.Emulator
         public int IOPrivilege { get; set; }
         public bool NestedTask { get; set; }
         public bool Identification { get; set; } = true;
+        public bool Virtual8086Mode { get; set; }
 
         public EFlags Value
         {
@@ -83,6 +84,8 @@ namespace Aeon.Emulator
                     flags |= EFlags.IOPrivilege1;
                 if ((this.IOPrivilege & 2) != 0)
                     flags |= EFlags.IOPrivilege2;
+                if (this.Virtual8086Mode)
+                    flags |= EFlags.Virtual8086Mode;
                 return flags;
             }
             [MethodImpl(MethodImplOptions.AggressiveOptimization)]
@@ -99,7 +102,71 @@ namespace Aeon.Emulator
                 this.Overflow = value.HasFlag(EFlags.Overflow);
                 this.NestedTask = value.HasFlag(EFlags.NestedTask);
                 this.Identification = value.HasFlag(EFlags.Identification);
+
+                this.Virtual8086Mode = value.HasFlag(EFlags.Virtual8086Mode);
+
+
+
+                this.IOPrivilege = value.HasFlag(EFlags.IOPrivilege1) && value.HasFlag(EFlags.IOPrivilege2) ? 3
+                    : value.HasFlag(EFlags.IOPrivilege2) && !value.HasFlag(EFlags.IOPrivilege1) ? 2
+                    : value.HasFlag(EFlags.IOPrivilege1) && !value.HasFlag(EFlags.IOPrivilege2) ? 1
+                    : 0;
             }
+        }
+
+        public void Clear(EFlags mask)
+        {
+            if (mask.HasFlag(EFlags.Carry))
+                this.Carry = false;
+            if (mask.HasFlag(EFlags.Parity))
+                this.Parity = false;
+            if (mask.HasFlag(EFlags.Sign))
+                this.Sign = false;
+            if (mask.HasFlag(EFlags.Trap))
+                this.Trap = false;
+            if (mask.HasFlag(EFlags.Virtual8086Mode))
+                this.Virtual8086Mode = false;
+            if (mask.HasFlag(EFlags.Zero))
+                this.Zero = false;
+            if (mask.HasFlag(EFlags.Direction))
+                this.Direction = false;
+            if (mask.HasFlag(EFlags.Identification))
+                this.Identification = false;
+            if (mask.HasFlag(EFlags.InterruptEnable))
+                this.InterruptEnable = false;
+            if (mask.HasFlag(EFlags.IOPrivilege1) && mask.HasFlag(EFlags.IOPrivilege2))
+                this.IOPrivilege = 0;
+            if (mask.HasFlag(EFlags.NestedTask))
+                this.NestedTask = false;
+            if (mask.HasFlag(EFlags.Overflow))
+                this.Overflow = false;
+        }
+        public void SetWithMask(EFlags value, EFlags mask)
+        {
+            if (mask.HasFlag(EFlags.Carry))
+                this.Carry = value.HasFlag(EFlags.Carry);
+            if (mask.HasFlag(EFlags.Parity))
+                this.Parity = value.HasFlag(EFlags.Parity);
+            if (mask.HasFlag(EFlags.Sign))
+                this.Sign = value.HasFlag(EFlags.Sign);
+            if (mask.HasFlag(EFlags.Trap))
+                this.Trap = value.HasFlag(EFlags.Trap);
+            if (mask.HasFlag(EFlags.Virtual8086Mode))
+                this.Virtual8086Mode = value.HasFlag(EFlags.Virtual8086Mode);
+            if (mask.HasFlag(EFlags.Zero))
+                this.Zero = value.HasFlag(EFlags.Zero);
+            if (mask.HasFlag(EFlags.Direction))
+                this.Direction = value.HasFlag(EFlags.Direction);
+            if (mask.HasFlag(EFlags.Identification))
+                this.Identification = value.HasFlag(EFlags.Identification);
+            if (mask.HasFlag(EFlags.InterruptEnable))
+                this.InterruptEnable = value.HasFlag(EFlags.InterruptEnable);
+            if (mask.HasFlag(EFlags.NestedTask))
+                this.NestedTask = value.HasFlag(EFlags.NestedTask);
+            if (mask.HasFlag(EFlags.Overflow))
+                this.Overflow = value.HasFlag(EFlags.Overflow);
+
+            this.IOPrivilege = (int)Intrinsics.ExtractBits((uint)value, 12, 2, (uint)(EFlags.IOPrivilege1 | EFlags.IOPrivilege2));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

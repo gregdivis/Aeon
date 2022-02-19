@@ -37,7 +37,7 @@ namespace Aeon.Emulator.Instructions
         public static void AbsoluteFarJump(VirtualMachine vm, uint address)
         {
             ushort segment = (ushort)(address >> 16);
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
+            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) | vm.Processor.Flags.Virtual8086Mode)
             {
                 vm.WriteSegmentRegister(SegmentIndex.CS, segment);
                 vm.Processor.EIP = (ushort)address;
@@ -52,7 +52,7 @@ namespace Aeon.Emulator.Instructions
         public static void AbsoluteFarJump32(VirtualMachine vm, ulong address)
         {
             var segment = (ushort)(address >> 32);
-            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
+            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) | vm.Processor.Flags.Virtual8086Mode)
             {
                 vm.WriteSegmentRegister(SegmentIndex.CS, segment);
                 vm.Processor.EIP = (uint)address;

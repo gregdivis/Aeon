@@ -11,7 +11,7 @@ namespace Aeon.Emulator.Instructions
         {
             if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                uint cpl = vm.Processor.CS & 3u;
+                uint cpl = vm.Processor.CPL;
                 if (cpl != 0)
                 {
                     vm.RaiseException(new GeneralProtectionFaultException(0));
