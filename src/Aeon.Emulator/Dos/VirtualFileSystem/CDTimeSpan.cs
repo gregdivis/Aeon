@@ -68,7 +68,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         public static CDTimeSpan Parse(ReadOnlySpan<char> text)
         {
             if (text.Length != 8 || text[2] != ':' || text[5] != ':')
-                throw new FormatException($"Invalid position/length: {text}");
+                throw new FormatException($"Invalid position/length: {text.ToString()}");
 
             int minutes = int.Parse(text[..2]);
             int seconds = int.Parse(text.Slice(3, 2));
