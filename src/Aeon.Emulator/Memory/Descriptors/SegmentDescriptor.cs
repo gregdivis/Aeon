@@ -37,15 +37,7 @@ namespace Aeon.Emulator
         private byte attributes2;
         private byte base3;
 
-        public SegmentDescriptor()
-        {
-            this.limit1 = 0;
-            this.base1 = 0;
-            this.base2 = 0;
-            this.attributes1 = 0b0001_0000;
-            this.attributes2 = 0;
-            this.base3 = 0;
-        }
+        private bool setAttribute1InitialValue;
 
         /// <summary>
         /// Casts a segment descriptor to a descriptor.
@@ -99,7 +91,21 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets attribute byte 1 of the descriptor.
         /// </summary>
-        public byte Attributes1 => attributes1;
+        public byte Attributes1
+        {
+            get
+            {
+                if (!setAttribute1InitialValue)
+                {
+                    attributes1 = 0b0001_0000;
+                    setAttribute1InitialValue = true;
+                }
+                return attributes1;
+            }
+
+            private set => attributes1 = value;
+        }
+
         /// <summary>
         /// Gets attribute byte 2 of the descriptor.
         /// </summary>
@@ -107,7 +113,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets the privilege level of the descriptor.
         /// </summary>
-        public uint PrivilegeLevel => (uint)(this.attributes1 >> 5) & 0x3u;
+        public uint PrivilegeLevel => (uint)(this.Attributes1 >> 5) & 0x3u;
         /// <summary>
         /// Gets the limit of the descriptor in bytes.
         /// </summary>
@@ -130,9 +136,9 @@ namespace Aeon.Emulator
             set
             {
                 if (value)
-                    this.attributes1 |= (byte)CodeData;
+                    this.Attributes1 |= (byte)CodeData;
                 else
-                    this.attributes1 &= unchecked((byte)~CodeData);
+                    this.Attributes1 &= unchecked((byte)~CodeData);
             }
         }
 
@@ -153,9 +159,9 @@ namespace Aeon.Emulator
                 if (this.IsCodeSegment)
                 {
                     if (value)
-                        this.attributes1 |= (byte)ReadWrite;
+                        this.Attributes1 |= (byte)ReadWrite;
                     else
-                        this.attributes1 &= unchecked((byte)~ReadWrite);
+                        this.Attributes1 &= unchecked((byte)~ReadWrite);
                 }
             }
         }
@@ -177,13 +183,13 @@ namespace Aeon.Emulator
         /// </summary>
         public bool IsPresent
         {
-            get => (this.attributes1 & Present) != 0;
+            get => (this.Attributes1 & Present) != 0;
             set
             {
                 if (value)
-                    this.attributes1 |= (byte)Present;
+                    this.Attributes1 |= (byte)Present;
                 else
-                    this.attributes1 &= unchecked((byte)~Present);
+                    this.Attributes1 &= unchecked((byte)~Present);
             }
         }
         /// <summary>
