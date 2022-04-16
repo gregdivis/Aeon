@@ -72,7 +72,7 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="obj">Other object to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override bool Equals(object obj) => obj is OpcodeInfo other ? this.Equals(other) : false;
+        public override bool Equals(object obj) => obj is OpcodeInfo other && this.Equals(other);
         /// <summary>
         /// Gets a hash code for the OpcodeInfo instance.
         /// </summary>

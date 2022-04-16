@@ -9,8 +9,8 @@ namespace Aeon.Emulator.DebugSupport
         /// </summary>
         public const PrefixState SegmentOverrideMask = PrefixState.CS | PrefixState.DS | PrefixState.ES | PrefixState.FS | PrefixState.GS | PrefixState.SS;
 
-        private static readonly SortedList<CodeMemoryBase, string> effectiveAddresses = new SortedList<CodeMemoryBase, string>();
-        private static readonly SortedList<CodeSibRegister, string> sibRegisters = new SortedList<CodeSibRegister, string>();
+        private static readonly SortedList<CodeMemoryBase, string> effectiveAddresses = new();
+        private static readonly SortedList<CodeSibRegister, string> sibRegisters = new();
 
         static AddressFormatter()
         {
@@ -107,46 +107,26 @@ namespace Aeon.Emulator.DebugSupport
         }
         private static string GetSizePrefix(CodeOperandSize size)
         {
-            switch (size)
+            return size switch
             {
-                case CodeOperandSize.Byte:
-                    return "byte ptr";
-
-                case CodeOperandSize.Word:
-                    return "word ptr";
-
-                case CodeOperandSize.DoubleWord:
-                    return "dword ptr";
-
-                default:
-                    return string.Empty;
-            }
+                CodeOperandSize.Byte => "byte ptr",
+                CodeOperandSize.Word => "word ptr",
+                CodeOperandSize.DoubleWord => "dword ptr",
+                _ => string.Empty
+            };
         }
         private static string FormatSegment(PrefixState prefixes)
         {
-            switch (prefixes & SegmentOverrideMask)
+            return (prefixes & SegmentOverrideMask) switch
             {
-                case PrefixState.CS:
-                    return "cs:";
-
-                case PrefixState.DS:
-                    return "ds:";
-
-                case PrefixState.ES:
-                    return "es:";
-
-                case PrefixState.FS:
-                    return "fs:";
-
-                case PrefixState.GS:
-                    return "gs:";
-
-                case PrefixState.SS:
-                    return "ss:";
-
-                default:
-                    return string.Empty;
-            }
+                PrefixState.CS => "cs:",
+                PrefixState.DS => "ds:",
+                PrefixState.ES => "es:",
+                PrefixState.FS => "fs:",
+                PrefixState.GS => "gs:",
+                PrefixState.SS => "ss:",
+                _ => string.Empty
+            };
         }
     }
 }

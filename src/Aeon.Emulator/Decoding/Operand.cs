@@ -78,7 +78,7 @@ namespace Aeon.Emulator
 
         public static bool operator ==(CodeOperand opA, CodeOperand opB) => opA.Type == opB.Type && opA.ImmediateValue == opB.ImmediateValue && opA.RegisterValue == opB.RegisterValue;
         public static bool operator !=(CodeOperand opA, CodeOperand opB) => opA.Type != opB.Type || opA.ImmediateValue != opB.ImmediateValue || opA.RegisterValue != opB.RegisterValue;
-        public static implicit operator CodeOperand(CodeRegister register) => new CodeOperand(register);
+        public static implicit operator CodeOperand(CodeRegister register) => new(register);
 
         /// <summary>
         /// Gets or sets the type of the operand.
@@ -159,7 +159,7 @@ namespace Aeon.Emulator
         /// <param name="segment">The pointer segment.</param>
         /// <param name="offset">The pointer offset.</param>
         /// <returns><see cref="CodeOperand"/> containing the far pointer address.</returns>
-        public static CodeOperand FarPointer(ushort segment, uint offset) => new CodeOperand { type = CodeOperandType.FarMemoryAddress, value = offset, farSegment = segment };
+        public static CodeOperand FarPointer(ushort segment, uint offset) => new() { type = CodeOperandType.FarMemoryAddress, value = offset, farSegment = segment };
 
         /// <summary>
         /// Gets a string representation of the operand.
@@ -200,7 +200,7 @@ namespace Aeon.Emulator
                     return string.Empty;
             }
         }
-        public override bool Equals(object obj) => obj is CodeOperand other ? (this == other) : false;
+        public override bool Equals(object obj) => obj is CodeOperand other && (this == other);
         public override int GetHashCode() => ((byte)type | (byte)register << 8) ^ value.GetHashCode();
     }
 
@@ -292,7 +292,7 @@ namespace Aeon.Emulator
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(index));
             }
         }
 
