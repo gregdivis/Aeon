@@ -74,5 +74,60 @@ namespace Aeon.Emulator.Launcher
                 i++;
             }
         }
+
+        private void NextV86_Click(object sender, RoutedEventArgs e)
+        {
+            var log = (LogAccessor)this.historyList.ItemsSource;
+            int i = 0;
+            int selectedIndex = this.historyList.SelectedIndex;
+
+            bool current = false;
+
+            if (this.historyList.SelectedItem is DebugLogItem currentItem)
+                current = currentItem.Flags.HasFlag(EFlags.Virtual8086Mode);
+
+            foreach (var item in log)
+            {
+                if (i > selectedIndex && item.Flags.HasFlag(EFlags.Virtual8086Mode) != current)
+                {
+                    this.historyList.SelectedIndex = i;
+                    this.historyList.ScrollIntoView(item);
+                    return;
+                }
+
+                i++;
+            }
+        }
+
+        private void LastV86_Click(object sender, RoutedEventArgs e)
+        {
+            var log = (LogAccessor)this.historyList.ItemsSource;
+            int i = 0;
+            int selectedIndex = this.historyList.SelectedIndex;
+
+            bool current = false;
+
+            if (this.historyList.SelectedItem is DebugLogItem currentItem)
+                current = currentItem.Flags.HasFlag(EFlags.Virtual8086Mode);
+
+            int foundIndex = 0;
+
+            foreach (var item in log)
+            {
+                if (i >= selectedIndex)
+                    break;
+
+                if (item.Flags.HasFlag(EFlags.Virtual8086Mode) != current)
+                    foundIndex = i;
+
+                i++;
+            }
+
+            if (foundIndex >= 0)
+            {
+                this.historyList.SelectedIndex = foundIndex;
+                this.historyList.ScrollIntoView(this.historyList.SelectedItem);
+            }
+        }
     }
 }

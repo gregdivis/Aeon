@@ -322,7 +322,7 @@ namespace Aeon.Emulator
             else
                 return operand1.ToString(ip, prefixes) + ", " + operand2.ToString(ip, prefixes) + ", " + operand3.ToString(ip, prefixes);
         }
-        public override bool Equals(object obj) => obj is DecodedOperands other ? this == other : false;
+        public override bool Equals(object obj) => obj is DecodedOperands other && this == other;
         public override int GetHashCode() => operand1.GetHashCode() ^ operand2.GetHashCode() ^ operand3.GetHashCode();
     }
 

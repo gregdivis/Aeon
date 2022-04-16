@@ -48,22 +48,32 @@ namespace Aeon.Emulator.DebugSupport
         /// <returns>String representation of the memory address.</returns>
         public static string Format(CodeOperand memoryOperand, PrefixState prefixes)
         {
-            string prefix = GetSizePrefix(memoryOperand.OperandSize);
+            var prefix = GetSizePrefix(memoryOperand.OperandSize);
 
             if (memoryOperand.EffectiveAddress == CodeMemoryBase.SIB)
                 return prefix + FormatSib(memoryOperand);
 
-            string register;
-            effectiveAddresses.TryGetValue(memoryOperand.EffectiveAddress, out register);
+            effectiveAddresses.TryGetValue(memoryOperand.EffectiveAddress, out var register);
 
-            string segmentOverride = FormatSegment(prefixes);
+            var segmentOverride = FormatSegment(prefixes);
 
             if (register == null)
-                return $"{prefix} {segmentOverride}[{memoryOperand.ImmediateValue:X4}]";
+            {
+                return $"{prefix} {segmentOverride}[{(int)memoryOperand.ImmediateValue:X}]";
+            }
             else if (memoryOperand.ImmediateValue == 0)
+            {
                 return $"{prefix} {segmentOverride}[{register}]";
+            }
             else
-                return $"{prefix} {segmentOverride}[{register}+{memoryOperand.ImmediateValue:X4}]";
+            {
+                int value = (int)memoryOperand.ImmediateValue;
+                char sign = value < 0 ? '-' : '+';
+                if (value < 0)
+                    value = -value;
+
+                return $"{prefix} {segmentOverride}[{register}{sign}{value:X}]";
+            }
         }
 
         private static string FormatSib(CodeOperand sibOperand)

@@ -105,7 +105,7 @@ namespace Aeon.Emulator.Decoding
                 }
             }
         }
-        internal int PackedCode { get; private set; }
+        public int PackedCode { get; private set; }
 
         /// <summary>
         /// Returns a string representation of the operands.

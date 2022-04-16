@@ -14,6 +14,9 @@
                 <Button Content="Next" Click="NextAddress_Click" />
                 <Button Content="Prev" />
                 <Separator />
+                <Button Content="Next V86 Change" Click="NextV86_Click" />
+                <Button Content="Last V86 Change" Click="LastV86_Click" />
+                <Separator />
                 <Button Content="Find Next Error" Click="FindNextError_Click" />
             </ToolBar>
         </ToolBarTray>

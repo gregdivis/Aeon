@@ -33,7 +33,7 @@ namespace Aeon.Emulator.DebugSupport
                 gpr[5] = processor.ESP;
                 gpr[6] = processor.ESI;
                 gpr[7] = processor.EDI;
-                gpr[8] = processor.EIP - (uint)processor.PrefixCount;
+                gpr[8] = processor.StartEIP - (uint)processor.PrefixCount;
                 gpr[9] = (uint)processor.Flags.Value;
                 gpr[10] = (uint)GetPrefixState(processor);
                 gpr[11] = (uint)processor.CR0;

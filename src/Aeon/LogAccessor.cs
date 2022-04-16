@@ -192,12 +192,13 @@ namespace Aeon.Emulator.Launcher
             var opcode = this.Opcode;
 
             var prefixes = this.Prefixes;
-            if (this.CR0.HasFlag(CR0.ProtectedModeEnable))
-            {
-                var sizePrefixes = prefixes & (PrefixState.OperandSize | PrefixState.AddressSize);
-                prefixes &= ~(PrefixState.OperandSize | PrefixState.AddressSize);
-                prefixes |= sizePrefixes ^ (PrefixState.OperandSize | PrefixState.AddressSize);
-            }
+#warning fix this
+            //if (this.CR0.HasFlag(CR0.ProtectedModeEnable))
+            //{
+            //    var sizePrefixes = prefixes & (PrefixState.OperandSize | PrefixState.AddressSize);
+            //    prefixes &= ~(PrefixState.OperandSize | PrefixState.AddressSize);
+            //    prefixes |= sizePrefixes ^ (PrefixState.OperandSize | PrefixState.AddressSize);
+            //}
 
             var decoded = InstructionDecoder.TryDecode(opcode, this.OpcodeSpan[opcode.Length..], prefixes);
             var sb = new StringBuilder(100);

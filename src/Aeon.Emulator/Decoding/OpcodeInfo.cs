@@ -20,7 +20,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets performance statistics for the opcode.
         /// </summary>
-        public readonly OpcodeInstrumentation Statistics = new OpcodeInstrumentation();
+        public readonly OpcodeInstrumentation Statistics = new();
 
         internal readonly DecodeAndEmulate[] Emulators;
 

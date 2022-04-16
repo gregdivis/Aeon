@@ -43,7 +43,7 @@ namespace Aeon.Emulator.Instructions.Stack
         public static void PushFlags32(VirtualMachine vm)
         {
             var p = vm.Processor;
-            vm.PushToStack32((uint)p.Flags.Value);
+            vm.PushToStack32((uint)(p.Flags.Value & ~EFlags.Virtual8086Mode));
             p.InstructionEpilog();
         }
 

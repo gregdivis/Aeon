@@ -53,13 +53,16 @@ namespace Aeon.Emulator.Dos
 
         public void LoadImage(ProgramImage image, ushort environmentSegment = 0, string commandLineArgs = null, string stdOut = null)
         {
-            memoryAllocator.LoadImage(image, environmentSegment, commandLineArgs);
-            UpdateSDA();
+            this.memoryAllocator.LoadImage(image, environmentSegment, commandLineArgs);
+            this.UpdateSDA();
 
             if (!string.IsNullOrEmpty(stdOut))
                 this.fileControl.SetStdOut(stdOut);
 
-            vm.OnCurrentProcessChanged(EventArgs.Empty);
+            this.vm.Processor.Flags.Clear(EFlags.Carry | EFlags.Auxiliary | EFlags.Parity | EFlags.Auxiliary | EFlags.Zero | EFlags.Sign | EFlags.Overflow);
+            this.vm.Processor.Flags.InterruptEnable = true;
+
+            this.vm.OnCurrentProcessChanged(EventArgs.Empty);
         }
         /// <summary>
         /// Ends the current process.
@@ -731,7 +734,9 @@ namespace Aeon.Emulator.Dos
             var program = ProgramImage.Load(fileName, this.vm);
 
             if (vm.Processor.ES == 0)
-                LoadImage(program);
+            {
+                this.LoadImage(program);
+            }
             else
             {
                 ushort envSegment = vm.PhysicalMemory.GetUInt16(vm.Processor.ES, (ushort)vm.Processor.BX);
@@ -746,7 +751,7 @@ namespace Aeon.Emulator.Dos
                         cmdLineArgs = vm.PhysicalMemory.GetString(cmdLineSegment, cmdLineOffset + 1u, count);
                 }
 
-                LoadImage(program, envSegment, cmdLineArgs);
+                this.LoadImage(program, envSegment, cmdLineArgs);
             }
         }
         private void LoadOverlay()
