@@ -1,0 +1,10 @@
+﻿{
+  "startup-path": "C:\\",
+  "launch": "FALL.EXE z.cfg",
+  "drives": {
+    "c": {
+      "type": "fixed",
+      "host-path": "D:\\DOS\\32\\DAGGER"
+    }
+  }
+}

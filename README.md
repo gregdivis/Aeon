@@ -23,9 +23,9 @@ It's also possible to quick launch a command prompt in a directory if you'd like
 before launching the program. Aeon's DOS command interpreter is very limited, but can perform basic tasks.
 Batch files are not currently supported.
 
-You can set up the emulated environment with more detail by creating a yaml configuration file with
+You can set up the emulated environment with more detail by creating a json configuration file with
 a `.AeonConfig` extension and launching it with the quick launch program button. This format isn't
-documented yet; samples are forthcoming if anyone is interested.
+documented yet, but you can find a few basic samples [in the repo](https://github.com/gregdivis/Aeon/tree/master/examples).
 
 # Building
 You can build Aeon using Visual Studio 2022. It has a couple NuGet dependencies that should be fetched

@@ -1,0 +1,14 @@
+{
+  "startup-path": "C:\\LORDS2",
+  "launch": "L2D.EXE",
+  "drives": {
+    "c": {
+      "type": "Fixed",
+      "host-path": "D:\\DOS\\32"
+    },
+    "d": {
+      "type": "CDROM",
+      "image-path": "D:\\DOS\\Lords of the Realm II.iso"
+    }
+  }
+}

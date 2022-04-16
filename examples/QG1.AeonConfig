@@ -1,0 +1,11 @@
+﻿{
+  "startup-path": "C:\\",
+  "launch": "SCIDHUV.EXE",
+  "title": "Quest for Glory I",
+  "drives": {
+    "c": {
+      "type": "Fixed",
+      "host-path": "D:\\DOS\\QG1NEW"
+    }
+  }
+}
