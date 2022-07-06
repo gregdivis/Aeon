@@ -48,7 +48,7 @@ namespace Aeon.Emulator.Instructions
             if (address == 0)
                 ThrowHelper.ThrowNullCallException();
 
-            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) | vm.Processor.Flags.Virtual8086Mode)
+            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 // Real mode call.
                 vm.PushToStack(vm.Processor.CS, vm.Processor.IP);
@@ -68,7 +68,7 @@ namespace Aeon.Emulator.Instructions
             if (address == 0)
                 ThrowHelper.ThrowNullCallException();
 
-            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) | vm.Processor.Flags.Virtual8086Mode)
+            if (!vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 // Real mode call.
                 vm.PushToStack32(vm.Processor.CS);
@@ -108,7 +108,7 @@ namespace Aeon.Emulator.Instructions
             {
                 var callGate = (CallGateDescriptor)descriptor;
 
-                uint cpl = vm.Processor.CPL;
+                uint cpl = vm.Processor.CS & 3u;
                 uint dpl = callGate.Selector & 3u;
 
                 if (callGate.DWordCount != 0)
@@ -204,9 +204,9 @@ namespace Aeon.Emulator.Instructions
             uint eip = dest & 0xFFFFu;
             ushort cs = (ushort)(dest >> 16);
 
-            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) & !vm.Processor.Flags.Virtual8086Mode)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                uint cpl = vm.Processor.CPL;
+                uint cpl = vm.Processor.CS & 3u;
                 uint rpl = cs & 3u;
                 if (cpl != rpl)
                     System.Diagnostics.Debugger.Break();
@@ -224,9 +224,9 @@ namespace Aeon.Emulator.Instructions
             uint eip = Intrinsics.LowDWord(dest);
             ushort cs = (ushort)Intrinsics.HighDWord(dest);
 
-            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) & !vm.Processor.Flags.Virtual8086Mode)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
-                uint cpl = vm.Processor.CPL;
+                uint cpl = vm.Processor.CS & 3u;
                 uint rpl = cs & 3u;
                 if (cpl != rpl)
                     System.Diagnostics.Debugger.Break();

@@ -214,10 +214,6 @@ namespace Aeon.Emulator
         /// Gets or sets a value indicating whether paging is enabled.
         /// </summary>
         internal bool PagingEnabled { get; set; }
-        /// <summary>
-        /// Gets or sets the EMS handler.
-        /// </summary>
-        internal ExpandedMemoryManager Ems { get; set; }
 
         /// <summary>
         /// Reserves a block of conventional memory.
@@ -1097,11 +1093,7 @@ namespace Aeon.Emulator
 
             unsafe
             {
-                if (this.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
-                {
-                    return Unsafe.ReadUnaligned<T>(this.RawView + this.Ems.GetMappedAddress(address));
-                }
-                else if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
+                if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
                 {
                     return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
                 }
@@ -1132,11 +1124,7 @@ namespace Aeon.Emulator
 
             unsafe
             {
-                if (this.Ems != null && fullAddress is >= (ExpandedMemoryManager.PageFrameSegment << 4) and < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
-                {
-                    Unsafe.WriteUnaligned(this.RawView + this.Ems.GetMappedAddress(address), value);
-                }
-                else if (fullAddress is < VramAddress or > VramUpperBound)
+                if (fullAddress is < VramAddress or > VramUpperBound)
                 {
                     Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
                 }

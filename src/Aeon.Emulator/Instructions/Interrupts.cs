@@ -14,11 +14,11 @@ namespace Aeon.Emulator.Instructions
         public static void RaiseInterrupt(VirtualMachine vm, byte interrupt)
         {
 #if DEBUG
-            if (((vm.Processor.CR0 & CR0.ProtectedModeEnable) == 0 || vm.Processor.Flags.Virtual8086Mode) && interrupt != 0x1c && vm.PhysicalMemory.GetRealModeInterruptAddress(interrupt) == PhysicalMemory.NullInterruptHandler)
-                System.Diagnostics.Debug.WriteLine($"Unhandled interrupt {interrupt:X2}h");
+            if ((vm.Processor.CR0 & CR0.ProtectedModeEnable) == 0 && interrupt != 0x1c && vm.PhysicalMemory.GetRealModeInterruptAddress(interrupt) == PhysicalMemory.NullInterruptHandler)
+                System.Diagnostics.Debug.WriteLine(string.Format("Unhandled interrupt {0:X2}h", interrupt));
 #endif
 
-            vm.RaiseInterrupt(interrupt, true);
+            vm.RaiseInterrupt(interrupt);
         }
         [Opcode("CE", Name = "into")]
         public static void RaiseInterrupt4(VirtualMachine vm)
@@ -32,9 +32,9 @@ namespace Aeon.Emulator.Instructions
         {
             ushort cs;
             uint eip;
-            var flags = (EFlags)((uint)vm.Processor.Flags.Value & 0xFFFF0000u);
+            uint flags = (uint)vm.Processor.Flags.Value & 0xFFFF0000u;
 
-            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) & !vm.Processor.Flags.Virtual8086Mode)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 if (vm.Processor.Flags.NestedTask)
                 {
@@ -45,9 +45,9 @@ namespace Aeon.Emulator.Instructions
 
                 eip = vm.PopFromStack();
                 cs = vm.PopFromStack();
-                flags |= (EFlags)vm.PopFromStack();
+                flags |= vm.PopFromStack();
 
-                uint cpl = vm.Processor.CPL;
+                uint cpl = vm.Processor.CS & 3u;
                 uint rpl = cs & 3u;
 
                 if (cpl != rpl)
@@ -65,16 +65,15 @@ namespace Aeon.Emulator.Instructions
             {
                 eip = vm.PopFromStack();
                 cs = vm.PopFromStack();
-                flags |= (EFlags)vm.PopFromStack();
+                flags |= vm.PopFromStack();
             }
 
             bool throwTrap = false;
 
-            if (flags.HasFlag(EFlags.Trap) && !vm.Processor.Flags.Trap)
+            if (((EFlags)flags).HasFlag(EFlags.Trap) && !vm.Processor.Flags.Trap)
                 throwTrap = true;
 
-            vm.Processor.Flags.SetWithMask(flags, ~(EFlags.Trap | EFlags.Reserved1 | EFlags.Virtual8086Mode));
-            
+            vm.Processor.Flags.Value = (EFlags)flags | EFlags.Reserved1;
             vm.WriteSegmentRegister(SegmentIndex.CS, cs);
             vm.Processor.EIP = eip;
 
@@ -88,9 +87,9 @@ namespace Aeon.Emulator.Instructions
         {
             ushort cs;
             uint eip;
-            EFlags flags;
+            uint flags;
 
-            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) & !vm.Processor.Flags.Virtual8086Mode)
+            if (vm.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
             {
                 if (vm.Processor.Flags.NestedTask)
                 {
@@ -101,35 +100,9 @@ namespace Aeon.Emulator.Instructions
 
                 eip = vm.PopFromStack32();
                 cs = (ushort)vm.PopFromStack32();
-                flags = (EFlags)vm.PopFromStack32();
+                flags = vm.PopFromStack32();
 
-                if (flags.HasFlag(EFlags.Virtual8086Mode))
-                {
-                    vm.Processor.EIP = eip & 0xffff;
-                    uint n_esp = vm.PopFromStack32();
-                    ushort n_ss = (ushort)vm.PopFromStack32();
-                    ushort n_es = (ushort)vm.PopFromStack32();
-                    ushort n_ds = (ushort)vm.PopFromStack32();
-                    ushort n_fs = (ushort)vm.PopFromStack32();
-                    ushort n_gs = (ushort)vm.PopFromStack32();
-
-                    vm.Processor.Flags.SetWithMask(flags, ~(EFlags.Trap | EFlags.Reserved1));
-                    vm.Processor.Flags.Virtual8086Mode = true;
-                    vm.Processor.CPL = 3;
-                    vm.WriteSegmentRegister(SegmentIndex.SS, n_ss);
-                    vm.WriteSegmentRegister(SegmentIndex.ES, n_es);
-                    vm.WriteSegmentRegister(SegmentIndex.DS, n_ds);
-                    vm.WriteSegmentRegister(SegmentIndex.FS, n_fs);
-                    vm.WriteSegmentRegister(SegmentIndex.GS, n_gs);
-
-                    vm.Processor.ESP = n_esp;
-
-                    vm.WriteSegmentRegister(SegmentIndex.CS, cs);
-                    vm.Processor.InstructionEpilog();
-                    return;
-                }
-
-                uint cpl = vm.Processor.CPL;
+                uint cpl = vm.Processor.CS & 3u;
                 uint rpl = cs & 3u;
 
                 if (cpl != rpl)
@@ -147,15 +120,15 @@ namespace Aeon.Emulator.Instructions
             {
                 eip = vm.PopFromStack32();
                 cs = (ushort)vm.PopFromStack32();
-                flags = (EFlags)vm.PopFromStack32();
+                flags = vm.PopFromStack32();
             }
 
             bool throwTrap = false;
 
-            if (flags.HasFlag(EFlags.Trap) && !vm.Processor.Flags.Trap)
+            if (((EFlags)flags).HasFlag(EFlags.Trap) && !vm.Processor.Flags.Trap)
                 throwTrap = true;
 
-            vm.Processor.Flags.SetWithMask(flags, ~(EFlags.Trap | EFlags.Reserved1));
+            vm.Processor.Flags.Value = (EFlags)flags | EFlags.Reserved1;
             vm.WriteSegmentRegister(SegmentIndex.CS, cs);
             vm.Processor.EIP = eip;
 
@@ -183,7 +156,7 @@ namespace Aeon.Emulator.Instructions
                 var result = commandProcessor.RunNextBatchStatement();
                 if (result == CommandResult.Exit)
                     vm.Processor.Flags.Carry = true;
-                else if(result == CommandResult.Continue && commandProcessor.HasBatch)
+                else if (result == CommandResult.Continue && commandProcessor.HasBatch)
                     vm.Processor.EIP -= 3;
 
                 return;

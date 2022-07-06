@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -21,39 +20,21 @@ namespace Aeon.Emulator.Memory
         /// <summary>
         /// Maximum number of logical pages.
         /// </summary>
-        public const int MaximumLogicalPages = 256;
+        public const int MaximumLogicalPages = 1024;
 
-        public const ushort PageFrameSegment = 0xE000;
+        private const ushort PageFrameSegment = 0xE000;
         private const int FirstHandle = 1;
         private const int LastHandle = 254;
-        private const int SystemHandle = 0;
+        private const int SegmentsPerPage = PageSize / 16;
 
         private VirtualMachine vm;
-        private readonly short[] pageOwners = new short[MaximumLogicalPages];
         private readonly SortedList<int, EmsHandle> handles = new();
-        private readonly int[] mappedPages = new int[MaximumPhysicalPages] { -1, -1, -1, -1 };
-        private uint xmsBaseAddress;
-
-        public ExpandedMemoryManager()
-        {
-            this.pageOwners.AsSpan().Fill(-1);
-        }
+        private readonly byte[][] mappedPages = new byte[MaximumPhysicalPages][];
 
         /// <summary>
         /// Gets the total number of allocated EMS pages.
         /// </summary>
         public int AllocatedPages => this.handles.Values.Sum(p => p.PagesAllocated);
-        public RealModeAddress CallbackAddress { get; set; }
-
-        public uint GetMappedAddress(uint fullAddress)
-        {
-            uint physicalPage = (fullAddress - (PageFrameSegment << 4)) / PageSize;
-            int logicalPage = this.mappedPages[physicalPage];
-            if (logicalPage != -1)
-                return (this.xmsBaseAddress + ((uint)logicalPage * PageSize)) | (fullAddress % PageSize);
-            else
-                return fullAddress;
-        }
 
         IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x67 };
 
@@ -77,7 +58,7 @@ namespace Aeon.Emulator.Memory
                     // Return number of pages available in BX.
                     vm.Processor.BX = (short)(MaximumLogicalPages - this.AllocatedPages);
                     // Return total number of pages in DX.
-                    vm.Processor.DX = MaximumLogicalPages;
+                    vm.Processor.DX = (short)MaximumLogicalPages;
                     // Set good status.
                     vm.Processor.AH = 0;
                     break;
@@ -159,7 +140,7 @@ namespace Aeon.Emulator.Memory
                             // Return number of pages available in BX.
                             vm.Processor.BX = (short)(MaximumLogicalPages - this.AllocatedPages);
                             // Return total number of pages in DX.
-                            vm.Processor.DX = MaximumLogicalPages;
+                            vm.Processor.DX = (short)MaximumLogicalPages;
                             // Set good status.
                             vm.Processor.AH = 0;
                             break;
@@ -177,37 +158,21 @@ namespace Aeon.Emulator.Memory
                             break;
 
                         default:
-                            throw new NotImplementedException($"EMM function 57{this.vm.Processor.AL:X2}h not implemented.");
+                            throw new NotImplementedException(string.Format("EMM function 57{0:X2}h not implemented.", vm.Processor.AL));
                     }
                     break;
 
-                case EmsFunctions.VCPI:
-                    System.Diagnostics.Debug.WriteLine($"VCPI function {vm.Processor.AL:X2}h not implemented.");
-                    break;
-
                 default:
-                    System.Diagnostics.Debug.WriteLine($"EMM function {vm.Processor.AH:X2}h not implemented.");
+                    System.Diagnostics.Debug.WriteLine(string.Format("EMM function {0:X2}h not implemented.", vm.Processor.AH));
                     vm.Processor.AH = 0x84;
                     break;
             }
         }
-
         void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
         {
             this.vm = vm;
             this.vm.PhysicalMemory.SetString(0xF100, 0x000A, "EMMXXXX0");
             this.vm.PhysicalMemory.Reserve(PageFrameSegment, PageSize * MaximumPhysicalPages);
-
-            if (this.vm.ExtendedMemory.TryAllocate(PageSize * MaximumLogicalPages, out var handle) != 0)
-                throw new InvalidOperationException("Could not allocate memory for EMS paging.");
-
-            _ = this.vm.ExtendedMemory.TryGetBlock(handle, out var block);
-            this.xmsBaseAddress = ExtendedMemoryManager.XmsBaseAddress + block.Offset;
-
-            for (int i = 0; i < 24; i++)
-                this.pageOwners[i] = SystemHandle;
-
-            this.handles[SystemHandle] = new EmsHandle(Enumerable.Range(0, 24).Select(i => (ushort)i));
         }
 
         /// <summary>
@@ -259,22 +224,7 @@ namespace Aeon.Emulator.Memory
                 int handle = vm.Processor.DX;
                 if (handles.TryGetValue(handle, out var emsHandle))
                 {
-                    if (pagesRequested < emsHandle.PagesAllocated)
-                    {
-                        for (int i = emsHandle.LogicalPages.Count - 1; i >= emsHandle.LogicalPages.Count - pagesRequested; i--)
-                            this.mappedPages[emsHandle.LogicalPages[i]] = -1;
-
-                        emsHandle.LogicalPages.RemoveRange(emsHandle.LogicalPages.Count - pagesRequested, emsHandle.PagesAllocated - pagesRequested);
-                    }
-                    else if (pagesRequested > emsHandle.PagesAllocated)
-                    {
-                        int pagesToAdd = pagesRequested - emsHandle.PagesAllocated;
-                        for (int i = 0; i < pagesToAdd; i++)
-                        {
-                            ushort logicalPage = this.GetNextFreePage((short)handle);
-                            emsHandle.LogicalPages.Add(logicalPage);
-                        }
-                    }
+                    emsHandle.Reallocate(pagesRequested);
 
                     // Return good status.
                     vm.Processor.AH = 0;
@@ -302,16 +252,11 @@ namespace Aeon.Emulator.Memory
             {
                 if (!handles.ContainsKey(i))
                 {
-                    var pages = new List<ushort>(pagesRequested);
-                    for (int p = 0; p < pagesRequested; p++)
-                        pages.Add(GetNextFreePage((short)i));
-
-                    var handle = new EmsHandle(pages);
+                    EmsHandle handle = new EmsHandle(pagesRequested);
                     handles.Add(i, handle);
                     return i;
                 }
             }
-
             return 0;
         }
         /// <summary>
@@ -322,12 +267,6 @@ namespace Aeon.Emulator.Memory
             int handle = vm.Processor.DX;
             if (handles.Remove(handle))
             {
-                for (int i = 0; i < this.pageOwners.Length; i++)
-                {
-                    if (this.pageOwners[i] == handle)
-                        this.pageOwners[i] = -1;
-                }
-
                 // Return good status.
                 vm.Processor.AH = 0;
             }
@@ -362,18 +301,19 @@ namespace Aeon.Emulator.Memory
 
             if (logicalPageIndex != 0xFFFF)
             {
-                if (logicalPageIndex < 0 || logicalPageIndex >= handle.LogicalPages.Count)
+                byte[] logicalPage = handle.GetLogicalPage(logicalPageIndex);
+                if (logicalPage == null)
                 {
                     // Return "logical page out of range" code.
                     vm.Processor.AH = 0x8A;
                     return;
                 }
 
-                this.MapPage(handle.LogicalPages[logicalPageIndex], physicalPage);
+                MapPage(logicalPage, physicalPage);
             }
             else
             {
-                this.UnmapPage(physicalPage);
+                UnmapPage(physicalPage);
             }
 
             // Return good status.
@@ -384,18 +324,18 @@ namespace Aeon.Emulator.Memory
         /// </summary>
         /// <param name="logicalPage">Logical page to copy from.</param>
         /// <param name="physicalPageIndex">Index of physical page to copy to.</param>
-        private void MapPage(int logicalPage, int physicalPageIndex)
+        private void MapPage(byte[] logicalPage, int physicalPageIndex)
         {
             // If the requested logical page is already mapped, it needs to get unmapped first.
-            this.UnmapLogicalPage(logicalPage);
+            UnmapLogicalPage(logicalPage);
 
             // If a page is already mapped, make sure it gets unmapped first.
-            this.UnmapPage(physicalPageIndex);
+            UnmapPage(physicalPageIndex);
 
-            //var pageFrame = this.GetMappedPage(physicalPageIndex);
-            //var xms = this.GetLogicalPage(logicalPage);
-            //xms.CopyTo(pageFrame);
-            this.mappedPages[physicalPageIndex] = logicalPage;
+            ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
+            IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
+            System.Runtime.InteropServices.Marshal.Copy(logicalPage, 0, physicalPtr, PageSize);
+            mappedPages[physicalPageIndex] = logicalPage;
         }
         /// <summary>
         /// Copies data from a physical page to a logical page.
@@ -403,25 +343,25 @@ namespace Aeon.Emulator.Memory
         /// <param name="physicalPageIndex">Physical page to copy from.</param>
         private void UnmapPage(int physicalPageIndex)
         {
-            int currentPage = this.mappedPages[physicalPageIndex];
-            if (currentPage != -1)
+            byte[] currentPage = mappedPages[physicalPageIndex];
+            if (currentPage != null)
             {
-                //var pageFrame = this.GetMappedPage(physicalPageIndex);
-                //var xms = this.GetLogicalPage(currentPage);
-                //pageFrame.CopyTo(xms);
-                this.mappedPages[physicalPageIndex] = -1;
+                ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
+                IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
+                System.Runtime.InteropServices.Marshal.Copy(physicalPtr, currentPage, 0, PageSize);
+                mappedPages[physicalPageIndex] = null;
             }
         }
         /// <summary>
         /// Unmaps a specific logical page if it is currently mapped.
         /// </summary>
         /// <param name="logicalPage">Logical page to unmap.</param>
-        private void UnmapLogicalPage(int logicalPage)
+        private void UnmapLogicalPage(byte[] logicalPage)
         {
             for (int i = 0; i < this.mappedPages.Length; i++)
             {
                 if (this.mappedPages[i] == logicalPage)
-                    this.UnmapPage(i);
+                    UnmapPage(i);
             }
         }
         /// <summary>
@@ -518,18 +458,19 @@ namespace Aeon.Emulator.Memory
 
                 if (logicalPageIndex != 0xFFFF)
                 {
-                    if (logicalPageIndex < 0 || logicalPageIndex >= handle.LogicalPages.Count)
+                    byte[] logicalPage = handle.GetLogicalPage(logicalPageIndex);
+                    if (logicalPage == null)
                     {
                         // Return "logical page out of range" code.
                         vm.Processor.AH = 0x8A;
                         return;
                     }
 
-                    this.MapPage(handle.LogicalPages[logicalPageIndex], physicalPageIndex);
+                    MapPage(logicalPage, physicalPageIndex);
                 }
                 else
                 {
-                    this.UnmapPage(physicalPageIndex);
+                    UnmapPage(physicalPageIndex);
                 }
 
                 arrayOffset += 4u;
@@ -551,7 +492,7 @@ namespace Aeon.Emulator.Memory
                 return;
             }
 
-            this.mappedPages.CopyTo(handle.SavedPageMap);
+            handle.SavedPageMap = (byte[][])mappedPages.Clone();
 
             // Return good status.
             vm.Processor.AH = 0;
@@ -573,8 +514,8 @@ namespace Aeon.Emulator.Memory
             {
                 for (int i = 0; i < MaximumPhysicalPages; i++)
                 {
-                    if (handle.SavedPageMap[i] != mappedPages[i])
-                        this.MapPage(handle.SavedPageMap[i], i);
+                    if (handle.SavedPageMap[i] != null && handle.SavedPageMap[i] != mappedPages[i])
+                        MapPage(handle.SavedPageMap[i], i);
                 }
             }
 
@@ -586,8 +527,6 @@ namespace Aeon.Emulator.Memory
         /// </summary>
         private void Move()
         {
-#warning make sure works with new paging system
-
             int length = (int)vm.PhysicalMemory.GetUInt32(vm.Processor.DS, vm.Processor.SI);
 
             byte sourceType = vm.PhysicalMemory.GetByte(vm.Processor.DS, vm.Processor.SI + 4u);
@@ -600,33 +539,33 @@ namespace Aeon.Emulator.Memory
             int destOffset = vm.PhysicalMemory.GetUInt16(vm.Processor.DS, vm.Processor.SI + 14u);
             int destPage = vm.PhysicalMemory.GetUInt16(vm.Processor.DS, vm.Processor.SI + 16u);
 
-            this.SyncToEms();
+            SyncToEms();
 
             if (sourceType == 0 && destType == 0)
             {
-                vm.Processor.AH = this.ConvToConv((uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
+                vm.Processor.AH = EmsCopier.ConvToConv(vm.PhysicalMemory, (uint)((sourcePage << 4) + sourceOffset), (uint)((destPage << 4) + destOffset), length);
             }
             else if (sourceType != 0 && destType == 0)
             {
-                if (!handles.TryGetValue(sourceHandleIndex, out _))
+                if (!handles.TryGetValue(sourceHandleIndex, out var sourceHandle))
                 {
                     // Return "couldn't find specified handle" code.
                     vm.Processor.AH = 0x83;
                     return;
                 }
 
-                vm.Processor.AH = this.EmsToConv(sourcePage, sourceOffset, (uint)((destPage << 4) + destOffset), length);
+                vm.Processor.AH = EmsCopier.EmsToConv(sourceHandle, sourcePage, sourceOffset, vm.PhysicalMemory, (uint)((destPage << 4) + destOffset), length);
             }
             else if (sourceType == 0 && destType != 0)
             {
-                if (!handles.TryGetValue(destHandleIndex, out _))
+                if (!handles.TryGetValue(destHandleIndex, out var destHandle))
                 {
                     // Return "couldn't find specified handle" code.
                     vm.Processor.AH = 0x83;
                     return;
                 }
 
-                vm.Processor.AH = this.ConvToEms((uint)((sourcePage << 4) + sourceOffset), destPage, destOffset, length);
+                vm.Processor.AH = EmsCopier.ConvToEms(vm.PhysicalMemory, (uint)((sourcePage << 4) + sourceOffset), destHandle, destPage, destOffset, length);
             }
             else
             {
@@ -637,10 +576,10 @@ namespace Aeon.Emulator.Memory
                     return;
                 }
 
-                vm.Processor.AH = this.EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
+                vm.Processor.AH = EmsCopier.EmsToEms(sourceHandle, sourcePage, sourceOffset, destHandle, destPage, destOffset, length);
             }
 
-            this.SyncFromEms();
+            SyncFromEms();
         }
         /// <summary>
         /// Copies data from mapped conventional memory to EMS pages.
@@ -649,11 +588,11 @@ namespace Aeon.Emulator.Memory
         {
             for (int i = 0; i < MaximumPhysicalPages; i++)
             {
-                if (this.mappedPages[i] != -1)
+                if (mappedPages[i] != null)
                 {
-                    var src = this.GetMappedPage(i);
-                    var dest = this.GetLogicalPage(this.mappedPages[i]);
-                    src.CopyTo(dest);
+                    ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
+                    IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
+                    System.Runtime.InteropServices.Marshal.Copy(physicalPtr, mappedPages[i], 0, PageSize);
                 }
             }
         }
@@ -664,195 +603,13 @@ namespace Aeon.Emulator.Memory
         {
             for (int i = 0; i < MaximumPhysicalPages; i++)
             {
-                if (this.mappedPages[i] != -1)
+                if (mappedPages[i] != null)
                 {
-                    var src = this.GetLogicalPage(this.mappedPages[i]);
-                    var dest = this.GetMappedPage(i);
-                    src.CopyTo(dest);
+                    ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
+                    IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
+                    System.Runtime.InteropServices.Marshal.Copy(mappedPages[i], 0, physicalPtr, PageSize);
                 }
             }
-        }
-
-        private Span<byte> GetMappedPage(int physicalPageIndex) => this.vm.PhysicalMemory.Span.Slice((PageFrameSegment << 4) + (physicalPageIndex * PageSize), PageSize);
-        private Span<byte> GetLogicalPage(int logicalPageIndex) => this.vm.PhysicalMemory.Span.Slice((int)this.xmsBaseAddress + (logicalPageIndex * PageSize), PageSize);
-        private ushort GetNextFreePage(short handle)
-        {
-            for (int i = 0; i < this.pageOwners.Length; i++)
-            {
-                if (this.pageOwners[i] == -1)
-                {
-                    this.pageOwners[i] = handle;
-                    return (ushort)i;
-                }
-            }
-
-            return 0;
-        }
-
-        private byte ConvToConv(uint sourceAddress, uint destAddress, int length)
-        {
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length));
-            if (length == 0)
-                return 0;
-
-            if (sourceAddress + length > PhysicalMemory.ConvMemorySize || destAddress + length > PhysicalMemory.ConvMemorySize)
-                return 0xA2;
-
-            bool overlap = (sourceAddress + length - 1 >= destAddress || destAddress + length - 1 >= sourceAddress);
-            bool reverse = overlap && sourceAddress > destAddress;
-            var memory = this.vm.PhysicalMemory;
-
-            if (!reverse)
-            {
-                for (uint offset = 0; offset < length; offset++)
-                    memory.SetByte(destAddress + offset, memory.GetByte(sourceAddress + offset));
-            }
-            else
-            {
-                for (int offset = length - 1; offset >= 0; offset--)
-                    memory.SetByte(destAddress + (uint)offset, memory.GetByte(sourceAddress + (uint)offset));
-            }
-
-            return overlap ? (byte)0x92 : (byte)0;
-        }
-        private byte EmsToConv(int sourcePage, int sourcePageOffset, uint destAddress, int length)
-        {
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length));
-            if (length == 0)
-                return 0;
-
-            if (destAddress + length > PhysicalMemory.ConvMemorySize)
-                return 0xA2;
-            if (sourcePageOffset >= PageSize)
-                return 0x95;
-
-            int offset = sourcePageOffset;
-            uint sourceCount = destAddress;
-            int pageIndex = sourcePage;
-            var memory = this.vm.PhysicalMemory;
-            while (length > 0)
-            {
-                int size = Math.Min(length, PageSize - offset);
-                var source = this.GetLogicalPage(pageIndex);
-                if (source.IsEmpty)
-                    return 0x8A;
-
-                for (int i = 0; i < size; i++)
-                    memory.SetByte(sourceCount++, source[offset + i]);
-
-                length -= size;
-                pageIndex++;
-                offset = 0;
-            }
-
-            return 0;
-        }
-        private byte ConvToEms(uint sourceAddress, int destPage, int destPageOffset, int length)
-        {
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length));
-            if (length == 0)
-                return 0;
-
-            if (sourceAddress + length > PhysicalMemory.ConvMemorySize)
-                return 0xA2;
-            if (destPageOffset >= PageSize)
-                return 0x95;
-
-            var memory = this.vm.PhysicalMemory;
-            int offset = destPageOffset;
-            uint sourceCount = sourceAddress;
-            int pageIndex = destPage;
-            while (length > 0)
-            {
-                int size = Math.Min(length, PageSize - offset);
-                var target = this.GetLogicalPage(pageIndex);
-                if (target.IsEmpty)
-                    return 0x8A;
-
-                for (int i = 0; i < size; i++)
-                    target[offset + i] = memory.GetByte(sourceCount++);
-
-                length -= size;
-                pageIndex++;
-                offset = 0;
-            }
-
-            return 0;
-        }
-        private byte EmsToEms(EmsHandle srcHandle, int sourcePage, int sourcePageOffset, EmsHandle destHandle, int destPage, int destPageOffset, int length)
-        {
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length));
-            if (length == 0)
-                return 0;
-
-            if (sourcePageOffset >= ExpandedMemoryManager.PageSize || destPageOffset >= ExpandedMemoryManager.PageSize)
-                return 0x95;
-
-            bool overlap = false;
-            bool reverse = false;
-
-            if (srcHandle == destHandle)
-            {
-                int sourceStart = sourcePage * PageSize + sourcePageOffset;
-                int destStart = destPage * PageSize + destPageOffset;
-                int sourceEnd = sourceStart + length;
-                int destEnd = destStart + length;
-
-                if (sourceStart < destStart)
-                {
-                    overlap = sourceEnd > destStart;
-                }
-                else
-                {
-                    overlap = destEnd > sourceStart;
-                    reverse = overlap;
-                }
-            }
-
-            if (!reverse)
-            {
-                int sourceOffset = sourcePageOffset;
-                int currentSourcePage = sourcePage;
-                int destOffset = destPageOffset;
-                int currentDestPage = destPage;
-
-                while (length > 0)
-                {
-                    int size = Math.Min(Math.Min(length, ExpandedMemoryManager.PageSize - sourceOffset), ExpandedMemoryManager.PageSize - destOffset);
-                    var source = this.GetLogicalPage(currentSourcePage);
-                    var dest = this.GetLogicalPage(currentDestPage);
-                    if (source.IsEmpty || dest.IsEmpty)
-                        return 0x8A;
-
-                    for (int i = 0; i < size; i++)
-                        dest[destOffset + i] = source[sourceOffset + i];
-
-                    length -= size;
-                    sourceOffset += size;
-                    destOffset += size;
-
-                    if (sourceOffset == PageSize)
-                    {
-                        sourceOffset = 0;
-                        currentSourcePage++;
-                    }
-                    if (destOffset == PageSize)
-                    {
-                        destOffset = 0;
-                        currentDestPage++;
-                    }
-                }
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
-
-            return overlap ? (byte)0x92 : (byte)0;
         }
     }
 }

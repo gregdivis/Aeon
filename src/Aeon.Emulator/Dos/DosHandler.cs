@@ -38,6 +38,7 @@ namespace Aeon.Emulator.Dos
             this.fileControl = new FileControl(vm);
             this.memoryAllocator = new MemoryAllocator(vm);
             InitializeSDA();
+            this.EmmHack = true;
         }
 
         public IEnumerable<InterruptHandlerInfo> HandledInterrupts => new InterruptHandlerInfo[] { 0x21, 0x27, 0x20 };

@@ -53,17 +53,17 @@ namespace Aeon.Emulator
         /// <summary>
         /// Initializes a new instance of the <see cref="VirtualMachine"/> class.
         /// </summary>
-        public VirtualMachine() : this(new VirtualMachineStartupOptions())
+        public VirtualMachine() : this(16)
         {
         }
         /// <summary>
         /// Initializes a new instance of the <see cref="VirtualMachine"/> class.
         /// </summary>
-        /// <param name="options">Configuration options.</param>
-        public VirtualMachine(VirtualMachineStartupOptions options)
+        /// <param name="physicalMemorySize">Physical memory size in megabytes.</param>
+        public VirtualMachine(int physicalMemorySize)
         {
-            if (options.PhysicalMemory < 1 || options.PhysicalMemory > 2048)
-                throw new ArgumentException("Invalid amount of physical memory specified.");
+            if (physicalMemorySize < 1 || physicalMemorySize > 2048)
+                throw new ArgumentOutOfRangeException(nameof(physicalMemorySize));
 
             lock (globalInitLock)
             {
@@ -74,7 +74,7 @@ namespace Aeon.Emulator
                 }
             }
 
-            this.PhysicalMemory = new PhysicalMemory(options.PhysicalMemory * 1024 * 1024);
+            this.PhysicalMemory = new PhysicalMemory(physicalMemorySize * 1024 * 1024);
             this.Keyboard = new Keyboard.KeyboardDevice();
             this.ConsoleIn = new ConsoleInStream(this.Keyboard);
             this.Video = new Video.VideoHandler(this);
@@ -82,18 +82,14 @@ namespace Aeon.Emulator
             this.Dos = new Dos.DosHandler(this);
             this.Mouse = new Mouse.MouseHandler();
             this.InterruptTimer = new InterruptTimer();
-            if (options.EmsEnabled)
-                this.emm = new ExpandedMemoryManager();
-
+            this.emm = new ExpandedMemoryManager();
             this.xmm = new ExtendedMemoryManager();
             this.DmaController = new DmaController();
             this.Console = new VirtualConsole(this);
             this.multiplexHandler = new MultiplexInterruptHandler();
             this.PhysicalMemory.Video = this.Video;
-            this.PhysicalMemory.Ems = this.emm;
 
             this.Dos.InitializationComplete();
-            this.Dos.EmmHack = options.EmsEnabled;
 
             this.RegisterVirtualDevice(this.Dos);
             this.RegisterVirtualDevice(this.Video);
@@ -103,12 +99,11 @@ namespace Aeon.Emulator
             this.RegisterVirtualDevice(new ErrorHandler());
             this.RegisterVirtualDevice(this.InterruptController);
             this.RegisterVirtualDevice(this.InterruptTimer);
-            this.RegisterVirtualDevice(this.xmm);
-            if (options.EmsEnabled)
-                this.RegisterVirtualDevice(this.emm);
+            this.RegisterVirtualDevice(this.emm);
             this.RegisterVirtualDevice(this.DmaController);
             this.RegisterVirtualDevice(this.multiplexHandler);
             this.RegisterVirtualDevice(new BiosServices.SystemServices());
+            this.RegisterVirtualDevice(this.xmm);
             this.RegisterVirtualDevice(new Dos.CD.Mscdex());
             this.RegisterVirtualDevice(new LowLevelDisk.LowLevelDiskInterface());
 
@@ -230,7 +225,6 @@ namespace Aeon.Emulator
         internal Mouse.MouseHandler Mouse { get; }
         internal Dos.DosHandler Dos { get; }
         internal Video.VideoHandler Video { get; }
-        internal ExtendedMemoryManager ExtendedMemory => this.xmm;
         internal bool BigStackPointer { get; set; }
 
         /// <summary>
@@ -262,9 +256,8 @@ namespace Aeon.Emulator
         /// Raises a hardware/software interrupt on the virtual machine.
         /// </summary>
         /// <param name="interrupt">Interrupt to raise.</param>
-        /// <param name="soft">Value indicating whether the interrupt was raised from software.</param>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public void RaiseInterrupt(byte interrupt, bool soft = false)
+        public void RaiseInterrupt(byte interrupt)
         {
             if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))     // Real mode
             {
@@ -290,82 +283,35 @@ namespace Aeon.Emulator
                 {
                     var interruptGate = (InterruptDescriptor)descriptor;
                     uint wordSize = interruptGate.Is32Bit ? 4u : 2u;
-                    uint cpl = this.Processor.CPL;
+
+                    uint cpl = this.Processor.CS & 3u;
                     uint rpl = interruptGate.Selector & 3u;
-                    uint dpl = interruptGate.PrivilegeLevel;
 
-                    if (soft && (cpl > dpl || cpl > rpl))
+                    if (cpl > rpl)
                     {
-                        this.RaiseException(new GeneralProtectionFaultException(interrupt * 8 + 2));
-                        return;
-                    }
-
-                    if (this.Processor.Flags.Virtual8086Mode)
-                    {
-                        var oldFlags = this.Processor.Flags.Value;
                         ushort oldSS = this.Processor.SS;
                         uint oldESP = this.Processor.ESP;
 
-                        this.Processor.Flags.Virtual8086Mode = false;
                         ushort newSS = this.GetPrivilegedSS(rpl, wordSize);
                         uint newESP = this.GetPrivilegedESP(rpl, wordSize);
 
                         WriteSegmentRegister(SegmentIndex.SS, newSS);
                         this.Processor.ESP = newESP;
 
-                        this.PushToStack32(this.Processor.GS);
-                        this.PushToStack32(this.Processor.FS);
-                        this.PushToStack32(this.Processor.DS);
-                        this.PushToStack32(this.Processor.ES);
-                        this.PushToStack32(oldSS);
-                        this.PushToStack32(oldESP);
-
                         if (wordSize == 4u)
-                        {
-                            this.PushToStack32((uint)oldFlags);
-                            this.PushToStack32(this.Processor.CS);
-                            this.PushToStack32(this.Processor.EIP);
-                        }
+                            this.PushToStack32(oldSS, oldESP);
                         else
-                        {
-                            this.PushToStack((ushort)oldFlags);
-                            this.PushToStack(this.Processor.CS);
-                            this.PushToStack(this.Processor.IP);
-                        }
-
-                        this.WriteSegmentRegister(SegmentIndex.DS, 0);
-                        this.WriteSegmentRegister(SegmentIndex.ES, 0);
-                        this.WriteSegmentRegister(SegmentIndex.FS, 0);
-                        this.WriteSegmentRegister(SegmentIndex.GS, 0);
+                            this.PushToStack(oldSS, (ushort)oldESP);
                     }
-                    else
+                    else if (cpl < rpl)
                     {
-                        if (cpl > rpl)
-                        {
-                            ushort oldSS = this.Processor.SS;
-                            uint oldESP = this.Processor.ESP;
-
-                            ushort newSS = this.GetPrivilegedSS(rpl, wordSize);
-                            uint newESP = this.GetPrivilegedESP(rpl, wordSize);
-
-                            WriteSegmentRegister(SegmentIndex.SS, newSS);
-                            this.Processor.ESP = newESP;
-
-                            if (wordSize == 4u)
-                                this.PushToStack32(oldSS, oldESP);
-                            else
-                                this.PushToStack(oldSS, (ushort)oldESP);
-                        }
-                        else if (cpl < rpl)
-                        {
-                            throw new InvalidOperationException();
-                        }
-
-                        if (wordSize == 4u)
-                            this.PushToStack32((uint)this.Processor.Flags.Value, this.Processor.CS, this.Processor.EIP);
-                        else
-                            this.PushToStack((ushort)this.Processor.Flags.Value, this.Processor.CS, this.Processor.IP);
+                        throw new InvalidOperationException();
                     }
+
+                    if (wordSize == 4u)
+                        this.PushToStack32((uint)this.Processor.Flags.Value, this.Processor.CS, this.Processor.EIP);
+                    else
+                        this.PushToStack((ushort)this.Processor.Flags.Value, this.Processor.CS, this.Processor.IP);
 
                     this.Processor.EIP = interruptGate.Offset;
                     WriteSegmentRegister(SegmentIndex.CS, interruptGate.Selector);
@@ -480,12 +426,6 @@ namespace Aeon.Emulator
                 int id = callbackProviders.Count;
                 callbackProvider.CallbackAddress = this.PhysicalMemory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
                 callbackProviders.Add((uint)id, callbackProvider);
-
-                Span<byte> machineCode = stackalloc byte[3];
-                machineCode[0] = 0x0F;
-                machineCode[1] = 0x56;
-                machineCode[2] = (byte)id;
-                callbackProvider.SetRaiseCallbackInstruction(machineCode);
             }
 
             allDevices.Add(virtualDevice);
@@ -505,7 +445,7 @@ namespace Aeon.Emulator
         /// Returns an object containing information about current expanded memory usage.
         /// </summary>
         /// <returns>Information about current expanded memory usage.</returns>
-        public ExpandedMemoryInfo GetExpandedMemoryUsage() => new(this.emm?.AllocatedPages ?? 0);
+        public ExpandedMemoryInfo GetExpandedMemoryUsage() => new(emm.AllocatedPages);
         /// <summary>
         /// Returns an object containing information about current extended memory usage.
         /// </summary>
@@ -584,7 +524,6 @@ namespace Aeon.Emulator
             this.Dispose(true);
             GC.SuppressFinalize(this);
         }
-        /// <summary>
         /// Writes a message to the emulator's log.
         /// </summary>
         /// <param name="message">Message to write.</param>
@@ -596,7 +535,6 @@ namespace Aeon.Emulator
         /// <param name="message">Message to write.</param>
         /// <param name="level">Level of the message.</param>
         public void WriteMessage(ReadOnlySpan<char> message, MessageLevel level = MessageLevel.Debug) => this.MessageLogged?.Invoke(this, new MessageEventArgs(level, new string(message)));
-
         /// <summary>
         /// Returns the logical base address for a given selector.
         /// </summary>
@@ -604,10 +542,8 @@ namespace Aeon.Emulator
         /// <returns>Base address of the selector if it is valid; otherwise null.</returns>
         uint? IMachineCodeSource.GetBaseAddress(ushort selector)
         {
-            if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) | this.Processor.Flags.Virtual8086Mode)
-            {
+            if ((this.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
                 return (uint)selector << 4;
-            }
             else if (selector != 0)
             {
                 var descriptor = (SegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
@@ -773,28 +709,28 @@ namespace Aeon.Emulator
             else
                 this.Processor.ESP += value;
         }
-        internal ushort PeekStack16(int offset = 0)
+        internal ushort PeekStack16()
         {
             uint address;
             unsafe
             {
                 if (!this.BigStackPointer)
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP + (uint)offset;
+                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP;
                 else
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP + (uint)offset;
+                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP;
             }
 
             return this.PhysicalMemory.GetUInt16(address);
         }
-        internal uint PeekStack32(int offset = 0)
+        internal uint PeekStack32()
         {
             uint address;
             unsafe
             {
                 if (!this.BigStackPointer)
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP + (uint)offset;
+                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP;
                 else
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP + (uint)offset;
+                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP;
             }
 
             return this.PhysicalMemory.GetUInt32(address);
@@ -812,33 +748,6 @@ namespace Aeon.Emulator
 
             return this.PhysicalMemory.GetUInt64(address);
         }
-        internal void WriteStack16(int offset, ushort value)
-        {
-            uint address;
-            unsafe
-            {
-                if (!this.BigStackPointer)
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP + (uint)offset;
-                else
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP + (uint)offset;
-            }
-
-            this.PhysicalMemory.SetUInt16(address, value);
-        }
-        internal void WriteStack32(int offset, uint value)
-        {
-            uint address;
-            unsafe
-            {
-                if (!this.BigStackPointer)
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP + (uint)offset;
-                else
-                    address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP + (uint)offset;
-            }
-
-            this.PhysicalMemory.SetUInt32(address, value);
-        }
-
         internal byte ReadPortByte(ushort port)
         {
             if (inputPorts.TryGetValue(port, out var inputPort))
@@ -915,7 +824,7 @@ namespace Aeon.Emulator
             {
                 ushort value = *this.Processor.segmentRegisterPointers[(int)segment];
 
-                if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable) | this.Processor.Flags.Virtual8086Mode)
+                if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
                 {
                     this.Processor.segmentBases[(int)segment] = (uint)value << 4;
                     this.BigStackPointer = false;
@@ -941,8 +850,6 @@ namespace Aeon.Emulator
 
                             if (segment == SegmentIndex.CS)
                             {
-                                this.Processor.CPL = segmentDescriptor.PrivilegeLevel;
-
                                 if ((segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) == 0)
                                     this.Processor.GlobalSize = 0;
                                 else
@@ -1000,7 +907,6 @@ namespace Aeon.Emulator
                 p.CR3 = tss->CR3;
                 this.PhysicalMemory.DirectoryAddress = tss->CR3;
                 this.PhysicalMemory.LDTSelector = tss->LDTR;
-                p.Flags.Virtual8086Mode = tss->EFLAGS.HasFlag(EFlags.Virtual8086Mode);
 
                 WriteSegmentRegister(SegmentIndex.CS, tss->CS);
                 WriteSegmentRegister(SegmentIndex.SS, tss->SS);
@@ -1105,7 +1011,7 @@ namespace Aeon.Emulator
 
         private void Dispose(bool disposing)
         {
-            if(!this.disposed)
+            if (!this.disposed)
             {
                 if (disposing)
                 {
