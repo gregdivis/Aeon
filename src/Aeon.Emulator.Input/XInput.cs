@@ -42,6 +42,7 @@ namespace Aeon.Emulator.Input
 
         private sealed class Controller : IGameController
         {
+            private const long DebouncePeriod = 10;
             private readonly Stopwatch debounce = new();
             private XInputButtons lastButtonState;
 
@@ -60,7 +61,7 @@ namespace Aeon.Emulator.Input
                         {
                             this.debounce.Restart();
                         }
-                        else if (this.debounce.ElapsedMilliseconds >= 50)
+                        else if (this.debounce.ElapsedMilliseconds >= DebouncePeriod)
                         {
                             this.lastButtonState = s.Buttons;
                             this.debounce.Reset();
@@ -90,9 +91,9 @@ namespace Aeon.Emulator.Input
                     else if (f.HasFlag(XInputButtons.DPadRight))
                         xAxis = 1;
                     else
-                        xAxis = ((float)s.LeftThumbX + s.RightThumbX) / 2f / short.MaxValue;
+                        xAxis = (float)s.LeftThumbX / short.MaxValue;
 
-                    if (MathF.Abs(xAxis) < 0.2f)
+                    if (MathF.Abs(xAxis) < 0.25f)
                         xAxis = 0;
 
                     float yAxis;
@@ -102,9 +103,9 @@ namespace Aeon.Emulator.Input
                     else if (f.HasFlag(XInputButtons.DPadDown))
                         yAxis = 1;
                     else
-                        yAxis = ((float)s.LeftThumbY + s.RightThumbY) / 2f / short.MaxValue;
+                        yAxis = (float)s.LeftThumbY / -short.MaxValue;
 
-                    if (MathF.Abs(yAxis) < 0.2f)
+                    if (MathF.Abs(yAxis) < 0.25f)
                         yAxis = 0;
 
                     state = new GameControllerState(xAxis, yAxis, b);
