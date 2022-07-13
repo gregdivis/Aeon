@@ -113,7 +113,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Occurs when the emulated display mode has changed.
         /// </summary>
-        public event EventHandler VideoModeChanged;
+        public event EventHandler<VideoModeChangedEventArgs> VideoModeChanged;
         /// <summary>
         /// Occurs when the emulator sets the mouse position.
         /// </summary>
@@ -982,10 +982,10 @@ namespace Aeon.Emulator
             }
         }
         /// <summary>
-        /// Raises the VideoModeChanged event.
+        /// Raises the <see cref="VideoModeChanged" /> event.
         /// </summary>
         /// <param name="e">Empty EventArgs instance.</param>
-        internal void OnVideoModeChanged(EventArgs e)
+        internal void OnVideoModeChanged(VideoModeChangedEventArgs e)
         {
             this.VideoModeChanged?.Invoke(this, e);
 

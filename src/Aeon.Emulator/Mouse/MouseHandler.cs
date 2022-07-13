@@ -224,7 +224,12 @@ namespace Aeon.Emulator.Mouse
             };
         }
 
-        private void HandleVideoModeChanged(object sender, EventArgs e) => this.SetDefaultMax();
+        private void HandleVideoModeChanged(object sender, VideoModeChangedEventArgs e)
+        {
+            if (e.TrueModeChange)
+                this.SetDefaultMax();
+        }
+
         private void SetDefaultMax()
         {
             var mode = this.vm.VideoMode;

@@ -550,7 +550,7 @@ namespace Aeon.Emulator.Video
             if (this.defaultPaletteLoading)
                 Dac.Reset();
 
-            VirtualMachine.OnVideoModeChanged(EventArgs.Empty);
+            VirtualMachine.OnVideoModeChanged(new VideoModeChangedEventArgs(true));
         }
 
         void IDisposable.Dispose()
@@ -567,7 +567,7 @@ namespace Aeon.Emulator.Video
             var mode = new Modes.Unchained256(320, 200, this);
             CrtController.Offset = 320 / 8;
             this.CurrentMode = mode;
-            VirtualMachine.OnVideoModeChanged(EventArgs.Empty);
+            VirtualMachine.OnVideoModeChanged(new VideoModeChangedEventArgs(false));
         }
         /// <summary>
         /// Changes the current video mode to match the new value of the vertical end register.
@@ -591,7 +591,7 @@ namespace Aeon.Emulator.Video
             }
 
             this.CurrentMode.Height = newEnd;
-            VirtualMachine.OnVideoModeChanged(EventArgs.Empty);
+            VirtualMachine.OnVideoModeChanged(new VideoModeChangedEventArgs(false));
         }
         /// <summary>
         /// Sets the current mode to text mode 80x50.
@@ -600,7 +600,7 @@ namespace Aeon.Emulator.Video
         {
             var mode = new Modes.TextMode(80, 50, 8, this);
             this.CurrentMode = mode;
-            VirtualMachine.OnVideoModeChanged(EventArgs.Empty);
+            VirtualMachine.OnVideoModeChanged(new VideoModeChangedEventArgs(false));
         }
         /// <summary>
         /// Sets DAC color registers to values in emulated RAM.
