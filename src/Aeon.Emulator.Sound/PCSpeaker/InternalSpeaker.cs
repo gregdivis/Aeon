@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-
 using TinyAudio;
 
 namespace Aeon.Emulator.Sound.PCSpeaker
@@ -25,6 +24,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         private readonly Stopwatch durationTimer = new();
         private readonly ConcurrentQueue<QueuedNote> queuedNotes = new();
         private readonly object threadStateLock = new();
+        private readonly float[] emptyBuffer = new float[1024];
         private SpeakerControl controlRegister = SpeakerControl.UseTimer;
         private Task generateWaveformTask;
         private readonly CancellationTokenSource cancelGenerateWaveform = new();
@@ -161,7 +161,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
         {
             using var player = Audio.CreatePlayer();
 
-            FillWithSilence(player);
+            this.FillWithSilence(player);
 
             var buffer = new byte[4096];
             var writeBuffer = buffer;
@@ -200,17 +200,7 @@ namespace Aeon.Emulator.Sound.PCSpeaker
                 }
                 else
                 {
-                    var floatArray = new float[buffer.Length];
-
-                    for (int i = 0; i < buffer.Length; i++)
-                    {
-                        floatArray[i] = buffer[i];
-                    }
-
-
-                    while (player.WriteData(floatArray.AsSpan()) > 0)
-                    {
-                    }
+                    this.FillWithSilence(player);
 
                     await Task.Delay(5, this.cancelGenerateWaveform.Token);
                     idleCount++;
@@ -220,12 +210,9 @@ namespace Aeon.Emulator.Sound.PCSpeaker
             }
         }
 
-        private static void FillWithSilence(AudioPlayer player)
+        private void FillWithSilence(AudioPlayer player)
         {
-            var buffer = new float[4096];
-            var span = buffer.AsSpan();
-
-            while (player.WriteData(span) > 0)
+            while (player.WriteData(this.emptyBuffer) > 0)
             {
             }
         }
