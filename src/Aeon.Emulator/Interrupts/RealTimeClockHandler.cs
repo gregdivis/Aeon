@@ -12,6 +12,7 @@ namespace Aeon.Emulator.Interrupts
     {
         private const byte ReadClock = 0;
         private const byte SetClock = 1;
+        private const byte GetRealTime = 2;
         private const byte GetDate = 4;
 
         private VirtualMachine vm;
@@ -21,33 +22,41 @@ namespace Aeon.Emulator.Interrupts
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
             var now = DateTime.Now;
-            vm.Processor.Flags.Carry = false;
+            var p = this.vm.Processor;
+            p.Flags.Carry = false;
 
             switch (vm.Processor.AH)
             {
                 case ReadClock:
                     // This should be nonzero if timer has run for more than 24 hours.
                     // Ignore it for now.
-                    vm.Processor.AL = 0;
+                    p.AL = 0;
 
                     var nowSpan = now.TimeOfDay;
                     uint dosTicks = (uint)(nowSpan.TotalMilliseconds / 55.0);
-                    vm.Processor.DX = (short)(dosTicks & 0xFFFF);
-                    vm.Processor.CX = (short)((dosTicks >> 16) & 0xFFFF);
+                    p.DX = (short)(dosTicks & 0xFFFF);
+                    p.CX = (short)((dosTicks >> 16) & 0xFFFF);
+                    break;
+
+                case GetRealTime:
+                    p.CH = (byte)ConvertToBCD(now.Hour);
+                    p.CL = (byte)ConvertToBCD(now.Minute);
+                    p.DH = (byte)ConvertToBCD(now.Second);
+                    p.DL = TimeZoneInfo.Local.IsDaylightSavingTime(now) ? (byte)1 : (byte)0;
                     break;
 
                 case GetDate:
-                    vm.Processor.CX = (short)ConvertToBCD(now.Year);
-                    vm.Processor.DL = (byte)ConvertToBCD(now.Day);
-                    vm.Processor.DH = (byte)ConvertToBCD(now.Month);
+                    p.CX = (short)ConvertToBCD(now.Year);
+                    p.DL = (byte)ConvertToBCD(now.Day);
+                    p.DH = (byte)ConvertToBCD(now.Month);
                     break;
 
                 default:
-                    System.Diagnostics.Debug.WriteLine($"Timer function {vm.Processor.AH:X2}h not implemented.");
+                    System.Diagnostics.Debug.WriteLine($"Timer function {p.AH:X2}h not implemented.");
                     break;
             }
 
-            SaveFlags(EFlags.Carry);
+            this.SaveFlags(EFlags.Carry);
         }
 
         Task IVirtualDevice.PauseAsync()
@@ -75,13 +84,13 @@ namespace Aeon.Emulator.Interrupts
         /// <param name="state">Unused state object.</param>
         private void UpdateClock(object state)
         {
-            vm.PhysicalMemory.Bios.RealTimeClock = (uint)(DateTime.Now.TimeOfDay.TotalMilliseconds / 55.0);
+            this.vm.PhysicalMemory.Bios.RealTimeClock = (uint)(DateTime.Now.TimeOfDay.TotalMilliseconds / 55.0);
         }
         private void SaveFlags(EFlags modified)
         {
-            var oldFlags = (EFlags)vm.PhysicalMemory.GetUInt16(vm.Processor.SS, (ushort)(vm.Processor.SP + 4));
+            var oldFlags = (EFlags)this.vm.PhysicalMemory.GetUInt16(this.vm.Processor.SS, (ushort)(vm.Processor.SP + 4));
             oldFlags &= ~modified;
-            vm.PhysicalMemory.SetUInt16(vm.Processor.SS, (ushort)(vm.Processor.SP + 4), (ushort)(oldFlags | (vm.Processor.Flags.Value & modified)));
+            this.vm.PhysicalMemory.SetUInt16(this.vm.Processor.SS, (ushort)(this.vm.Processor.SP + 4), (ushort)(oldFlags | (this.vm.Processor.Flags.Value & modified)));
         }
         /// <summary>
         /// Converts an integer value to BCD representation.
