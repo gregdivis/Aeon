@@ -1,5 +1,5 @@
 ﻿using System;
-using System.IO;
+using System.Diagnostics;
 using Aeon.Emulator.Interrupts;
 
 namespace Aeon.Emulator
@@ -18,7 +18,7 @@ namespace Aeon.Emulator
         private byte bytesRemainingHighByte;
         private byte addressHighByte;
         private int transferRate;
-        private System.Diagnostics.Stopwatch transferTimer = new System.Diagnostics.Stopwatch();
+        private readonly Stopwatch transferTimer = new();
 
         internal DmaChannel()
         {
@@ -243,62 +243,7 @@ namespace Aeon.Emulator
                 this.transferTimer.Start();
             }
         }
-        internal void Serialize(BinaryWriter writer)
-        {
-            writer.Write(this.isActive);
-            writer.Write(this.addressByteRead);
-            writer.Write(this.addressByteWritten);
-            writer.Write(this.countByteRead);
-            writer.Write(this.countByteWritten);
-            writer.Write(this.bytesRemaining);
-            writer.Write(this.bytesRemainingHighByte);
-            writer.Write(this.addressHighByte);
-            writer.Write(this.transferRate);
-
-            writer.Write(this.IsMasked);
-            writer.Write((int)this.TransferMode);
-            writer.Write(this.Page);
-            writer.Write(this.Address);
-            writer.Write(this.Count);
-            writer.Write(this.TransferPeriod);
-            writer.Write(this.TransferChunkSize);
-        }
-        internal void Deserialize(BinaryReader reader)
-        {
-            this.isActive = reader.ReadBoolean();
-            this.addressByteRead = reader.ReadBoolean();
-            this.addressByteWritten = reader.ReadBoolean();
-            this.countByteRead = reader.ReadBoolean();
-            this.countByteWritten = reader.ReadBoolean();
-            this.bytesRemaining = reader.ReadInt32();
-            this.bytesRemainingHighByte = reader.ReadByte();
-            this.addressHighByte = reader.ReadByte();
-            this.transferRate = reader.ReadInt32();
-
-            this.IsMasked = reader.ReadBoolean();
-            this.TransferMode = (DmaTransferMode)reader.ReadInt32();
-            this.Page = reader.ReadByte();
-            this.Address = reader.ReadUInt16();
-            this.Count = reader.ReadUInt16();
-            this.TransferPeriod = reader.ReadInt64();
-            this.TransferChunkSize = reader.ReadInt32();
-        }
 
         private void OnIsActiveChanged(EventArgs e) => this.IsActiveChanged?.Invoke(this, e);
-    }
-
-    /// <summary>
-    /// Specifies the transfer mode of a DMA channel.
-    /// </summary>
-    public enum DmaTransferMode
-    {
-        /// <summary>
-        /// The DMA channel is in single-cycle mode.
-        /// </summary>
-        SingleCycle,
-        /// <summary>
-        /// The DMA channel is in auto-initialize mode.
-        /// </summary>
-        AutoInitialize
     }
 }

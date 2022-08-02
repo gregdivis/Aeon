@@ -10,14 +10,16 @@ using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.RuntimeExceptions;
 
+#nullable enable
+
 namespace Aeon.Emulator
 {
     /// <summary>
     /// Hosts a <see cref="Aeon.Emulator.VirtualMachine"/> instance and provides additional services.
     /// </summary>
-    public sealed class EmulatorHost : IDisposable
+    public sealed class EmulatorHost : IDisposable, IAsyncDisposable
     {
-        private Task processorTask;
+        private Task? processorTask;
         private volatile EmulatorState targetState;
         private readonly ConcurrentQueue<MouseEvent> mouseQueue = new();
         private EmulatorState currentState;
@@ -25,7 +27,7 @@ namespace Aeon.Emulator
         private long totalInstructions;
         private readonly SortedSet<Keys> keysPresssed = new();
         private int emulationSpeed = 10_000_000;
-        private readonly InstructionLog log;
+        private readonly InstructionLog? log;
 
         /// <summary>
         /// The smallest number that may be assigned to the EmulationSpeed property.
@@ -47,7 +49,7 @@ namespace Aeon.Emulator
         /// Initializes a new instance of the EmulatorHost class.
         /// </summary>
         /// <param name="instructionLog">Log which will be used to record instructions.</param>
-        public EmulatorHost(InstructionLog instructionLog)
+        public EmulatorHost(InstructionLog? instructionLog)
             : this(new VirtualMachine(), instructionLog)
         {
         }
@@ -56,7 +58,7 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="virtualMachine">VirtualMachine instance to host.</param>
         /// <param name="instructionLog">Log which will be used to record instructions.</param>
-        public EmulatorHost(VirtualMachine virtualMachine, InstructionLog instructionLog)
+        public EmulatorHost(VirtualMachine virtualMachine, InstructionLog? instructionLog)
         {
             this.VirtualMachine = virtualMachine ?? throw new ArgumentNullException(nameof(virtualMachine));
             this.VirtualMachine.VideoModeChanged += (s, e) => this.OnVideoModeChanged(e);
@@ -72,35 +74,35 @@ namespace Aeon.Emulator
         /// <summary>
         /// Occurs when the emulated display mode has changed.
         /// </summary>
-        public event EventHandler VideoModeChanged;
+        public event EventHandler? VideoModeChanged;
         /// <summary>
         /// Occurs when the emulator sets the mouse position.
         /// </summary>
-        public event EventHandler<MouseMoveEventArgs> MouseMoveByEmulator;
+        public event EventHandler<MouseMoveEventArgs>? MouseMoveByEmulator;
         /// <summary>
         /// Occurs when the internal mouse position has changed.
         /// </summary>
-        public event EventHandler<MouseMoveEventArgs> MouseMove;
+        public event EventHandler<MouseMoveEventArgs>? MouseMove;
         /// <summary>
         /// Occurs when the mouse cursor is shown or hidden.
         /// </summary>
-        public event EventHandler MouseVisibilityChanged;
+        public event EventHandler? MouseVisibilityChanged;
         /// <summary>
         /// Occurs when the text-mode cursor is shown or hidden.
         /// </summary>
-        public event EventHandler CursorVisibilityChanged;
+        public event EventHandler? CursorVisibilityChanged;
         /// <summary>
         /// Occurs when the current process has changed.
         /// </summary>
-        public event EventHandler CurrentProcessChanged;
+        public event EventHandler? CurrentProcessChanged;
         /// <summary>
         /// Occurs when the emulator state has changed.
         /// </summary>
-        public event EventHandler StateChanged;
+        public event EventHandler? StateChanged;
         /// <summary>
         /// Occurs when the emulator has halted due to an error.
         /// </summary>
-        public event EventHandler<ErrorEventArgs> Error;
+        public event EventHandler<ErrorEventArgs>? Error;
 
         /// <summary>
         /// Gets the current state of the emulated system.
@@ -142,7 +144,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets or sets the object to use for raising events.
         /// </summary>
-        public IEventSynchronizer EventSynchronizer { get; set; }
+        public IEventSynchronizer? EventSynchronizer { get; set; }
 
         /// <summary>
         /// Loads an executable program image into the emulator.
@@ -154,10 +156,9 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="fileName">Name of executable file to load.</param>
         /// <param name="commandLineArguments">Command line arguments for the program.</param>
-        public void LoadProgram(string fileName, string commandLineArguments)
+        public void LoadProgram(string fileName, string? commandLineArguments)
         {
-            if (fileName == null)
-                throw new ArgumentNullException(nameof(fileName));
+            ArgumentNullException.ThrowIfNull(fileName);
             if (commandLineArguments != null && commandLineArguments.Length > 127)
                 throw new ArgumentException("Command line length must not exceed 127 characters.");
 
@@ -190,13 +191,17 @@ namespace Aeon.Emulator
         /// <summary>
         /// Pauses emulation.
         /// </summary>
-        public void Pause()
+        public void Pause() => this.PauseAsync().Wait();
+        /// <summary>
+        /// Pauses emulation.
+        /// </summary>
+        public Task PauseAsync()
         {
             if (this.State != EmulatorState.Running)
                 throw new InvalidOperationException("No program is running.");
 
             this.targetState = EmulatorState.Paused;
-            this.processorTask.Wait();
+            return this.processorTask ?? Task.CompletedTask;
         }
         /// <summary>
         /// Immediately stops emulation and places the emulator in a halted state.
@@ -239,15 +244,28 @@ namespace Aeon.Emulator
         /// <param name="mouseEvent">Mouse input event that has occurred.</param>
         public void MouseEvent(MouseEvent mouseEvent)
         {
-            if (mouseEvent == null)
-                throw new ArgumentNullException(nameof(mouseEvent));
-
+            ArgumentNullException.ThrowIfNull(mouseEvent);
             this.mouseQueue.Enqueue(mouseEvent);
         }
         /// <summary>
         /// Releases resources used by the emulator.
         /// </summary>
         public void Dispose() => this.Dispose(true);
+        /// <summary>
+        /// Releases resources used by the emulator.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            if (!this.disposed)
+            {
+                this.Halt();
+                var task = this.processorTask;
+                if (task != null)
+                    await task.ConfigureAwait(false);
+                this.VirtualMachine?.Dispose();
+                this.disposed = true;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void EmulateInstructions(int count)
@@ -299,13 +317,13 @@ namespace Aeon.Emulator
                 if (vm.Processor.Flags.InterruptEnable)
                 {
                     while (vm.Processor.InPrefix)
-                        vm.Emulate(this.log);
+                        vm.Emulate(this.log!);
 
                     this.CheckHardwareInterrupts();
                 }
 
                 for (int i = 0; i < count; i++)
-                    vm.Emulate(this.log);
+                    vm.Emulate(this.log!);
             }
             catch (EmulatedException ex)
             {
@@ -314,9 +332,9 @@ namespace Aeon.Emulator
             }
             catch (EnableInstructionTrapException)
             {
-                vm.Emulate(this.log);
+                vm.Emulate(this.log!);
                 while (vm.Processor.InPrefix)
-                    vm.Emulate(this.log);
+                    vm.Emulate(this.log!);
 
                 if (vm.Processor.Flags.Trap)
                 {
@@ -402,11 +420,15 @@ namespace Aeon.Emulator
         }
         private void Dispose(bool disposing)
         {
-            if (disposing && !disposed)
+            if (!this.disposed)
             {
-                this.Halt();
-                this.processorTask?.GetAwaiter().GetResult();
-                this.VirtualMachine?.Dispose();
+                if (disposing)
+                {
+                    this.Halt();
+                    this.processorTask?.GetAwaiter().GetResult();
+                    this.VirtualMachine?.Dispose();
+                }
+
                 this.disposed = true;
             }
         }
@@ -526,53 +548,5 @@ namespace Aeon.Emulator
                 return false;
             }
         }
-    }
-
-    /// <summary>
-    /// Describes the current state of the emulated system.
-    /// </summary>
-    public enum EmulatorState
-    {
-        /// <summary>
-        /// The emulator is initialized but no program has been loaded yet.
-        /// </summary>
-        NoProgram,
-        /// <summary>
-        /// The emulator is ready to run.
-        /// </summary>
-        Ready,
-        /// <summary>
-        /// The emulator is running.
-        /// </summary>
-        Running,
-        /// <summary>
-        /// The emulator is paused.
-        /// </summary>
-        Paused,
-        /// <summary>
-        /// The emulator has reached the end of the currently loaded program.
-        /// </summary>
-        ProgramExited,
-        /// <summary>
-        /// The emulator has been halted and cannot be resumed.
-        /// </summary>
-        Halted
-    }
-
-    /// <summary>
-    /// Provides information about an error in emulation.
-    /// </summary>
-    public sealed class ErrorEventArgs : EventArgs
-    {
-        /// <summary>
-        /// Initializes a new instance of the ErrorEventArgs class.
-        /// </summary>
-        /// <param name="message">Message describing the error.</param>
-        public ErrorEventArgs(string message) => this.Message = message;
-
-        /// <summary>
-        /// Gets a message describing the error.
-        /// </summary>
-        public string Message { get; }
     }
 }

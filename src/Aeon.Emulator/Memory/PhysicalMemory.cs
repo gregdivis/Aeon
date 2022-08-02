@@ -10,6 +10,8 @@ using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Memory;
 using Aeon.Emulator.RuntimeExceptions;
 
+#nullable enable
+
 namespace Aeon.Emulator
 {
     /// <summary>
@@ -140,7 +142,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets the location and size of base memory in the system.
         /// </summary>
-        public ReservedBlock BaseMemory { get; private set; }
+        public ReservedBlock? BaseMemory { get; private set; }
         /// <summary>
         /// Gets the entire emulated RAM as a <see cref="Span{byte}"/>.
         /// </summary>
@@ -161,7 +163,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets or sets the emulated video device.
         /// </summary>
-        internal Video.VideoHandler Video { get; set; }
+        internal Video.VideoHandler? Video { get; set; }
         /// <summary>
         /// Gets or sets the current linear offset of the global descriptor table.
         /// </summary>
@@ -690,8 +692,7 @@ namespace Aeon.Emulator
         /// <returns>Raw index into memory where string was found.</returns>
         public IEnumerable<int> Find(byte[] match)
         {
-            if (match == null)
-                throw new ArgumentNullException(nameof(match));
+            ArgumentNullException.ThrowIfNull(match);
             if (match.Length == 0)
                 throw new ArgumentException("Array must not be empty.");
 
@@ -722,8 +723,7 @@ namespace Aeon.Emulator
         /// <returns>Raw index into memory where string was found.</returns>
         public IEnumerable<int> Find(string match)
         {
-            if (match == null)
-                throw new ArgumentNullException(nameof(match));
+            ArgumentNullException.ThrowIfNull(match);
             if (match == string.Empty)
                 throw new ArgumentException("String cannot be empty.");
 
@@ -739,8 +739,7 @@ namespace Aeon.Emulator
         /// <param name="count">Number of bytes to copy.</param>
         public void ReadBytes(byte[] buffer, int bufferOffset, QualifiedAddress address, int count)
         {
-            if (buffer == null)
-                throw new ArgumentNullException(nameof(buffer));
+            ArgumentNullException.ThrowIfNull(buffer);
             if (bufferOffset < 0 || bufferOffset > buffer.Length - count)
                 throw new ArgumentOutOfRangeException(nameof(bufferOffset));
             if (count < 0)
@@ -754,7 +753,7 @@ namespace Aeon.Emulator
             {
                 uint offset;
                 if (address.AddressType == AddressType.RealMode)
-                    offset = GetRealModePhysicalAddress((ushort)address.Segment, address.Offset);
+                    offset = GetRealModePhysicalAddress((ushort)address.Segment!, address.Offset);
                 else
                     offset = address.Offset;
 
@@ -789,11 +788,11 @@ namespace Aeon.Emulator
                 return source;
 
             if (source.AddressType == AddressType.RealMode)
-                return QualifiedAddress.FromLogicalAddress(GetRealModePhysicalAddress((ushort)source.Segment, source.Offset));
+                return QualifiedAddress.FromLogicalAddress(GetRealModePhysicalAddress((ushort)source.Segment!, source.Offset));
 
             if (source.AddressType == AddressType.ProtectedMode)
             {
-                var descriptor = (SegmentDescriptor)GetDescriptor((ushort)source.Segment);
+                var descriptor = (SegmentDescriptor)GetDescriptor((ushort)source.Segment!);
                 if (!descriptor.IsPresent || descriptor.ByteLimit == 0)
                     return null;
 
@@ -1101,17 +1100,17 @@ namespace Aeon.Emulator
                 {
                     if (sizeof(T) == 1)
                     {
-                        byte b = this.Video.GetVramByte(fullAddress - VramAddress);
+                        byte b = this.Video!.GetVramByte(fullAddress - VramAddress);
                         return Unsafe.As<byte, T>(ref b);
                     }
                     else if (sizeof(T) == 2)
                     {
-                        ushort s = this.Video.GetVramWord(fullAddress - VramAddress);
+                        ushort s = this.Video!.GetVramWord(fullAddress - VramAddress);
                         return Unsafe.As<ushort, T>(ref s);
                     }
                     else
                     {
-                        uint i = this.Video.GetVramDWord(fullAddress - VramAddress);
+                        uint i = this.Video!.GetVramDWord(fullAddress - VramAddress);
                         return Unsafe.As<uint, T>(ref i);
                     }
                 }
@@ -1131,11 +1130,11 @@ namespace Aeon.Emulator
                 else
                 {
                     if (sizeof(T) == 1)
-                        this.Video.SetVramByte(fullAddress - VramAddress, Unsafe.As<T, byte>(ref value));
+                        this.Video!.SetVramByte(fullAddress - VramAddress, Unsafe.As<T, byte>(ref value));
                     else if (sizeof(T) == 2)
-                        this.Video.SetVramWord(fullAddress - VramAddress, Unsafe.As<T, ushort>(ref value));
+                        this.Video!.SetVramWord(fullAddress - VramAddress, Unsafe.As<T, ushort>(ref value));
                     else
-                        this.Video.SetVramDWord(fullAddress - VramAddress, Unsafe.As<T, uint>(ref value));
+                        this.Video!.SetVramDWord(fullAddress - VramAddress, Unsafe.As<T, uint>(ref value));
                 }
             }
         }

@@ -4,7 +4,7 @@ namespace Aeon.Emulator.Dos
 {
     internal sealed class NullStream : Stream, IDeviceStream
     {
-        public static readonly NullStream Instance = new NullStream();
+        public static readonly NullStream Instance = new();
 
         private NullStream()
         {

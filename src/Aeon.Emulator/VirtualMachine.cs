@@ -9,6 +9,8 @@ using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.Memory;
 using Aeon.Emulator.RuntimeExceptions;
 
+#nullable enable
+
 namespace Aeon.Emulator
 {
     /// <summary>
@@ -113,31 +115,31 @@ namespace Aeon.Emulator
         /// <summary>
         /// Occurs when the emulated display mode has changed.
         /// </summary>
-        public event EventHandler<VideoModeChangedEventArgs> VideoModeChanged;
+        public event EventHandler<VideoModeChangedEventArgs>? VideoModeChanged;
         /// <summary>
         /// Occurs when the emulator sets the mouse position.
         /// </summary>
-        public event EventHandler<MouseMoveEventArgs> MouseMoveByEmulator;
+        public event EventHandler<MouseMoveEventArgs>? MouseMoveByEmulator;
         /// <summary>
         /// Occurs when the internal mouse position has changed.
         /// </summary>
-        public event EventHandler<MouseMoveEventArgs> MouseMove;
+        public event EventHandler<MouseMoveEventArgs>? MouseMove;
         /// <summary>
         /// Occurs when the mouse cursor is shown or hidden.
         /// </summary>
-        public event EventHandler MouseVisibilityChanged;
+        public event EventHandler? MouseVisibilityChanged;
         /// <summary>
         /// Occurs when the text-mode cursor is shown or hidden.
         /// </summary>
-        public event EventHandler CursorVisibilityChanged;
+        public event EventHandler? CursorVisibilityChanged;
         /// <summary>
         /// Occurs when the current process has changed.
         /// </summary>
-        public event EventHandler CurrentProcessChanged;
+        public event EventHandler? CurrentProcessChanged;
         /// <summary>
         /// Occurs when an informational message has been written to the log.
         /// </summary>
-        public event EventHandler<MessageEventArgs> MessageLogged;
+        public event EventHandler<MessageEventArgs>? MessageLogged;
 
         /// <summary>
         /// Gets the virtual file system used by the virtual machine.
@@ -146,7 +148,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets information about the current emulated video mode.
         /// </summary>
-        public Video.VideoMode VideoMode => this.Video?.CurrentMode;
+        public Video.VideoMode? VideoMode => this.Video?.CurrentMode;
         /// <summary>
         /// Gets a collection of all virtual devices registered with the virtual machine.
         /// </summary>
@@ -233,9 +235,7 @@ namespace Aeon.Emulator
         /// <param name="image">Executable file to load.</param>
         public void LoadImage(ProgramImage image)
         {
-            if (image == null)
-                throw new ArgumentNullException(nameof(image));
-
+            ArgumentNullException.ThrowIfNull(image);
             Dos.LoadImage(image);
         }
         /// <summary>
@@ -243,10 +243,9 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="image">Executable file to load.</param>
         /// <param name="commandLineArguments">Command line arguments for the program.</param>
-        public void LoadImage(ProgramImage image, string commandLineArguments, string stdOut = null)
+        public void LoadImage(ProgramImage image, string? commandLineArguments, string? stdOut = null)
         {
-            if (image == null)
-                throw new ArgumentNullException(nameof(image));
+            ArgumentNullException.ThrowIfNull(image);
             if (commandLineArguments != null && commandLineArguments.Length > 255)
                 throw new ArgumentException("Command line length must not exceed 255 characters.");
 
@@ -374,10 +373,8 @@ namespace Aeon.Emulator
         /// <param name="mouseEvent">Mouse input event that occurred.</param>
         public void MouseEvent(MouseEvent mouseEvent)
         {
-            if (mouseEvent == null)
-                throw new ArgumentNullException(nameof(mouseEvent));
-
-            mouseEvent.RaiseEvent(Mouse);
+            ArgumentNullException.ThrowIfNull(mouseEvent);
+            mouseEvent.RaiseEvent(this.Mouse);
         }
         /// <summary>
         /// Registers a virtual device with the virtual machine.
@@ -385,8 +382,7 @@ namespace Aeon.Emulator
         /// <param name="virtualDevice">Virtual device to register.</param>
         public void RegisterVirtualDevice(IVirtualDevice virtualDevice)
         {
-            if (virtualDevice == null)
-                throw new ArgumentNullException(nameof(virtualDevice));
+            ArgumentNullException.ThrowIfNull(virtualDevice);
 
             if (virtualDevice is IInterruptHandler interruptHandler)
             {
@@ -472,8 +468,7 @@ namespace Aeon.Emulator
         /// <returns>Value indicating whether exception was handled.</returns>
         public bool RaiseException(EmulatedException exception)
         {
-            if (exception == null)
-                throw new ArgumentNullException(nameof(exception));
+            ArgumentNullException.ThrowIfNull(exception);
 
             System.Diagnostics.Debug.WriteLine(exception.Message);
 
