@@ -117,7 +117,7 @@ namespace Aeon.Emulator.Launcher
 
             vm.RegisterVirtualDevice(new Input.JoystickDevice());
 
-            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 20_000_000;
+            emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 100_000_000;
             emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? MouseInputMode.Absolute : MouseInputMode.Relative;
             toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
             mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;

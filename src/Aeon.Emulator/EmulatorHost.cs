@@ -527,12 +527,12 @@ namespace Aeon.Emulator
                     return;
             }
 
-            long ticksPerInst = TimeSpan.TicksPerSecond / this.emulationSpeed;
-            long targetTicks = ticksPerInst * IterationInstructionCount;
+            double ticksPerInst = TimeSpan.TicksPerSecond / (double)this.emulationSpeed;
+            long targetTicks = (long)(ticksPerInst * IterationInstructionCount);
 
             while (speedTimer.ElapsedTicks < targetTicks)
             {
-                Thread.SpinWait(100);
+                Thread.SpinWait(10);
             }
         }
 
