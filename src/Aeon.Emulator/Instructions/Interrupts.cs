@@ -176,8 +176,8 @@ namespace Aeon.Emulator.Instructions
                     }
                     else
                     {
-                        ParseCommand(vm, actualArgs);
                         vm.Processor.Flags.Carry = true;
+                        ParseCommand(vm, actualArgs);
                     }
                 }
                 else
