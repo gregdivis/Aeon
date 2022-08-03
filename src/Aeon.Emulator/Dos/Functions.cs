@@ -81,5 +81,8 @@
         public const byte CanonicalizePath = 0x60;
         public const byte CreateChildPsp = 0x55;
         public const byte RenameFile = 0x56;
+
+        public const byte Function37 = 0x37;
+        public const byte Function37_GetSwitchCharacter = 0x00;
     }
 }

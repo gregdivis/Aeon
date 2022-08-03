@@ -488,6 +488,19 @@ namespace Aeon.Emulator.Dos
                     fileControl.MoveFile();
                     break;
 
+                case Functions.Function37:
+                    System.Diagnostics.Debug.WriteLine($"DOS function {vm.Processor.AX:X4}h.");
+                    vm.Processor.Flags.Carry = true;
+                    switch (vm.Processor.AL)
+                    {
+                        case Functions.Function37_GetSwitchCharacter:
+                            // not technically supported but some things rely on this anyway
+                            vm.Processor.DL = (byte)'/';
+                            vm.Processor.AL = 0;
+                            break;
+                    }
+                    break;
+
                 default:
                     System.Diagnostics.Debug.WriteLine($"DOS function {vm.Processor.AH:X2}h not implemented.");
                     vm.Processor.Flags.Carry = true;
