@@ -146,7 +146,7 @@ namespace Aeon.Emulator.Launcher
         /// <summary>
         /// Gets the BitmapSource used for rendering the output display.
         /// </summary>
-        public BitmapSource DisplayBitmap => this.renderTarget.InteropBitmap;
+        public BitmapSource DisplayBitmap => this.renderTarget?.InteropBitmap;
         /// <summary>
         /// Gets information about the current process. This is a dependency property.
         /// </summary>
