@@ -66,6 +66,23 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// Gets the collection of emulated drives.
         /// </summary>
         public DriveList Drives => this.drives;
+        /// <summary>
+        /// Gets the path of the default command interpreter.
+        /// </summary>
+        public VirtualPath CommandInterpreterPath
+        {
+            get
+            {
+                foreach (char c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                {
+                    var drive = this.Drives[new DriveLetter(c)];
+                    if (drive.HasCommandInterpreter)
+                        return new VirtualPath($"{c}:\\COMMAND.COM");
+                }
+
+                return null;
+            }
+        }
 
         /// <summary>
         /// Returns an absolute path based on the current directory and drive.

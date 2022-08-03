@@ -431,7 +431,15 @@ namespace Aeon.Emulator
         /// Informs the VirtualMachine instance that initialization is complete and no more devices will be added.
         /// This must be called prior to emulation.
         /// </summary>
-        public void EndInitialization() => this.PhysicalMemory.ReserveBaseMemory();
+        public void EndInitialization()
+        {
+            this.PhysicalMemory.ReserveBaseMemory();
+
+            var comspec = this.FileSystem.CommandInterpreterPath;
+            if (comspec != null)
+                this.EnvironmentVariables["COMSPEC"] = comspec.ToString();
+
+        }
         /// <summary>
         /// Returns an object containing information about current conventional memory usage.
         /// </summary>
