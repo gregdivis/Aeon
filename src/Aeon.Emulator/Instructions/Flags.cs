@@ -37,7 +37,7 @@
         {
             vm.Processor.Flags.InterruptEnable = true;
         }
-        [Opcode("9F", Name = "lahf")]
+        [Opcode("9F", Name = "lahf", AddressSize = 16 | 32, OperandSize = 16 | 32)]
         public static void CopyFlagsToAH(VirtualMachine vm)
         {
             var value = EFlags.Clear;
