@@ -11,9 +11,9 @@ namespace Aeon.Emulator
         public bool Carry
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.carry.Value;
+            get => this.carry.Carry;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set => this.carry.Value = value;
+            set => this.carry.Carry = value;
         }
         public bool Parity
         {
@@ -22,7 +22,13 @@ namespace Aeon.Emulator
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => this.signZeroParity.Parity = value;
         }
-        public bool Auxiliary { get; set; }
+        public bool Auxiliary
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => this.carry.Aux;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => this.carry.Aux = value;
+        }
         public bool Zero
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -104,8 +110,6 @@ namespace Aeon.Emulator
                 this.Identification = value.HasFlag(EFlags.Identification);
 
                 this.Virtual8086Mode = value.HasFlag(EFlags.Virtual8086Mode);
-
-
 
                 this.IOPrivilege = value.HasFlag(EFlags.IOPrivilege1) && value.HasFlag(EFlags.IOPrivilege2) ? 3
                     : value.HasFlag(EFlags.IOPrivilege2) && !value.HasFlag(EFlags.IOPrivilege1) ? 2

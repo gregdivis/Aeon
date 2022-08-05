@@ -6,20 +6,27 @@ namespace Aeon.Emulator
     {
         private struct CarryFlag
         {
-            private bool? currentValue;
+            private Overrides overrides;
             private FlagOperation operation;
             private uint a;
             private uint b;
             private uint c;
 
-            public CarryFlag(bool initialValue) : this() => this.currentValue = initialValue;
+            public CarryFlag(bool initialValue) : this() => this.overrides = new Overrides(initialValue);
 
-            public bool Value
+            public bool Carry
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => this.currentValue ?? this.CalculateValue();
+                get => this.overrides.Carry ?? this.CalculateCarryValue();
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                set => this.currentValue = value;
+                set => this.overrides.Carry = value;
+            }
+            public bool Aux
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => this.overrides.Aux ?? this.CalculateAuxValue();
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                set => this.overrides.Aux = value;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -27,7 +34,7 @@ namespace Aeon.Emulator
             {
                 this.operation = operation;
                 this.a = a;
-                this.currentValue = null;
+                this.overrides = default;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void SetLazy(FlagOperation operation, uint a, uint b)
@@ -35,7 +42,7 @@ namespace Aeon.Emulator
                 this.operation = operation;
                 this.a = a;
                 this.b = b;
-                this.currentValue = null;
+                this.overrides = default;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void SetLazy(FlagOperation operation, uint a, uint b, uint c)
@@ -44,11 +51,11 @@ namespace Aeon.Emulator
                 this.a = a;
                 this.b = b;
                 this.c = c;
-                this.currentValue = null;
+                this.overrides = default;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
-            private bool CalculateValue()
+            private bool CalculateCarryValue()
             {
                 int signed;
                 long longSigned;
@@ -108,8 +115,37 @@ namespace Aeon.Emulator
                     _ => false
                 };
 
-                this.currentValue = value;
+                this.overrides.Carry = value;
                 return value;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
+            private bool CalculateAuxValue()
+            {
+                bool value = this.operation switch
+                {
+                    FlagOperation.Add_Byte or FlagOperation.Add_Word or FlagOperation.Add_DWord => (((this.a & 0xF) + (this.b & 0xF)) & 0x10u) != 0,
+                    FlagOperation.Adc_Byte or FlagOperation.Adc_Word or FlagOperation.Adc_DWord => (((this.a & 0xF) + (this.b & 0xF) + (this.c & 0xF)) & 0x10u) != 0,
+                    FlagOperation.Sub_Byte or FlagOperation.Sub_Word or FlagOperation.Sub_DWord => (((this.a & 0xF) - (this.b & 0xF)) & 0x10u) != 0,
+                    FlagOperation.Sbb_Byte or FlagOperation.Sbb_Word or FlagOperation.Sbb_DWord => (((this.a & 0xF) - (this.b & 0xF) - (this.c & 0xF)) & 0x10u) != 0,
+                    _ => false
+                };
+
+                this.overrides.Aux = value;
+                return value;
+            }
+
+            private struct Overrides
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                public Overrides(bool initialValue)
+                {
+                    this.Carry = initialValue;
+                    this.Aux = initialValue;
+                }
+
+                public bool? Carry;
+                public bool? Aux;
             }
         }
     }
