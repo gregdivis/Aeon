@@ -27,7 +27,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Occurs when the <see cref="IsActive"/> property has changed.
         /// </summary>
-        internal event EventHandler IsActiveChanged;
+        internal event EventHandler? IsActiveChanged;
 
         /// <summary>
         /// Gets or sets a value indicating whether a DMA transfer is active.
@@ -45,7 +45,7 @@ namespace Aeon.Emulator
                         this.transferTimer.Reset();
 
                     this.isActive = value;
-                    OnIsActiveChanged(EventArgs.Empty);
+                    this.OnIsActiveChanged(EventArgs.Empty);
                 }
             }
         }
@@ -100,7 +100,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets or sets the device which is connected to the DMA channel.
         /// </summary>
-        internal IDmaDevice8 Device { get; set; }
+        internal IDmaDevice8? Device { get; set; }
 
         /// <summary>
         /// Gets or sets the period between DMA transfers in stopwatch ticks.
@@ -128,8 +128,8 @@ namespace Aeon.Emulator
                 if (!this.addressByteRead)
                 {
                     ushort address = (ushort)(this.Address + this.Count - (this.TransferBytesRemaining - 1));
-                    this.addressHighByte = (byte)(address >> 8);
-                    return (byte)(address & 0xFF);
+                    this.addressHighByte = Intrinsics.HighByte(address);
+                    return Intrinsics.LowByte(address);
                 }
                 else
                 {
@@ -170,8 +170,8 @@ namespace Aeon.Emulator
                 if (!this.countByteRead)
                 {
                     ushort count = (ushort)(this.TransferBytesRemaining - 1);
-                    this.bytesRemainingHighByte = (byte)((count >> 8) & 0xFF);
-                    return (byte)(count & 0xFF);
+                    this.bytesRemainingHighByte = Intrinsics.HighByte(count);
+                    return Intrinsics.LowByte(count);
                 }
                 else
                 {
@@ -236,7 +236,9 @@ namespace Aeon.Emulator
                         device.SingleCycleComplete();
                     }
                     else
+                    {
                         this.TransferBytesRemaining = this.Count + 1;
+                    }
                 }
 
                 this.transferTimer.Reset();

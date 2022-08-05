@@ -45,7 +45,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             var attributes = Convert(info.Attributes);
             string name = info.Name.ToUpperInvariant();
 
-            if ((attributes & VirtualFileAttributes.Directory) == 0)
+            if (!attributes.HasFlag(VirtualFileAttributes.Directory))
             {
                 var fileInfo = (FileInfo)info;
                 return new VirtualFileInfo(name, attributes, fileInfo.LastWriteTimeUtc, fileInfo.Length);
@@ -63,15 +63,15 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         public static VirtualFileAttributes Convert(FileAttributes attributes)
         {
             var res = VirtualFileAttributes.Default;
-            if ((attributes & FileAttributes.Archive) != 0)
+            if (attributes.HasFlag(FileAttributes.Archive))
                 res |= VirtualFileAttributes.Archived;
-            if ((attributes & FileAttributes.Directory) != 0)
+            if (attributes.HasFlag(FileAttributes.Directory))
                 res |= VirtualFileAttributes.Directory;
-            if ((attributes & FileAttributes.Hidden) != 0)
+            if (attributes.HasFlag(FileAttributes.Hidden))
                 res |= VirtualFileAttributes.Hidden;
-            if ((attributes & FileAttributes.ReadOnly) != 0)
+            if (attributes.HasFlag(FileAttributes.ReadOnly))
                 res |= VirtualFileAttributes.ReadOnly;
-            if ((attributes & FileAttributes.System) != 0)
+            if (attributes.HasFlag(FileAttributes.System))
                 res |= VirtualFileAttributes.System;
             return res;
         }
@@ -83,8 +83,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Stream back by specified file.</returns>
         public virtual ErrorCodeResult<Stream> OpenRead(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             string fullPath = GetFullPath(path);
 
@@ -101,8 +100,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <exception cref="System.IO.DirectoryNotFoundException">The specified directory was not found.</exception>
         public virtual ErrorCodeResult<IEnumerable<VirtualFileInfo>> GetDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             string fullPath = GetFullPath(path);
             var directory = new DirectoryInfo(fullPath);
@@ -121,8 +119,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Information about the specified file or directory; null if file was not found.</returns>
         public virtual ErrorCodeResult<VirtualFileInfo> GetFileInfo(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             string fullPath;
             try
@@ -137,7 +134,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
                 return ExtendedErrorCode.PathNotFound;
 
-            FileSystemInfo info = null;
+            FileSystemInfo? info = null;
 
             if (File.Exists(fullPath))
                 info = new FileInfo(fullPath);
@@ -152,7 +149,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Releases resources used by the MappedFolder.
         /// </summary>
-        public void Dispose() => this.Dispose(true);
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Releases resources used by the instance.
@@ -168,9 +169,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Full path to the specified file or folder.</returns>
         protected string GetFullPath(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
-
+            ArgumentNullException.ThrowIfNull(path);
             return Path.Combine(this.HostPath, path.Path);
         }
     }

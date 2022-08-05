@@ -1,4 +1,6 @@
-﻿namespace Aeon.Emulator.Dos
+﻿#nullable disable
+
+namespace Aeon.Emulator.Dos
 {
     public readonly struct ErrorCodeResult<TResult>
     {
@@ -13,33 +15,10 @@
             this.ErrorCode = errorCode;
         }
 
-        public static implicit operator ErrorCodeResult<TResult>(TResult result) => new ErrorCodeResult<TResult>(result);
-        public static implicit operator ErrorCodeResult<TResult>(ExtendedErrorCode errorCode) => new ErrorCodeResult<TResult>(errorCode);
+        public static implicit operator ErrorCodeResult<TResult>(TResult result) => new(result);
+        public static implicit operator ErrorCodeResult<TResult>(ExtendedErrorCode errorCode) => new(errorCode);
 
         public TResult Result { get; }
         public ExtendedErrorCode ErrorCode { get; }
-    }
-
-    public enum ExtendedErrorCode : byte
-    {
-        NoError,
-        FunctionNumberInvalid,
-        FileNotFound,
-        PathNotFound,
-        TooManyOpenFiles,
-        AccessDenied,
-        InvalidHandle,
-        MemoryControlBlockDestroyed,
-        InsufficientMemory,
-        MemoryBlockAddressInvalid,
-        EnvironmentInvalid,
-        FormatInvalid,
-        AccessCodeInvalid,
-        DataInvalid,
-        Reserved,
-        InvalidDrive,
-        AttemptedToRemoveCurrentDirectory,
-        NotSameDevice,
-        NoMoreFiles
     }
 }

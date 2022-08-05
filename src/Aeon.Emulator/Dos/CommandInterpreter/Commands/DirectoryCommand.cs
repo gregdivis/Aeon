@@ -10,7 +10,7 @@ namespace Aeon.Emulator.CommandInterpreter
         private readonly DirectoryAttributeFilter[] attributeFilter;
         private readonly DirectorySort[] sortBy;
 
-        public DirectoryCommand(string path, DirectoryOptions options = default, IEnumerable<DirectoryAttributeFilter> attributeFilter = null, IEnumerable<DirectorySort> sortBy = null)
+        public DirectoryCommand(string path, DirectoryOptions options = default, IEnumerable<DirectoryAttributeFilter>? attributeFilter = null, IEnumerable<DirectorySort>? sortBy = null)
         {
             this.Path = path;
             this.Options = options;

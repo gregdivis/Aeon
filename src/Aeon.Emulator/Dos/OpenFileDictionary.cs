@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Aeon.Emulator.Dos
 {
@@ -180,7 +181,7 @@ namespace Aeon.Emulator.Dos
                 this.Remove(file.Key);
             }
         }
-        public bool TryGetValue(short handle, out DosStream stream)
+        public bool TryGetValue(short handle, [NotNullWhen(true)] out DosStream? stream)
         {
             return this.fileHandles.TryGetValue(handle, out stream);
         }

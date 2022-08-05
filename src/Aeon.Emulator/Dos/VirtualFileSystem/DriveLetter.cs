@@ -151,7 +151,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
 
         public int CompareTo(DriveLetter other) => this.driveIndex.CompareTo(other.driveIndex);
         public bool Equals(DriveLetter other) => this.driveIndex == other.driveIndex;
-        public override bool Equals(object obj) => obj is DriveLetter d && this.Equals(d);
+        public override bool Equals(object? obj) => obj is DriveLetter d && this.Equals(d);
         public override int GetHashCode() => this.driveIndex.GetHashCode();
         public override string ToString()
         {

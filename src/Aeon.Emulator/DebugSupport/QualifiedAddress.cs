@@ -93,7 +93,7 @@ namespace Aeon.Emulator.DebugSupport
         /// </summary>
         /// <param name="s">Address string to parse.</param>
         /// <returns>QualifiedAddress instance if parsing was successful; otherwise null.</returns>
-        public static QualifiedAddress? TryParse(string s)
+        public static QualifiedAddress? TryParse(string? s)
         {
             s = s?.Trim();
             if (string.IsNullOrEmpty(s))
@@ -183,7 +183,7 @@ namespace Aeon.Emulator.DebugSupport
         /// </summary>
         /// <param name="obj">Other object to test for equality.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override bool Equals(object obj) => obj is QualifiedAddress a ? this.Equals(a) : false;
+        public override bool Equals(object? obj) => obj is QualifiedAddress a && this.Equals(a);
         /// <summary>
         /// Returns a hash code for the address.
         /// </summary>

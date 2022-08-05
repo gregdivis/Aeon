@@ -11,7 +11,7 @@ namespace Aeon.Emulator
     /// </summary>
     public static class VirtualDirectory
     {
-        private static readonly Regex LegalNameRegex = new Regex("^" + NameExpression + "$", RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly Regex LegalNameRegex = new("^" + NameExpression + "$", RegexOptions.CultureInvariant | RegexOptions.Compiled | RegexOptions.Singleline);
 
         private const string ValidCharacters = @"0-9a-zA-Z\!\@\#\$\%\^\&\(\)\-_\`\'\~\{\}";
         private const string NameExpression = "[" + ValidCharacters + "]{1,8}(\\.[" + ValidCharacters + "]{1,3})?";
@@ -23,9 +23,7 @@ namespace Aeon.Emulator
         /// <returns>True if name is a legal 8.3 DOS name; otherwise false.</returns>
         public static bool IsLegalDosName(string name)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
-
+            ArgumentNullException.ThrowIfNull(name);
             return LegalNameRegex.IsMatch(name);
         }
         /// <summary>
@@ -35,8 +33,7 @@ namespace Aeon.Emulator
         /// <returns>True if path is a legal 8.3 DOS path; otherwise false.</returns>
         public static bool IsLegalDosPath(string path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             if (path == string.Empty)
                 return true;
@@ -67,10 +64,8 @@ namespace Aeon.Emulator
         /// <returns>True if name matches the filter; otherwise false.</returns>
         public static bool MatchesFilter(string filter, string name)
         {
-            if (filter == null)
-                throw new ArgumentNullException(nameof(filter));
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
+            ArgumentNullException.ThrowIfNull(filter);
+            ArgumentNullException.ThrowIfNull(name);
 
             if (name == "*.*")
                 return true;
@@ -88,12 +83,9 @@ namespace Aeon.Emulator
         /// <returns>Filtered collection of items.</returns>
         public static IEnumerable<T> ApplyFilter<T>(string filter, IEnumerable<T> source, Func<T, string> getName)
         {
-            if (filter == null)
-                throw new ArgumentNullException(nameof(filter));
-            if (source == null)
-                throw new ArgumentNullException(nameof(source));
-            if (getName == null)
-                throw new ArgumentNullException(nameof(getName));
+            ArgumentNullException.ThrowIfNull(filter);
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(getName);
 
             if (filter == "*.*" || filter == "*")
                 return source;

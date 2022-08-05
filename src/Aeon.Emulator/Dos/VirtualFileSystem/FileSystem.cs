@@ -29,7 +29,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Raised when the <see cref="CurrentDrive"/> property has changed.
         /// </summary>
-        public event EventHandler CurrentDriveChanged;
+        public event EventHandler? CurrentDriveChanged;
 
         /// <summary>
         /// Gets or sets the current drive and directory in the DOS session.
@@ -69,7 +69,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Gets the path of the default command interpreter.
         /// </summary>
-        public VirtualPath CommandInterpreterPath
+        public VirtualPath? CommandInterpreterPath
         {
             get
             {
@@ -91,8 +91,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Absolute path generated from the input path.</returns>
         public VirtualPath ResolvePath(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             if (path.PathType == VirtualPathType.Absolute)
             {
@@ -127,8 +126,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <param name="path">New current directory.</param>
         public void ChangeDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
@@ -144,12 +142,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Stream backed by the requested file.</returns>
         public ErrorCodeResult<Stream> OpenFile(VirtualPath path, FileMode fileMode, FileAccess fileAccess)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
-            return this.Drives[(DriveLetter)path.DriveLetter].OpenFile(path, fileMode, fileAccess);
+            return this.Drives[(DriveLetter)path.DriveLetter!].OpenFile(path, fileMode, fileAccess);
         }
         /// <summary>
         /// Opens an existing file or creates a new one.
@@ -160,8 +157,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Stream backed by the requested file.</returns>
         public ErrorCodeResult<Stream> OpenFile(string path, FileMode fileMode, FileAccess fileAccess)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return OpenFile(new VirtualPath(path), fileMode, fileAccess);
         }
@@ -172,12 +168,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>List of files in the specified path.</returns>
         public ErrorCodeResult<IEnumerable<VirtualFileInfo>> GetDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
-            return this.Drives[(DriveLetter)path.DriveLetter].GetDirectory(path);
+            return this.Drives[(DriveLetter)path.DriveLetter!].GetDirectory(path);
         }
         /// <summary>
         /// Returns a list of all of the files in a path inside a virtual directory.
@@ -186,8 +181,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>List of files in the specified path.</returns>
         public ErrorCodeResult<IEnumerable<VirtualFileInfo>> GetDirectory(string path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return GetDirectory(new VirtualPath(path));
         }
@@ -199,8 +193,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>List of files in the specified path.</returns>
         public ErrorCodeResult<IEnumerable<VirtualFileInfo>> GetDirectory(VirtualPath path, VirtualFileAttributes includedAttributes)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var labelEntries = Enumerable.Empty<VirtualFileInfo>();
 
@@ -215,7 +208,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             if (includedAttributes.HasFlag(VirtualFileAttributes.VolumeLabel))
             {
                 path = ResolvePath(path);
-                var label = this.Drives[(DriveLetter)path.DriveLetter].VolumeLabel ?? string.Empty;
+                var label = this.Drives[(DriveLetter)path.DriveLetter!].VolumeLabel ?? string.Empty;
                 results = new[] { new VirtualFileInfo(label, VirtualFileAttributes.VolumeLabel, DateTime.Now, 0) }.Concat(results);
             }
 
@@ -229,8 +222,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>List of files in the specified path.</returns>
         public ErrorCodeResult<IEnumerable<VirtualFileInfo>> GetDirectory(string path, VirtualFileAttributes includedAttributes)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return this.GetDirectory(new VirtualPath(path), includedAttributes);
         }
@@ -241,12 +233,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Information about the file if it is found; otherwise null.</returns>
         public ErrorCodeResult<VirtualFileInfo> GetFileInfo(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
-            var info = this.Drives[(DriveLetter)path.DriveLetter].GetFileInfo(path);
+            var info = this.Drives[(DriveLetter)path.DriveLetter!].GetFileInfo(path);
             if (info.Result != null)
                 info.Result.DeviceIndex = ((DriveLetter)path.DriveLetter).Index;
 
@@ -259,8 +250,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Information about the file if it is found; otherwise null.</returns>
         public ErrorCodeResult<VirtualFileInfo> GetFileInfo(string path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return GetFileInfo(new VirtualPath(path));
         }
@@ -271,12 +261,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>True if file was delete; false if file was not found.</returns>
         public ExtendedErrorCode DeleteFile(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
-            return this.Drives[(DriveLetter)path.DriveLetter].DeleteFile(path);
+            return this.Drives[(DriveLetter)path.DriveLetter!].DeleteFile(path);
         }
         /// <summary>
         /// Deletes a file.
@@ -285,8 +274,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>True if file was delete; false if file was not found.</returns>
         public ExtendedErrorCode DeleteFile(string path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return DeleteFile(new VirtualPath(path));
         }
@@ -297,8 +285,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether file exists.</returns>
         public bool FileExists(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
@@ -315,8 +302,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether file exists.</returns>
         public bool FileExists(string path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return FileExists(new VirtualPath(path));
         }
@@ -327,8 +313,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether directory exists.</returns>
         public bool DirectoryExists(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
@@ -345,8 +330,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether directory exists.</returns>
         public bool DirectoryExists(string path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             return FileExists(new VirtualPath(path));
         }
@@ -357,15 +341,14 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether directory exists.</returns>
         public ExtendedErrorCode CreateDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             path = ResolvePath(path);
 
             if (path.Elements.Count == 0)
                 return ExtendedErrorCode.NoError;
 
-            return this.Drives[(DriveLetter)path.DriveLetter].CreateDirectory(path);
+            return this.Drives[(DriveLetter)path.DriveLetter!].CreateDirectory(path);
         }
         /// <summary>
         /// Creates a new directory.

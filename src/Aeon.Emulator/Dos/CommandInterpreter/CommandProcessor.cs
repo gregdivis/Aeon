@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,7 +12,7 @@ namespace Aeon.Emulator.CommandInterpreter
     internal sealed class CommandProcessor
     {
         private readonly VirtualMachine vm;
-        private readonly Stack<BatchInstance> batchInstances = new Stack<BatchInstance>();
+        private readonly Stack<BatchInstance> batchInstances = new();
         private bool echoCommand = true;
 
         public CommandProcessor(VirtualMachine vm)
@@ -21,7 +22,7 @@ namespace Aeon.Emulator.CommandInterpreter
 
         public bool HasBatch => this.batchInstances.Count > 0;
 
-        private BatchInstance CurrentBatch => this.batchInstances.TryPeek(out var b) ? b : null;
+        private BatchInstance? CurrentBatch => this.batchInstances.TryPeek(out var b) ? b : null;
 
         public CommandResult RunNextBatchStatement()
         {
@@ -54,7 +55,7 @@ namespace Aeon.Emulator.CommandInterpreter
             return true;
         }
 
-        private bool LoadBatchFile(ReadOnlySpan<char> batchFileName, ReadOnlySpan<char> args, out BatchInstance batchInstance)
+        private bool LoadBatchFile(ReadOnlySpan<char> batchFileName, ReadOnlySpan<char> args, [NotNullWhen(true)] out BatchInstance? batchInstance)
         {
             batchInstance = null;
 
@@ -101,7 +102,6 @@ namespace Aeon.Emulator.CommandInterpreter
             return result;
         }
 
-#pragma warning disable IDE0060 // Remove unused parameter
         internal CommandResult RunCommand(CallCommand callCommand)
         {
             var batchFileName = callCommand.Target;
@@ -129,7 +129,8 @@ namespace Aeon.Emulator.CommandInterpreter
             var path = VirtualPath.TryParse(typeCommand.FileName);
             try
             {
-                path = this.vm.FileSystem.ResolvePath(path);
+                if (path != null)
+                    path = this.vm.FileSystem.ResolvePath(path);
             }
             catch (ArgumentException)
             {
@@ -148,8 +149,8 @@ namespace Aeon.Emulator.CommandInterpreter
                         int bytesRead = stream.Read(buffer);
                         while (bytesRead > 0)
                         {
-                            int charCount = Encoding.Latin1.GetChars(buffer.Slice(0, bytesRead), charBuffer);
-                            this.vm.Console.Write(charBuffer.Slice(0, charCount));
+                            int charCount = Encoding.Latin1.GetChars(buffer[..bytesRead], charBuffer);
+                            this.vm.Console.Write(charBuffer[..charCount]);
                             bytesRead = stream.Read(buffer);
                         }
                     }
@@ -336,7 +337,8 @@ namespace Aeon.Emulator.CommandInterpreter
 
             try
             {
-                path = this.vm.FileSystem.ResolvePath(path);
+                if (path != null)
+                    path = this.vm.FileSystem.ResolvePath(path);
             }
             catch (ArgumentException)
             {
@@ -405,7 +407,6 @@ namespace Aeon.Emulator.CommandInterpreter
 
             return CommandResult.Continue;
         }
-#pragma warning restore IDE0060 // Remove unused parameter
 
         private string ReplaceVariables(string s)
         {

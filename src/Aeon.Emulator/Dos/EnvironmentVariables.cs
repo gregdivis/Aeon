@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Aeon.Emulator
@@ -9,7 +10,7 @@ namespace Aeon.Emulator
     /// </summary>
     public sealed class EnvironmentVariables : IDictionary<string, string>
     {
-        private readonly Dictionary<string, string> variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> variables = new(StringComparer.OrdinalIgnoreCase);
 
         internal EnvironmentVariables()
         {
@@ -38,7 +39,7 @@ namespace Aeon.Emulator
         public bool ContainsKey(string key) => this.variables.ContainsKey(key);
         public ICollection<string> Keys => this.variables.Keys;
         public bool Remove(string key) => this.variables.Remove(key);
-        public bool TryGetValue(string key, out string value) => this.variables.TryGetValue(key, out value);
+        public bool TryGetValue(string key, [NotNullWhen(true)] out string? value) => this.variables.TryGetValue(key, out value);
         public ICollection<string> Values => this.variables.Values;
         public string this[string key]
         {

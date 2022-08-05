@@ -26,11 +26,10 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Stream backed by the new file.</returns>
         public virtual ErrorCodeResult<Stream> CreateFile(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var fullPath = GetFullPath(path);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
             return new FileStream(fullPath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
         }
@@ -41,8 +40,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Stream backed by the file.</returns>
         public virtual ErrorCodeResult<Stream> OpenWrite(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var fullPath = GetFullPath(path);
             if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
@@ -59,8 +57,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether file was deleted.</returns>
         public virtual ExtendedErrorCode DeleteFile(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var fullPath = GetFullPath(path);
 
@@ -90,10 +87,8 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <param name="newFileName">New name and path of the file.</param>
         public virtual ExtendedErrorCode MoveFile(VirtualPath fileToMove, VirtualPath newFileName)
         {
-            if (fileToMove == null)
-                throw new ArgumentNullException(nameof(fileToMove));
-            if (newFileName == null)
-                throw new ArgumentNullException(nameof(newFileName));
+            ArgumentNullException.ThrowIfNull(fileToMove);
+            ArgumentNullException.ThrowIfNull(newFileName);
 
             var srcPath = GetFullPath(fileToMove);
             if (!File.Exists(srcPath))
@@ -112,8 +107,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <param name="path">Path of directory to create.</param>
         public virtual ExtendedErrorCode CreateDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var fullPath = GetFullPath(path);
             if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
@@ -129,8 +123,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether directory was removed.</returns>
         public virtual ExtendedErrorCode RemoveDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var fullPath = GetFullPath(path);
 

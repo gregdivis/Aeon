@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Memory;
 
+#nullable disable
+
 namespace Aeon.Emulator.Dos.CD
 {
     /// <summary>

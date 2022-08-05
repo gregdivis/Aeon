@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using Aeon.Emulator.Instructions;
 
+#nullable disable
+
 namespace Aeon.Emulator.Decoding
 {
     internal sealed class InstructionSetBuilder

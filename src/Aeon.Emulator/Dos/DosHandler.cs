@@ -52,7 +52,7 @@ namespace Aeon.Emulator.Dos
             set => this.fileControl.EmmHack = value;
         }
 
-        public void LoadImage(ProgramImage image, ushort environmentSegment = 0, string commandLineArgs = null, string stdOut = null)
+        public void LoadImage(ProgramImage image, ushort environmentSegment = 0, string? commandLineArgs = null, string? stdOut = null)
         {
             this.memoryAllocator.LoadImage(image, environmentSegment, commandLineArgs);
             this.UpdateSDA();
@@ -757,7 +757,7 @@ namespace Aeon.Emulator.Dos
                 ushort cmdLineOffset = vm.PhysicalMemory.GetUInt16(vm.Processor.ES, (ushort)vm.Processor.BX + 2u);
                 ushort cmdLineSegment = vm.PhysicalMemory.GetUInt16(vm.Processor.ES, (ushort)vm.Processor.BX + 4u);
 
-                string cmdLineArgs = null;
+                string? cmdLineArgs = null;
                 if (cmdLineSegment != 0)
                 {
                     int count = vm.PhysicalMemory.GetByte(cmdLineSegment, cmdLineOffset);

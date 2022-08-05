@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using System.Runtime.Intrinsics.X86;
 
+#nullable disable
+
 namespace Aeon.Emulator.Decoding
 {
     internal static class Infos

@@ -1,5 +1,4 @@
-﻿using System;
-using Aeon.Emulator.CommandInterpreter;
+﻿using Aeon.Emulator.CommandInterpreter;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
@@ -13,9 +12,9 @@ namespace Aeon.Emulator.Dos
         /// <summary>
         /// Temporary process definition used for certain internal allocations.
         /// </summary>
-        internal static readonly DosProcess NullProcess = new DosProcess(null, 1, 0, string.Empty);
+        internal static readonly DosProcess NullProcess = new(null, 1, 0, string.Empty);
 
-        internal DosProcess(ProgramImage image, ushort pspSegment, ushort environmentSegment, string commandLineArgs)
+        internal DosProcess(ProgramImage? image, ushort pspSegment, ushort environmentSegment, string commandLineArgs)
         {
             if (image != null)
             {
@@ -27,6 +26,7 @@ namespace Aeon.Emulator.Dos
                 this.FullPath = VirtualPath.RelativeCurrent;
                 this.ImageName = string.Empty;
             }
+
             this.PrefixSegment = pspSegment;
             this.EnvironmentSegment = environmentSegment;
             this.CommandLineArguments = commandLineArgs;
@@ -76,11 +76,11 @@ namespace Aeon.Emulator.Dos
         /// <summary>
         /// Gets or sets a buffer containing the processor state before the process is started.
         /// </summary>
-        internal byte[] InitialProcessorState { get; set; }
+        internal byte[]? InitialProcessorState { get; set; }
         /// <summary>
-        /// Gets or sets the command interpreter if this is a COMMAND.COM process;
+        /// Gets or sets the command interpreter if this is a COMMAND.COM process.
         /// </summary>
-        internal CommandProcessor Interpreter { get; set; }
+        internal CommandProcessor? Interpreter { get; set; }
 
         /// <summary>
         /// Returns a short description of the process.
@@ -93,7 +93,7 @@ namespace Aeon.Emulator.Dos
             return new DosProcess(this.FullPath, this.ImageName, pspSegment, this.EnvironmentSegment, this.CommandLineArguments)
             {
                 DiskTransferAreaSegment = this.DiskTransferAreaSegment,
-                DiskTransferAreaOffset = this.DiskTransferAreaOffset,
+                DiskTransferAreaOffset = this.DiskTransferAreaOffset
             };
         }
     }

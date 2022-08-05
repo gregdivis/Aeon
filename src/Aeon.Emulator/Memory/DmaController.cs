@@ -9,8 +9,6 @@ namespace Aeon.Emulator
     /// </summary>
     public sealed class DmaController : IInputPort, IOutputPort
     {
-        private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
-
         private const int ModeRegister8 = 0x0B;
         private const int ModeRegister16 = 0xD6;
         private const int MaskRegister8 = 0x0A;
@@ -35,20 +33,35 @@ namespace Aeon.Emulator
         /// </summary>
         public ReadOnlyCollection<DmaChannel> Channels { get; }
 
-        IEnumerable<int> IInputPort.InputPorts => Array.AsReadOnly(AllPorts);
+        private static ReadOnlySpan<byte> AllPorts => new byte[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
+
+        IEnumerable<int> IInputPort.InputPorts
+        {
+            get
+            {
+                var ports = new List<int>();
+
+                foreach (byte p in AllPorts)
+                    ports.Add(p);
+
+                return ports;
+            }
+        }
         IEnumerable<int> IOutputPort.OutputPorts
         {
             get
             {
-                var ports = new List<int>(AllPorts)
-                {
-                    ModeRegister8,
-                    ModeRegister16,
-                    MaskRegister8,
-                    MaskRegister16
-                };
+                var ports = new List<int>();
 
-                return ports.AsReadOnly();
+                foreach (byte p in AllPorts)
+                    ports.Add(p);
+
+                ports.Add(ModeRegister8);
+                ports.Add(ModeRegister16);
+                ports.Add(MaskRegister8);
+                ports.Add(MaskRegister16);
+
+                return ports;
             }
         }
 
@@ -81,23 +94,25 @@ namespace Aeon.Emulator
         }
         void IOutputPort.WriteWord(int port, ushort value)
         {
-            int index = Array.IndexOf(AllPorts, port);
+            int index = AllPorts.IndexOf((byte)port);
             if (index < 0)
                 throw new ArgumentException("Invalid port.");
 
-            switch (index % 3)
+            var (channel, mode) = Math.DivRem(index, 3);
+
+            switch (mode)
             {
                 case 0:
-                    channels[index / 3].Page = (byte)value;
+                    channels[channel].Page = (byte)value;
                     break;
 
                 case 1:
-                    channels[index / 3].Address = value;
+                    channels[channel].Address = value;
                     break;
 
                 case 2:
-                    channels[index / 3].Count = value;
-                    channels[index / 3].TransferBytesRemaining = value + 1;
+                    channels[channel].Count = value;
+                    channels[channel].TransferBytesRemaining = value + 1;
                     break;
             }
         }
@@ -109,10 +124,7 @@ namespace Aeon.Emulator
         /// <param name="value">Flags specifying channel's new mode information.</param>
         private static void SetChannelMode(DmaChannel channel, int value)
         {
-            if ((value & AutoInitFlag) != 0)
-                channel.TransferMode = DmaTransferMode.AutoInitialize;
-            else
-                channel.TransferMode = DmaTransferMode.SingleCycle;
+            channel.TransferMode = (value & AutoInitFlag) != 0 ? DmaTransferMode.AutoInitialize : DmaTransferMode.SingleCycle;
         }
         /// <summary>
         /// Returns the value from a DMA channel port.
@@ -121,15 +133,17 @@ namespace Aeon.Emulator
         /// <returns>Value of specified port.</returns>
         private byte GetPortValue(int port)
         {
-            int index = Array.IndexOf(AllPorts, port);
+            int index = AllPorts.IndexOf((byte)port);
             if (index < 0)
                 throw new ArgumentException("Invalid port.");
 
-            return (index % 3) switch
+            var (channel, mode) = Math.DivRem(index, 3);
+
+            return mode switch
             {
-                0 => channels[index / 3].Page,
-                1 => channels[index / 3].ReadAddressByte(),
-                2 => channels[index / 3].ReadCountByte(),
+                0 => channels[channel].Page,
+                1 => channels[channel].ReadAddressByte(),
+                2 => channels[channel].ReadCountByte(),
                 _ => 0
             };
         }
@@ -140,22 +154,24 @@ namespace Aeon.Emulator
         /// <param name="value">Value to write.</param>
         private void SetPortValue(int port, byte value)
         {
-            int index = Array.IndexOf(AllPorts, port);
+            int index = AllPorts.IndexOf((byte)port);
             if (index < 0)
                 throw new ArgumentException("Invalid port.");
 
-            switch (index % 3)
+            var (channel, mode) = Math.DivRem(index, 3);
+
+            switch (mode)
             {
                 case 0:
-                    channels[index / 3].Page = value;
+                    channels[channel].Page = value;
                     break;
 
                 case 1:
-                    channels[index / 3].WriteAddressByte(value);
+                    channels[channel].WriteAddressByte(value);
                     break;
 
                 case 2:
-                    channels[index / 3].WriteCountByte(value);
+                    channels[channel].WriteCountByte(value);
                     break;
             }
         }

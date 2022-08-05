@@ -9,13 +9,12 @@ namespace Aeon.Emulator.Video
     internal sealed class TextConsole
     {
         private const byte ansiEscape = 0x1B;
-        private readonly StringBuilder ansiCommand = new StringBuilder();
-        private Point savedPosition = new Point(0, 24);
+        private readonly StringBuilder ansiCommand = new();
+        private Point savedPosition = new(0, 24);
         private readonly VideoHandler video;
         private readonly Bios bios;
         private bool boldEnabled;
         private bool negativeEnabled;
-        private readonly unsafe ushort* displayData;
 
         /// <summary>
         /// Initializes a new instance of the TextConsole class.
@@ -24,11 +23,6 @@ namespace Aeon.Emulator.Video
         /// <param name="bios">Current Bios instance.</param>
         public TextConsole(VideoHandler video, Bios bios)
         {
-            unsafe
-            {
-                displayData = (ushort*)video.VideoRam.ToPointer();
-            }
-
             this.video = video;
             this.bios = bios;
 
@@ -274,9 +268,9 @@ namespace Aeon.Emulator.Video
             char commandCode = commandBody[^1];
 
             commandBody = commandBody[0..^1];
-            string[] commandArgs = null;
+            string[]? commandArgs = null;
             if (commandBody.Length > 0)
-                commandArgs = commandBody.Split(new char[] { ';' }, StringSplitOptions.None);
+                commandArgs = commandBody.Split(';', StringSplitOptions.None);
 
             switch (commandCode)
             {
@@ -340,13 +334,13 @@ namespace Aeon.Emulator.Video
 
             this.ansiCommand.Length = 0;
         }
-        private void AnsiCursorMove(string[] args, Direction direction)
+        private void AnsiCursorMove(string[]? args, Direction direction)
         {
             int offset = 1;
 
             if (args != null && args.Length >= 1)
             {
-                if (!int.TryParse(args[0].Trim(), out offset))
+                if (!int.TryParse(args[0].AsSpan().Trim(), out offset))
                     offset = 1;
             }
 
@@ -372,13 +366,13 @@ namespace Aeon.Emulator.Video
 
             this.CursorPosition = pos;
         }
-        private void AnsiCursorMoveToLine(string[] args, Direction direction)
+        private void AnsiCursorMoveToLine(string[]? args, Direction direction)
         {
             int offset = 1;
 
             if (args != null && args.Length > 0)
             {
-                if (!int.TryParse(args[0].Trim(), out offset))
+                if (!int.TryParse(args[0].AsSpan().Trim(), out offset))
                     offset = 1;
             }
 
@@ -397,12 +391,12 @@ namespace Aeon.Emulator.Video
 
             this.CursorPosition = pos;
         }
-        private void AnsiCursorSetColumn(string[] args)
+        private void AnsiCursorSetColumn(string[]? args)
         {
             int column = 0;
             if (args != null && args.Length > 0)
             {
-                if (int.TryParse(args[0].Trim(), out column))
+                if (int.TryParse(args[0].AsSpan().Trim(), out column))
                     column--;
                 else
                     column = 0;
@@ -412,21 +406,21 @@ namespace Aeon.Emulator.Video
             pos.X = column;
             this.CursorPosition = pos;
         }
-        private void AnsiSetPosition(string[] args)
+        private void AnsiSetPosition(string[]? args)
         {
             int row = 0;
             int column = 0;
 
             if (args != null && args.Length > 0)
             {
-                if (int.TryParse(args[0].Trim(), out row))
+                if (int.TryParse(args[0].AsSpan().Trim(), out row))
                     row--;
                 else
                     row = 0;
 
                 if (args.Length > 1)
                 {
-                    if (int.TryParse(args[1].Trim(), out column))
+                    if (int.TryParse(args[1].AsSpan().Trim(), out column))
                         column--;
                     else
                         column = 0;
@@ -435,12 +429,12 @@ namespace Aeon.Emulator.Video
 
             this.CursorPosition = new Point(column, row);
         }
-        private void AnsiClearScreen(string[] args)
+        private void AnsiClearScreen(string[]? args)
         {
             int code = 0;
             if (args != null && args.Length > 0)
             {
-                if (!int.TryParse(args[0].Trim(), out code))
+                if (!int.TryParse(args[0].AsSpan().Trim(), out code))
                     code = 0;
             }
 
@@ -465,12 +459,12 @@ namespace Aeon.Emulator.Video
                     break;
             }
         }
-        private void AnsiClearLine(string[] args)
+        private void AnsiClearLine(string[]? args)
         {
             int code = 0;
             if (args != null && args.Length > 0)
             {
-                if (!int.TryParse(args[0].Trim(), out code))
+                if (!int.TryParse(args[0].AsSpan().Trim(), out code))
                     code = 0;
             }
 
@@ -491,12 +485,12 @@ namespace Aeon.Emulator.Video
                     break;
             }
         }
-        private void AnsiGraphics(string[] args)
+        private void AnsiGraphics(string[]? args)
         {
             int code = 0;
             if (args != null && args.Length > 0)
             {
-                if (!int.TryParse(args[0].Trim(), out code))
+                if (!int.TryParse(args[0].AsSpan().Trim(), out code))
                     code = 0;
             }
 
@@ -504,7 +498,7 @@ namespace Aeon.Emulator.Video
 
             if (args != null && args.Length > 1)
             {
-                if (int.TryParse(args[1].Trim(), out code))
+                if (int.TryParse(args[1].AsSpan().Trim(), out code))
                     this.RunGraphicsCommand(code);
             }
         }

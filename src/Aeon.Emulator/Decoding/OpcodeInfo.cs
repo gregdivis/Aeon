@@ -66,13 +66,13 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="other">Other OpcodeInfo instance to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public bool Equals(OpcodeInfo other) => this.Opcode == other.Opcode && this.ModRmInfo == other.ModRmInfo;
+        public bool Equals(OpcodeInfo? other) => other is not null && this.Opcode == other.Opcode && this.ModRmInfo == other.ModRmInfo;
         /// <summary>
         /// Tests for equality with another object.
         /// </summary>
         /// <param name="obj">Other object to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override bool Equals(object obj) => obj is OpcodeInfo other && this.Equals(other);
+        public override bool Equals(object? obj) => obj is OpcodeInfo other && this.Equals(other);
         /// <summary>
         /// Gets a hash code for the OpcodeInfo instance.
         /// </summary>

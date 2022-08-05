@@ -14,10 +14,8 @@ namespace Aeon.Emulator
         /// <param name="newItems">Values to insert in place of the original item.</param>
         public static void Replace<T>(this LinkedList<T> list, T originalItem, T[] newItems)
         {
-            if (list == null)
-                throw new ArgumentNullException(nameof(list));
-            if (newItems == null)
-                throw new ArgumentNullException(nameof(newItems));
+            ArgumentNullException.ThrowIfNull(list);
+            ArgumentNullException.ThrowIfNull(newItems);
 
             var originalNode = list.Find(originalItem);
             if (originalNode == null)
@@ -46,8 +44,7 @@ namespace Aeon.Emulator
         /// <param name="newItems">New item to replace the original with.</param>
         public static void Replace<T>(this LinkedList<T> list, T originalItem, T newItem)
         {
-            if (list == null)
-                throw new ArgumentNullException(nameof(list));
+            ArgumentNullException.ThrowIfNull(list);
 
             var originalNode = list.Find(originalItem);
             if (originalNode == null)

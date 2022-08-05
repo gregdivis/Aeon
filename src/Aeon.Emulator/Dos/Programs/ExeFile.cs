@@ -10,8 +10,8 @@ namespace Aeon.Emulator.Dos.Programs
 {
     internal sealed class ExeFile : ProgramImage
     {
-        private byte[] imageData;
-        private readonly List<RealModeAddress> relocationTable = new List<RealModeAddress>();
+        private byte[]? imageData;
+        private readonly List<RealModeAddress> relocationTable = new();
 
         public ExeFile(VirtualPath path, Stream stream)
             : base(path, stream)
@@ -73,8 +73,7 @@ namespace Aeon.Emulator.Dos.Programs
 
         internal override void Load(VirtualMachine vm, ushort dataSegment)
         {
-            if (vm == null)
-                throw new ArgumentNullException(nameof(vm));
+            ArgumentNullException.ThrowIfNull(vm);
 
             ushort codeSegment = (ushort)(dataSegment + 0x10u);
 
@@ -96,7 +95,7 @@ namespace Aeon.Emulator.Dos.Programs
             vm.Processor.Flags.Clear(~(EFlags.InterruptEnable | EFlags.Virtual8086Mode | EFlags.IOPrivilege1 | EFlags.IOPrivilege2 | EFlags.NestedTask));
 
             var ptr = vm.PhysicalMemory.GetPointer(codeSegment, 0);
-            Marshal.Copy(imageData, 0, ptr, Math.Min(this.ImageSize, imageData.Length));
+            Marshal.Copy(imageData!, 0, ptr, Math.Min(this.ImageSize, imageData!.Length));
 
             foreach (var relocationEntry in this.RelocationEntries)
             {
@@ -107,7 +106,7 @@ namespace Aeon.Emulator.Dos.Programs
         internal override void LoadOverlay(VirtualMachine vm, ushort overlaySegment, int relocationFactor)
         {
             var ptr = vm.PhysicalMemory.GetPointer(overlaySegment, 0);
-            Marshal.Copy(imageData, 0, ptr, Math.Min(this.ImageSize, imageData.Length));
+            Marshal.Copy(imageData!, 0, ptr, Math.Min(this.ImageSize, imageData!.Length));
 
             foreach (var relocationEntry in this.RelocationEntries)
             {

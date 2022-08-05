@@ -7,7 +7,7 @@ namespace Aeon.Emulator.Dos
     /// </summary>
     internal sealed class FileHandle
     {
-        private Stream stream;
+        private readonly Stream stream;
         private int referenceCount = 1;
 
         public FileHandle(Stream stream)
@@ -27,7 +27,7 @@ namespace Aeon.Emulator.Dos
         /// <summary>
         /// Gets or sets additional information about the file.
         /// </summary>
-        public VirtualFileInfo FileInfo { get; set; }
+        public VirtualFileInfo? FileInfo { get; set; }
 
         /// <summary>
         /// Adds a reference to the handle.

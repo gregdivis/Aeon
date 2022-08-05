@@ -4,6 +4,8 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
+#nullable disable
+
 namespace Aeon.Emulator.CommandInterpreter
 {
     public static class StatementParser

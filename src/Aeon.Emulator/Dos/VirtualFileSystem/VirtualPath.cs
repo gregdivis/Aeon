@@ -7,29 +7,26 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
     /// <summary>
     /// Represents a path in the virtual file system.
     /// </summary>
-    [Serializable]
     public sealed class VirtualPath : IEquatable<VirtualPath>
     {
         /// <summary>
         /// A path which specifies the current directory.
         /// </summary>
-        public static readonly VirtualPath RelativeCurrent = new VirtualPath();
+        public static readonly VirtualPath RelativeCurrent = new();
         /// <summary>
         /// A path which specifies the parent directory.
         /// </summary>
-        public static readonly VirtualPath RelativeParent = new VirtualPath("..");
+        public static readonly VirtualPath RelativeParent = new("..");
         /// <summary>
         /// A path which specifies the root directory of the current drive.
         /// </summary>
-        public static readonly VirtualPath AbsoluteRoot = new VirtualPath("\\");
+        public static readonly VirtualPath AbsoluteRoot = new("\\");
 
         private readonly string[] pathElements;
         private readonly DriveLetter? driveLetter;
         private readonly VirtualPathType pathType;
-        [NonSerialized]
-        private Lazy<string> cachedPath;
-        [NonSerialized]
-        private Lazy<string> cachedFullPath;
+        private readonly Lazy<string> cachedPath;
+        private readonly Lazy<string> cachedFullPath;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="VirtualPath"/> class.
@@ -47,12 +44,11 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <param name="path">String representation of an absolute or relative path.</param>
         public VirtualPath(string path) : this()
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var instance = Parse(path, out var error);
             if (instance == null)
-                throw error;
+                throw error!;
 
             this.driveLetter = instance.driveLetter;
             this.pathElements = instance.pathElements;
@@ -72,19 +68,19 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             this.driveLetter = drive;
         }
 
-        public static bool operator ==(VirtualPath pathA, VirtualPath pathB)
+        public static bool operator ==(VirtualPath? pathA, VirtualPath? pathB)
         {
-            if (!ReferenceEquals(pathA, null))
+            if (pathA is not null)
                 return pathA.Equals(pathB);
             else
-                return ReferenceEquals(pathB, null);
+                return pathB is null;
         }
-        public static bool operator !=(VirtualPath pathA, VirtualPath pathB)
+        public static bool operator !=(VirtualPath? pathA, VirtualPath? pathB)
         {
-            if (!ReferenceEquals(pathA, null))
+            if (pathA is not null)
                 return !pathA.Equals(pathB);
             else
-                return !ReferenceEquals(pathB, null);
+                return pathB is not null;
         }
         public static VirtualPath operator +(VirtualPath pathA, VirtualPath pathB) => Combine(pathA, pathB);
         public static VirtualPath operator +(VirtualPath pathA, string pathB) => Combine(pathA, pathB);
@@ -155,7 +151,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// </summary>
         /// <param name="other">Other instance to test.</param>
         /// <returns>True if paths are the same; otherwise false.</returns>
-        public bool Equals(VirtualPath other)
+        public bool Equals(VirtualPath? other)
         {
             if (other is null)
                 return false;
@@ -187,7 +183,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// </summary>
         /// <param name="obj">Other object to test.</param>
         /// <returns>True if objects are the same; otherwise false.</returns>
-        public override bool Equals(object obj) => this.Equals(obj as VirtualPath);
+        public override bool Equals(object? obj) => this.Equals(obj as VirtualPath);
         /// <summary>
         /// Gets a hash code for the path.
         /// </summary>
@@ -205,8 +201,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Result of this path appended with the other path.</returns>
         public VirtualPath Append(VirtualPath other)
         {
-            if (other == null)
-                throw new ArgumentNullException(nameof(other));
+            ArgumentNullException.ThrowIfNull(other);
             if (other.PathType == VirtualPathType.Absolute)
                 throw new ArgumentException("Cannot combine with an absolute path.");
 
@@ -221,7 +216,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
 
             var elements = Simplify(newPath, 0);
             if (this.PathType == VirtualPathType.Absolute && elements.Length > 0 && elements[0] == "..")
-                throw new ArgumentException("Resulting absolute path would be invalid.", "other");
+                throw new ArgumentException("Resulting absolute path would be invalid.", nameof(other));
 
             return new VirtualPath(elements, pathType, this.driveLetter);
         }
@@ -232,9 +227,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Result of this path appended with the other path.</returns>
         public VirtualPath Append(string other)
         {
-            if (other == null)
-                throw new ArgumentNullException(nameof(other));
-
+            ArgumentNullException.ThrowIfNull(other);
             return Append(new VirtualPath(other));
         }
         /// <summary>
@@ -265,8 +258,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Relative path from this path to the specified path.</returns>
         public VirtualPath GetRelativePath(VirtualPath pathTo)
         {
-            if (pathTo == null)
-                throw new ArgumentNullException(nameof(pathTo));
+            ArgumentNullException.ThrowIfNull(pathTo);
             if (this.PathType != VirtualPathType.Absolute || pathTo.PathType != VirtualPathType.Absolute)
                 throw new InvalidOperationException("Both paths must be absolute.");
             if (this.driveLetter != pathTo.driveLetter)
@@ -357,24 +349,24 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                     // First remove extra extensions.
                     while (s.IndexOf('.') != s.LastIndexOf('.'))
                     {
-                        s = s.Substring(0, s.LastIndexOf('.'));
+                        s = s[..s.LastIndexOf('.')];
                     }
 
                     int dotPos = s.IndexOf('.');
                     if (dotPos >= 0)
                     {
                         if (dotPos < s.Length - 4)
-                            s = s.Substring(0, s.Length - dotPos - 4);
+                            s = s[..(s.Length - dotPos - 4)];
 
                         if (s.Length > 12)
-                            s = s.Substring(0, 8) + s.Substring(dotPos);
+                            s = string.Concat(s.AsSpan(0, 8), s.AsSpan(dotPos));
 
                         newElements[i] = s;
                     }
                     else
                     {
                         if (s.Length > 8)
-                            s = s.Substring(0, 8);
+                            s = s[..8];
                     }
                 }
 
@@ -392,10 +384,8 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Combined path.</returns>
         public static VirtualPath Combine(VirtualPath pathA, VirtualPath pathB)
         {
-            if (ReferenceEquals(pathA, null))
-                throw new ArgumentNullException(nameof(pathA));
-            if (ReferenceEquals(pathB, null))
-                throw new ArgumentNullException(nameof(pathB));
+            ArgumentNullException.ThrowIfNull(pathA);
+            ArgumentNullException.ThrowIfNull(pathB);
 
             return pathA.Append(pathB);
         }
@@ -407,10 +397,8 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Combined path.</returns>
         public static VirtualPath Combine(VirtualPath pathA, string pathB)
         {
-            if (ReferenceEquals(pathA, null))
-                throw new ArgumentNullException(nameof(pathA));
-            if (ReferenceEquals(pathB, null))
-                throw new ArgumentNullException(nameof(pathB));
+            ArgumentNullException.ThrowIfNull(pathA);
+            ArgumentNullException.ThrowIfNull(pathB);
 
             return pathA.Append(pathB);
         }
@@ -422,10 +410,8 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Combined path.</returns>
         public static VirtualPath Combine(string pathA, VirtualPath pathB)
         {
-            if (ReferenceEquals(pathA, null))
-                throw new ArgumentNullException(nameof(pathA));
-            if (ReferenceEquals(pathB, null))
-                throw new ArgumentNullException(nameof(pathB));
+            ArgumentNullException.ThrowIfNull(pathA);
+            ArgumentNullException.ThrowIfNull(pathB);
 
             return new VirtualPath(pathA).Append(pathB);
         }
@@ -437,21 +423,16 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Absolute path.</returns>
         public static VirtualPath Combine(DriveLetter driveLetter, VirtualPath path)
         {
-            if (ReferenceEquals(path, null))
-                throw new ArgumentNullException(nameof(path));
-
-            return new VirtualPath(new string[0], VirtualPathType.Absolute, driveLetter).Append(path);
+            ArgumentNullException.ThrowIfNull(path);
+            return new VirtualPath(Array.Empty<string>(), VirtualPathType.Absolute, driveLetter).Append(path);
         }
         /// <summary>
         /// Attempts to parse a path string to a VirtualPath instance.
         /// </summary>
         /// <param name="path">Path string to parse.</param>
         /// <returns>VirtualPath instance if successful; otherwise null.</returns>
-        public static VirtualPath TryParse(ReadOnlySpan<char> path)
+        public static VirtualPath? TryParse(ReadOnlySpan<char> path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
-
             return Parse(path, out _);
         }
 
@@ -464,7 +445,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             return driveLetter.ToString() + path;
         }
 
-        private static VirtualPath Parse(ReadOnlySpan<char> path, out Exception error)
+        private static VirtualPath? Parse(ReadOnlySpan<char> path, out Exception? error)
         {
             error = null;
 
@@ -485,12 +466,12 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                 {
                     if (!char.IsLetter(path[0]))
                     {
-                        error = new ArgumentException("Invalid drive specifier.", "path");
+                        error = new ArgumentException("Invalid drive specifier.", nameof(path));
                         return null;
                     }
 
                     driveLetter = new DriveLetter(path[0]);
-                    path = path.Slice(2);
+                    path = path[2..];
                 }
 
                 if (path.Length > 0 && (path[0] == '\\' || path[0] == '/'))
@@ -516,7 +497,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                 else if (elements[i] == "..")
                 {
                     // Store parent directory symbol if necessary.
-                    if (result.Count == 0 || result[result.Count - 1] == "..")
+                    if (result.Count == 0 || result[^1] == "..")
                         result.Add("..");
                     else
                         result.RemoveAt(result.Count - 1);
@@ -570,20 +551,5 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
 
             return true;
         }
-    }
-
-    /// <summary>
-    /// Specifies the type of virtual path represented.
-    /// </summary>
-    public enum VirtualPathType
-    {
-        /// <summary>
-        /// The path is absolute and rooted at a virtual drive.
-        /// </summary>
-        Absolute,
-        /// <summary>
-        /// The path is relative.
-        /// </summary>
-        Relative
     }
 }

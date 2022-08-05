@@ -5,6 +5,8 @@ using System.Reflection.Emit;
 using Aeon.Emulator.Decoding.Emitters;
 using Aeon.Emulator.Instructions;
 
+#nullable disable
+
 namespace Aeon.Emulator.Decoding
 {
     internal sealed class EmulatorBuilder

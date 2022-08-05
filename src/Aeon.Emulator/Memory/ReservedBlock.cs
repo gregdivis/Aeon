@@ -48,7 +48,7 @@ namespace Aeon.Emulator.Memory
         /// </summary>
         /// <param name="other">Other block to test.</param>
         /// <returns>True if blocks are equal; otherwise false.</returns>
-        public bool Equals(ReservedBlock other)
+        public bool Equals(ReservedBlock? other)
         {
             if (other is null)
                 return false;
@@ -60,7 +60,7 @@ namespace Aeon.Emulator.Memory
         /// </summary>
         /// <param name="other">Other object to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override bool Equals(object obj) => this.Equals(obj as ReservedBlock);
+        public override bool Equals(object? obj) => this.Equals(obj as ReservedBlock);
         /// <summary>
         /// Returns a hash code for the block.
         /// </summary>

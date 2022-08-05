@@ -25,7 +25,7 @@ namespace Aeon.Emulator.DebugSupport
         /// <summary>
         /// Occurs when a property value has changed.
         /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         /// <summary>
         /// Gets or sets the starting code segment for instruction decoding.

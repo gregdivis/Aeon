@@ -1,5 +1,7 @@
 ﻿using System;
 
+#nullable disable
+
 namespace Aeon.Emulator.DebugSupport
 {
     /// <summary>

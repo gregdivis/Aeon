@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Reflection.Emit;
 
+#nullable disable
+
 namespace Aeon.Emulator.Decoding.Emitters
 {
     internal sealed class LoadRegRmw16 : LoadRegRmw

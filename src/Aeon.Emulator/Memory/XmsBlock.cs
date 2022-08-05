@@ -39,7 +39,7 @@ namespace Aeon.Emulator.Memory
             else
                 return "Free";
         }
-        public override bool Equals(object obj) => obj is XmsBlock b ? this.Equals(b) : false;
+        public override bool Equals(object? obj) => obj is XmsBlock b && this.Equals(b);
         public override int GetHashCode() => this.Handle ^ (int)this.Offset ^ (int)this.Length;
         public bool Equals(XmsBlock other) => this.Handle == other.Handle && this.Offset == other.Offset && this.Length == other.Length && this.IsUsed == other.IsUsed;
         /// <summary>

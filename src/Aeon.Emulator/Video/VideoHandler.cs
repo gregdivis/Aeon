@@ -4,6 +4,8 @@ using Aeon.Emulator.Memory;
 using Aeon.Emulator.Interrupts;
 using System.Runtime.InteropServices;
 
+#nullable disable
+
 namespace Aeon.Emulator.Video
 {
     /// <summary>

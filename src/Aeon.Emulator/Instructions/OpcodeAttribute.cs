@@ -21,7 +21,7 @@ namespace Aeon.Emulator.Instructions
         /// <summary>
         /// Gets or sets the name of the opcode.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
         /// <summary>
         /// Gets or sets a value indicating whether the opcode is a prefix.
         /// </summary>

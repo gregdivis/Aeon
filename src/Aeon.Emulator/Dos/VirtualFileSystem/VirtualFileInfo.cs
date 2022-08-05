@@ -7,7 +7,7 @@ namespace Aeon.Emulator
     /// </summary>
     public class VirtualFileInfo : IEquatable<VirtualFileInfo>
     {
-        private static uint DosAttributeMask = 0x3F;
+        private const uint DosAttributeMask = 0x3F;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="VirtualFileInfo"/> class.
@@ -85,13 +85,7 @@ namespace Aeon.Emulator
         /// <summary>
         /// Gets the file attributes supported by DOS.
         /// </summary>
-        internal byte DosAttributes
-        {
-            get
-            {
-                return (byte)((uint)this.Attributes & DosAttributeMask);
-            }
-        }
+        internal byte DosAttributes => (byte)((uint)this.Attributes & DosAttributeMask);
         /// <summary>
         /// Gets or sets the index of the device which contains the file.
         /// (A: = 0, B: = 1, ...)
@@ -108,15 +102,15 @@ namespace Aeon.Emulator
         /// </summary>
         /// <param name="obj">Other object to test.</param>
         /// <returns>True if objects are equal; otherwise false.</returns>
-        public override bool Equals(object obj) => this.Equals(obj as VirtualFileInfo);
+        public override bool Equals(object? obj) => this.Equals(obj as VirtualFileInfo);
         /// <summary>
         /// Tests for equality with another instance.
         /// </summary>
         /// <param name="other">Other instance to test.</param>
         /// <returns>True if files have the same name; otherwise false.</returns>
-        public bool Equals(VirtualFileInfo other)
+        public bool Equals(VirtualFileInfo? other)
         {
-            if (ReferenceEquals(other, null))
+            if (other is null)
                 return false;
             if (ReferenceEquals(this, other))
                 return true;
@@ -129,48 +123,6 @@ namespace Aeon.Emulator
         /// Gets a hash code based on the file name.
         /// </summary>
         /// <returns>Hash code based on the file name.</returns>
-        public override int GetHashCode()
-        {
-            if (this.Name != null)
-                return this.Name.GetHashCode();
-            else
-                return 0;
-        }
-    }
-
-    /// <summary>
-    /// Describes additional properties of a DOS file.
-    /// </summary>
-    [Flags]
-    public enum VirtualFileAttributes
-    {
-        /// <summary>
-        /// The file has no special properties.
-        /// </summary>
-        Default = 0,
-        /// <summary>
-        /// The file is read-only.
-        /// </summary>
-        ReadOnly = 0x01,
-        /// <summary>
-        /// The file is hidden.
-        /// </summary>
-        Hidden = 0x02,
-        /// <summary>
-        /// The file is a system file.
-        /// </summary>
-        System = 0x04,
-        /// <summary>
-        /// The file is a volume label.
-        /// </summary>
-        VolumeLabel = 0x08,
-        /// <summary>
-        /// The file is a directory.
-        /// </summary>
-        Directory = 0x10,
-        /// <summary>
-        /// The file has been archived.
-        /// </summary>
-        Archived = 0x20
+        public override int GetHashCode() => this.Name?.GetHashCode() ?? 0;
     }
 }

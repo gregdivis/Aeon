@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading;
 
+#nullable disable
+
 namespace Aeon.Emulator.LowLevelDisk
 {
     internal sealed class LowLevelDiskInterface : IInterruptHandler, IDisposable

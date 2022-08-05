@@ -68,10 +68,8 @@ namespace Aeon.Emulator.Dos.Programs
         /// <returns>Loaded program image.</returns>
         public static ProgramImage Load(string fileName, VirtualMachine vm)
         {
-            if (fileName == null)
-                throw new ArgumentNullException(nameof(fileName));
-            if (vm == null)
-                throw new ArgumentNullException(nameof(vm));
+            ArgumentNullException.ThrowIfNull(fileName);
+            ArgumentNullException.ThrowIfNull(vm);
 
             var fullPath = new VirtualPath(fileName);
             if (fullPath.PathType == VirtualPathType.Relative)

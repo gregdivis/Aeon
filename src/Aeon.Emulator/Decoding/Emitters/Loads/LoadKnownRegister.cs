@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
+#nullable disable
+
 namespace Aeon.Emulator.Decoding.Emitters
 {
     internal sealed class LoadKnownRegister : Emitter

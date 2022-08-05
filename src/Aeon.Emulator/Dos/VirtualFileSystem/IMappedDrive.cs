@@ -12,7 +12,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Gets the volume label of the mapped drive.
         /// </summary>
-        string VolumeLabel { get; }
+        string? VolumeLabel { get; }
         /// <summary>
         /// Gets the amount of free space on the drive.
         /// </summary>

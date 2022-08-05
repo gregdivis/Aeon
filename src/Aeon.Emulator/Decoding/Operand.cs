@@ -200,7 +200,7 @@ namespace Aeon.Emulator
                     return string.Empty;
             }
         }
-        public override bool Equals(object obj) => obj is CodeOperand other && (this == other);
+        public override bool Equals(object? obj) => obj is CodeOperand other && (this == other);
         public override int GetHashCode() => ((byte)type | (byte)register << 8) ^ value.GetHashCode();
     }
 
@@ -322,7 +322,7 @@ namespace Aeon.Emulator
             else
                 return operand1.ToString(ip, prefixes) + ", " + operand2.ToString(ip, prefixes) + ", " + operand3.ToString(ip, prefixes);
         }
-        public override bool Equals(object obj) => obj is DecodedOperands other && this == other;
+        public override bool Equals(object? obj) => obj is DecodedOperands other && this == other;
         public override int GetHashCode() => operand1.GetHashCode() ^ operand2.GetHashCode() ^ operand3.GetHashCode();
     }
 

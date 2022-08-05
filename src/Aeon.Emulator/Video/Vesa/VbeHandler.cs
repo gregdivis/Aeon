@@ -1,6 +1,8 @@
 ﻿using System;
 using Aeon.Emulator.Memory;
 
+#nullable disable
+
 namespace Aeon.Emulator.Video.Vesa
 {
     /// <summary>

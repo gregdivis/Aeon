@@ -78,7 +78,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         }
 
         public bool Equals(CDTimeSpan other) => this.TotalSectors == other.TotalSectors;
-        public override bool Equals([NotNullWhen(true)] object obj) => obj is CDTimeSpan t && this.Equals(t);
+        public override bool Equals([NotNullWhen(true)] object? obj) => obj is CDTimeSpan t && this.Equals(t);
         public override int GetHashCode() => this.TotalFrames.GetHashCode();
         public override string ToString() => $"{this.Minutes:00}:{this.Seconds:00}:{this.Frames:00}";
         public int CompareTo(CDTimeSpan other) => this.TotalSectors.CompareTo(other.TotalSectors);

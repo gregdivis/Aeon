@@ -136,14 +136,14 @@ namespace Aeon.Emulator.Memory
                 this.IsUsed = isUsed;
             }
 
-            public bool Equals(Allocation other)
+            public bool Equals(Allocation? other)
             {
                 if (other == null)
                     return false;
 
                 return this.Segment == other.Segment && this.IsUsed == other.IsUsed && this.Length == other.Length;
             }
-            public override bool Equals(object obj) => Equals(obj as Allocation);
+            public override bool Equals(object? obj) => Equals(obj as Allocation);
             public override int GetHashCode() => this.Segment;
             public override string ToString() => $"{this.Segment:X4}: {this.Length}";
         }

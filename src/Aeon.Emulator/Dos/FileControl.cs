@@ -4,6 +4,8 @@ using System.IO;
 using System.Text;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 
+#nullable disable
+
 namespace Aeon.Emulator.Dos
 {
     internal sealed class FileControl : IDisposable

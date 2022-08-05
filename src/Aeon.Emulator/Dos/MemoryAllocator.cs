@@ -7,6 +7,8 @@ using System.Threading;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Memory;
 
+#nullable disable
+
 //http://www.drdos.com/dosdoc/sysprog/chap4.htm
 //http://www.piclist.com/techref/dos/pss.htm
 

@@ -9,39 +9,19 @@ namespace Aeon.Emulator.Memory
     /// </summary>
     internal sealed class EmsHandle
     {
-        private readonly List<byte[]> pages;
+        private readonly List<byte[]?> pages;
         private static readonly string nullHandleName = new((char)0, 8);
-        private readonly byte[][] savedPageMap = new byte[ExpandedMemoryManager.MaximumPhysicalPages][];
+        private readonly byte[]?[] savedPageMap = new byte[ExpandedMemoryManager.MaximumPhysicalPages][];
 
         public EmsHandle()
         {
-            pages = new List<byte[]>();
+            this.pages = new List<byte[]?>();
         }
         public EmsHandle(int pagesRequested)
         {
-            pages = new List<byte[]>(pagesRequested);
+            this.pages = new List<byte[]?>(pagesRequested);
             for (int i = 0; i < pagesRequested; i++)
                 pages.Add(null);
-        }
-        private EmsHandle(BinaryReader reader)
-        {
-            int count = reader.ReadInt32();
-            this.pages = new List<byte[]>(count);
-            for (int i = 0; i < count; i++)
-            {
-                if (reader.ReadBoolean())
-                    this.pages.Add(reader.ReadBytes(ExpandedMemoryManager.PageSize));
-                else
-                    this.pages.Add(null);
-            }
-
-            this.Name = reader.ReadString();
-
-            for (int i = 0; i < this.savedPageMap.Length; i++)
-            {
-                if (reader.ReadBoolean())
-                    this.savedPageMap[i] = this.pages[reader.ReadInt32()];
-            }
         }
 
         /// <summary>
@@ -55,19 +35,14 @@ namespace Aeon.Emulator.Memory
         /// <summary>
         /// Gets or sets the saved page map for the handle.
         /// </summary>
-        public byte[][] SavedPageMap { get; set; }
-
-        public static EmsHandle Deserialize(BinaryReader reader)
-        {
-            return new EmsHandle(reader);
-        }
+        public byte[]?[]? SavedPageMap { get; set; }
 
         /// <summary>
         /// Attempts to get a logical page allocated to the handle.
         /// </summary>
         /// <param name="logicalPageIndex">Index of logical page to get.</param>
         /// <returns>Logical page with specified index if successful; otherwise null.</returns>
-        public byte[] GetLogicalPage(int logicalPageIndex)
+        public byte[]? GetLogicalPage(int logicalPageIndex)
         {
             if (logicalPageIndex >= 0 && logicalPageIndex < pages.Count)
             {
@@ -139,9 +114,7 @@ namespace Aeon.Emulator.Memory
         /// <returns>Index of the specified page if found; otherwise -1.</returns>
         public int IndexOfPage(byte[] page)
         {
-            if (page == null)
-                throw new ArgumentNullException(nameof(page));
-
+            ArgumentNullException.ThrowIfNull(page);
             return this.pages.IndexOf(page);
         }
     }

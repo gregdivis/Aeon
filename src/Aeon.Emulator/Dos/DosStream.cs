@@ -38,7 +38,7 @@ namespace Aeon.Emulator.Dos
             get => this.handle.SFTIndex;
             set => this.handle.SFTIndex = value;
         }
-        public VirtualFileInfo FileInfo
+        public VirtualFileInfo? FileInfo
         {
             get => this.handle.FileInfo;
             set => this.handle.FileInfo = value;

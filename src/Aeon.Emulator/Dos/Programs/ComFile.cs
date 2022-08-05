@@ -1,14 +1,15 @@
 ﻿using System;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using Aeon.Emulator.Dos.VirtualFileSystem;
+
+#nullable disable
 
 namespace Aeon.Emulator.Dos.Programs
 {
     internal sealed class ComFile : ProgramImage
     {
-        public static readonly VirtualPath CommandPath = new VirtualPath("COMMAND.COM");
+        public static readonly VirtualPath CommandPath = new("COMMAND.COM");
 
         private byte[] imageData;
 
@@ -21,8 +22,7 @@ namespace Aeon.Emulator.Dos.Programs
 
         internal override void Load(VirtualMachine vm, ushort dataSegment)
         {
-            if (vm == null)
-                throw new ArgumentNullException(nameof(vm));
+            ArgumentNullException.ThrowIfNull(vm);
 
             vm.WriteSegmentRegister(SegmentIndex.CS, dataSegment);
             vm.WriteSegmentRegister(SegmentIndex.DS, dataSegment);

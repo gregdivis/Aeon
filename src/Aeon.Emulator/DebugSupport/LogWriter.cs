@@ -2,6 +2,8 @@
 using System.IO;
 using System.IO.Compression;
 
+#nullable disable
+
 namespace Aeon.Emulator.DebugSupport
 {
     internal sealed class LogWriter : IDisposable

@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
+#nullable disable
+
 namespace Aeon.Emulator.Keyboard
 {
     /// <summary>

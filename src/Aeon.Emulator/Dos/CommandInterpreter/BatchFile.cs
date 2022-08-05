@@ -29,11 +29,11 @@ namespace Aeon.Emulator.CommandInterpreter
         {
             var statements = new List<CommandStatement>();
 
-            string line;
+            string? line;
             while ((line = reader.ReadLine()) != null)
             {
                 if (!string.IsNullOrWhiteSpace(line))
-                    statements.Add(StatementParser.Parse(line));
+                    statements.Add(StatementParser.Parse(line)!);
             }
 
             return new BatchFile(statements);

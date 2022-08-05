@@ -11,24 +11,16 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
     /// </summary>
     public sealed class VirtualDrive
     {
-        private string labelOverride;
+        private string? labelOverride;
         private long? freeSpaceOverride;
-        /// <summary>
-        /// Empty VirtualFileInfo array.
-        /// </summary>
-        private static readonly VirtualFileInfo[] EmptyFileList = new VirtualFileInfo[0];
         /// <summary>
         /// Command interpreter file info.
         /// </summary>
-        private static readonly VirtualFileInfo CommandFileInfo = new VirtualFileInfo("COMMAND.COM", VirtualFileAttributes.Default, new DateTime(1995, 1, 1), CommandInterpreterStream.StreamLength);
+        private static readonly VirtualFileInfo CommandFileInfo = new("COMMAND.COM", VirtualFileAttributes.Default, new DateTime(1995, 1, 1), CommandInterpreterStream.StreamLength);
         /// <summary>
         /// Array containing only the command interpreter.
         /// </summary>
         private static readonly VirtualFileInfo[] CommandFileList = new[] { CommandFileInfo };
-        /// <summary>
-        /// Wildcards for file filters.
-        /// </summary>
-        private static readonly char[] WildcardList = new[] { '*', '?', '.' };
 
         internal VirtualDrive()
         {
@@ -41,7 +33,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Gets or sets the drive mapping source.
         /// </summary>
-        public IMappedDrive Mapping { get; set; }
+        public IMappedDrive? Mapping { get; set; }
         /// <summary>
         /// Gets or sets a value indicating whether the drive has a command interpreter installed.
         /// </summary>
@@ -52,7 +44,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <remarks>
         /// This may be null if the drive is optical.
         /// </remarks>
-        public IMagneticDrive MagneticDriveInfo
+        public IMagneticDrive? MagneticDriveInfo
         {
             get
             {
@@ -72,7 +64,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <summary>
         /// Gets or sets the volume label for the drive.
         /// </summary>
-        public string VolumeLabel
+        public string? VolumeLabel
         {
             get => this.labelOverride ?? this.Mapping?.VolumeLabel;
             set => this.labelOverride = value;
@@ -96,8 +88,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Stream backed by the requested file.</returns>
         public ErrorCodeResult<Stream> OpenFile(VirtualPath path, FileMode fileMode, FileAccess fileAccess)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             if (this.HasCommandInterpreter && path.GetRelativePart() == ComFile.CommandPath)
             {
@@ -117,10 +108,10 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             }
             else
             {
-                if (!(this.Mapping is IWritableMappedDrive writableDrive))
+                if (this.Mapping is not IWritableMappedDrive writableDrive)
                     return ExtendedErrorCode.AccessDenied;
 
-                if (fileMode == FileMode.Open || fileMode == FileMode.OpenOrCreate)
+                if (fileMode is FileMode.Open or FileMode.OpenOrCreate)
                     return writableDrive.OpenWrite(path);
                 else if (fileMode == FileMode.Create)
                     return writableDrive.CreateFile(path);
@@ -135,8 +126,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>List of files in the specified path.</returns>
         public ErrorCodeResult<IEnumerable<VirtualFileInfo>> GetDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             var drive = this.Mapping;
             if (drive == null)
@@ -144,7 +134,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
                 if (this.HasCommandInterpreter)
                     return Array.AsReadOnly(CommandFileList);
                 else
-                    return EmptyFileList;
+                    return Array.Empty<VirtualFileInfo>();
             }
 
             var filter = path.LastElement;
@@ -164,8 +154,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Information about the file if it is found; otherwise null.</returns>
         public ErrorCodeResult<VirtualFileInfo> GetFileInfo(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
             if (this.HasCommandInterpreter && path == ComFile.CommandPath)
                 return CommandFileInfo;
@@ -186,10 +175,9 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>True if file was delete; false if file was not found.</returns>
         public ExtendedErrorCode DeleteFile(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
-            if (!(this.Mapping is IWritableMappedDrive writableDrive))
+            if (this.Mapping is not IWritableMappedDrive writableDrive)
                 return ExtendedErrorCode.AccessDenied;
 
             return writableDrive.DeleteFile(path);
@@ -201,12 +189,10 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <param name="newFileName">New name and path of the file.</param>
         public ExtendedErrorCode MoveFile(VirtualPath fileToMove, VirtualPath newFileName)
         {
-            if (fileToMove == null)
-                throw new ArgumentNullException(nameof(fileToMove));
-            if (newFileName == null)
-                throw new ArgumentNullException(nameof(newFileName));
+            ArgumentNullException.ThrowIfNull(fileToMove);
+            ArgumentNullException.ThrowIfNull(newFileName);
 
-            if (!(this.Mapping is IWritableMappedDrive writableDrive))
+            if (this.Mapping is not IWritableMappedDrive writableDrive)
                 return ExtendedErrorCode.AccessDenied;
 
             return writableDrive.MoveFile(fileToMove, newFileName);
@@ -218,10 +204,9 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether directory was created.</returns>
         public ExtendedErrorCode CreateDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
-            if (!(this.Mapping is IWritableMappedDrive writableDrive))
+            if (this.Mapping is not IWritableMappedDrive writableDrive)
                 return ExtendedErrorCode.AccessDenied;
 
             return writableDrive.CreateDirectory(path);
@@ -233,10 +218,9 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
         /// <returns>Value indicating whether directory was removed.</returns>
         public ExtendedErrorCode RemoveDirectory(VirtualPath path)
         {
-            if (path == null)
-                throw new ArgumentNullException(nameof(path));
+            ArgumentNullException.ThrowIfNull(path);
 
-            if (!(this.Mapping is IWritableMappedDrive writableDrive))
+            if (this.Mapping is not IWritableMappedDrive writableDrive)
                 return ExtendedErrorCode.AccessDenied;
 
             return writableDrive.RemoveDirectory(path);

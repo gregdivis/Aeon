@@ -49,7 +49,7 @@ namespace Aeon.Emulator.Memory
             while (length > 0)
             {
                 int size = Math.Min(length, ExpandedMemoryManager.PageSize - offset);
-                byte[] target = destHandle.GetLogicalPage(pageIndex);
+                byte[]? target = destHandle.GetLogicalPage(pageIndex);
                 if (target == null)
                     return 0x8A;
 
@@ -82,7 +82,7 @@ namespace Aeon.Emulator.Memory
             while (length > 0)
             {
                 int size = Math.Min(length, ExpandedMemoryManager.PageSize - offset);
-                byte[] source = sourceHandle.GetLogicalPage(pageIndex);
+                byte[]? source = sourceHandle.GetLogicalPage(pageIndex);
                 if (source == null)
                     return 0x8A;
 
@@ -138,8 +138,8 @@ namespace Aeon.Emulator.Memory
                 while (length > 0)
                 {
                     int size = Math.Min(Math.Min(length, ExpandedMemoryManager.PageSize - sourceOffset), ExpandedMemoryManager.PageSize - destOffset);
-                    byte[] source = srcHandle.GetLogicalPage(currentSourcePage);
-                    byte[] dest = destHandle.GetLogicalPage(currentDestPage);
+                    byte[]? source = srcHandle.GetLogicalPage(currentSourcePage);
+                    byte[]? dest = destHandle.GetLogicalPage(currentDestPage);
                     if (source == null || dest == null)
                         return 0x8A;
 
