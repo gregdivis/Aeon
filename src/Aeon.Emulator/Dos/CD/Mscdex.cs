@@ -152,9 +152,12 @@ namespace Aeon.Emulator.Dos.CD
                     status = Status_Done;
                     break;
 
+                case CommandCodes.ReadLongPrefetch:
+                    System.Diagnostics.Debug.WriteLine("MSCDEX: ReadLongPrefetch");
+                    break;
+
                 default:
                     throw new NotImplementedException();
-
             }
 
             //status = 1 << 8;
