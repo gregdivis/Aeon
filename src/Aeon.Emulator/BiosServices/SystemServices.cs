@@ -11,13 +11,19 @@ namespace Aeon.Emulator.BiosServices
     {
         private VirtualMachine vm;
 
-        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x11, 0x15 };
+        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x11, 0x12, 0x15 };
 
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
             if (interrupt == 0x11)
             {
                 vm.Processor.AX = unchecked((short)0xD426);
+                return;
+            }
+
+            if (interrupt == 0x12)
+            {
+                vm.Processor.AX = 640;
                 return;
             }
 
