@@ -167,6 +167,9 @@ namespace Aeon.Emulator.Dos.CD
         {
             switch (data[0])
             {
+                case 1:
+                    return Status_Done;
+
                 case 8:
                     BinaryPrimitives.WriteInt32LittleEndian(data[1..], cd.TotalSectors);
                     return Status_Done;

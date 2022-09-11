@@ -16,7 +16,7 @@ using TinyAudio;
 
 namespace Aeon.DiskImages
 {
-    public sealed class CueSheetImage : IMappedDrive, IAudioCD
+    public sealed class CueSheetImage : IMappedDrive, IAudioCD, IRawSectorReader
     {
         private const int RawSectorSize = 2352;
         private static readonly Regex FileRegex = new(@"^FILE\s+""(?<1>[^""]+)""\s+BINARY$", RegexOptions.ExplicitCapture);
@@ -142,6 +142,8 @@ namespace Aeon.DiskImages
 
         public int TotalSectors { get; }
 
+        int IRawSectorReader.SectorSize => 2048;
+
         public void Dispose()
         {
             if (!this.disposed)
@@ -216,6 +218,11 @@ namespace Aeon.DiskImages
         public void Stop()
         {
             this.player?.Stop();
+        }
+
+        void IRawSectorReader.ReadSectors(int startingSector, int sectorsToRead, Span<byte> buffer)
+        {
+            this.disc.ReadRaw(startingSector, sectorsToRead, buffer);
         }
 
         private sealed class Mode1Stream : Stream
