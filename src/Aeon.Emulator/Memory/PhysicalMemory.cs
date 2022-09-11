@@ -333,12 +333,8 @@ namespace Aeon.Emulator
         public int ReadFromStream(uint segment, uint offset, Stream source, int length)
         {
             uint fullAddress = GetRealModePhysicalAddress(segment, offset);
-#warning optimize this
-            //if (fullAddress is not >= (ExpandedMemoryManager.PageFrameSegment << 4) or not < (ExpandedMemoryManager.PageFrameSegment << 4) + 65536)
-            //    return source.Read(this.GetSpan(segment, offset, length));
-
-            //if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
-            //    return source.Read(this.GetSpan(segment, offset, length));
+            if (fullAddress + length < VramAddress || fullAddress >= VramUpperBound)
+                return source.Read(this.GetSpan(segment, offset, length));
 
             var buffer = ArrayPool<byte>.Shared.Rent(length);
             try
@@ -347,6 +343,7 @@ namespace Aeon.Emulator
                 if (span.IsEmpty)
                     return 0;
                 int bytesRead = source.Read(span);
+                span = span[..bytesRead];
                 for (int i = 0; i < span.Length; i++)
                     this.SetByte(fullAddress + (uint)i, span[i]);
 
