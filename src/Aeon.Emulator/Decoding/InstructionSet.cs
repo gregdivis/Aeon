@@ -323,13 +323,19 @@ namespace Aeon.Emulator.Decoding
                 return null;
             }
         }
+        static readonly System.Reflection.FieldInfo methodPtr =
+            // .NET
+            typeof(Delegate).GetField("_methodPtrAux", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic) ??
+            // Mono
+            typeof(Delegate).GetField("interp_method", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
         private static unsafe delegate*<VirtualMachine, void> GetFunctionPointer(OpcodeInfo opcode, int mode)
         {
             if (opcode == null)
                 return null;
 
             if (opcode.Emulators[mode] != null)
-                return (delegate*<VirtualMachine, void>)((IntPtr)typeof(Delegate).GetField("_methodPtrAux", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(opcode.Emulators[mode])).ToPointer();
+                return (delegate*<VirtualMachine, void>)((IntPtr)methodPtr.GetValue(opcode.Emulators[mode])).ToPointer();
 
             return null;
         }
