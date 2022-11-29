@@ -206,60 +206,69 @@ namespace Aeon.Emulator.Decoding
             unsafe
             {
                 // Allocate first level (processor mode)
-                OneBytePtrs = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
-                RmPtrs = (delegate*<VirtualMachine, void>***)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
-                TwoBytePtrs = (delegate*<VirtualMachine, void>***)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
-                TwoByteRmPtrs = (delegate*<VirtualMachine, void>****)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
+                OneBytePtrs = (delegate*<VirtualMachine, void>**)alloc(4);
+                RmPtrs = (delegate*<VirtualMachine, void>***)alloc(4);
+                TwoBytePtrs = (delegate*<VirtualMachine, void>***)alloc(4);
+                TwoByteRmPtrs = (delegate*<VirtualMachine, void>****)alloc(4);
 
                 for (int mode = 0; mode < 4; mode++)
                 {
-                    OneBytePtrs[mode] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    RmPtrs[mode] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    for (int firstByte = 0; firstByte < 256; firstByte++)
-                    {
-                        OneBytePtrs[mode][firstByte] = GetFunctionPointer(oneByteCodes[firstByte], mode);
+                    OneBytePtrs[mode] = (delegate*<VirtualMachine, void>*)alloc(256);
 
-                        if (rmCodes[firstByte] != null)
-                        {
-                            RmPtrs[mode][firstByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 8, IntPtr.Size).ToPointer();
-                            for (int rm = 0; rm < 8; rm++)
-                                RmPtrs[mode][firstByte][rm] = GetFunctionPointer(rmCodes[firstByte][rm], mode);
-                        }
-                    }
+                    RmPtrs[mode] = (delegate*<VirtualMachine, void>**)alloc(256);
+                    //for (int firstByte = 0; firstByte < 256; firstByte++)
+                    //{
+                    //    OneBytePtrs[mode][firstByte] = GetFunctionPointer(oneByteCodes[firstByte], mode);
 
-                    TwoBytePtrs[mode] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    for (int firstByte = 0; firstByte < 256; firstByte++)
-                    {
-                        if (twoByteCodes[firstByte] != null)
-                        {
-                            TwoBytePtrs[mode][firstByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
+                    //    if (rmCodes[firstByte] != null)
+                    //    {
+                    //        RmPtrs[mode][firstByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 8, IntPtr.Size).ToPointer();
+                    //        for (int rm = 0; rm < 8; rm++)
+                    //            RmPtrs[mode][firstByte][rm] = GetFunctionPointer(rmCodes[firstByte][rm], mode);
+                    //    }
+                    //}
 
-                            for (int secondByte = 0; secondByte < 256; secondByte++)
-                                TwoBytePtrs[mode][firstByte][secondByte] = GetFunctionPointer(twoByteCodes[firstByte][secondByte], mode);
-                        }
-                    }
+                    TwoBytePtrs[mode] = (delegate*<VirtualMachine, void>**)alloc(256);
+                    //for (int firstByte = 0; firstByte < 256; firstByte++)
+                    //{
+                    //    if (twoByteCodes[firstByte] != null)
+                    //    {
+                    //        TwoBytePtrs[mode][firstByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
 
-                    TwoByteRmPtrs[mode] = (delegate*<VirtualMachine, void>***)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    for (int firstByte = 0; firstByte < 256; firstByte++)
-                    {
-                        if (twoByteRmCodes[firstByte] != null)
-                        {
-                            TwoByteRmPtrs[mode][firstByte] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
+                    //        for (int secondByte = 0; secondByte < 256; secondByte++)
+                    //            TwoBytePtrs[mode][firstByte][secondByte] = GetFunctionPointer(twoByteCodes[firstByte][secondByte], mode);
+                    //    }
+                    //}
 
-                            for (int secondByte = 0; secondByte < 256; secondByte++)
-                            {
-                                if (twoByteRmCodes[firstByte][secondByte] != null)
-                                {
-                                    TwoByteRmPtrs[mode][firstByte][secondByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 8, IntPtr.Size).ToPointer();
-                                    for (int rm = 0; rm < 8; rm++)
-                                        TwoByteRmPtrs[mode][firstByte][secondByte][rm] = GetFunctionPointer(twoByteRmCodes[firstByte][secondByte][rm], mode);
-                                }
-                            }
-                        }
-                    }
+                    TwoByteRmPtrs[mode] = (delegate*<VirtualMachine, void>***)alloc(256);
+                    //for (int firstByte = 0; firstByte < 256; firstByte++)
+                    //{
+                    //    if (twoByteRmCodes[firstByte] != null)
+                    //    {
+                    //        TwoByteRmPtrs[mode][firstByte] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
+
+                    //        for (int secondByte = 0; secondByte < 256; secondByte++)
+                    //        {
+                    //            if (twoByteRmCodes[firstByte][secondByte] != null)
+                    //            {
+                    //                TwoByteRmPtrs[mode][firstByte][secondByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 8, IntPtr.Size).ToPointer();
+                    //                for (int rm = 0; rm < 8; rm++)
+                    //                    TwoByteRmPtrs[mode][firstByte][secondByte][rm] = GetFunctionPointer(twoByteRmCodes[firstByte][secondByte][rm], mode);
+                    //            }
+                    //        }
+                    //    }
+                    //}
                 }
+
+                InstructionDecoders.GetOneBytePointers(OneBytePtrs);
+                InstructionDecoders.GetOneByteRmPointers(RmPtrs, alloc);
+                InstructionDecoders.GetTwoBytePointers(TwoBytePtrs, alloc);
+                InstructionDecoders.GetTwoByteRmPointers(TwoByteRmPtrs, alloc);
+
+                static nint alloc(int count) => functionPointerAllocator.Allocate(sizeof(nint) * count, sizeof(nint));
             }
         }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static Exception GetPartiallyNotImplementedException(VirtualMachine vm, OpcodeInfo info) => new NotImplementedException($"Instruction '{info.Name}' not implemented for {vm.Processor.AddressSize}-bit addressing, {vm.Processor.OperandSize}-bit operand size.");
         private static OpcodeInfo FindOpcode(PhysicalMemory memory, Processor processor)

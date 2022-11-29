@@ -26,7 +26,7 @@ namespace Aeon.Emulator.Decoding
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint GetModRMAddress16(Processor processor, int mod, int rm, bool offsetOnly)
         {
-            processor.CachedIP++;
+            //processor.CachedIP++;
 
             ushort displacement;
 

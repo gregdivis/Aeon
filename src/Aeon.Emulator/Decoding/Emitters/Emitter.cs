@@ -68,7 +68,7 @@ namespace Aeon.Emulator.Decoding.Emitters
                     break;
 
                 default:
-                    throw new ArgumentException("Unsupported type.", "type");
+                    throw new ArgumentException("Unsupported type.", nameof(size));
             }
         }
         protected void CallGetMemoryReal(int size)
