@@ -112,12 +112,6 @@ namespace Aeon.Emulator.Decoding
         public static class RuntimeCalls
         {
             #region Methods
-            public static readonly MethodInfo NewLoadSibMod0Address = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.NewLoadSibMod0Address));
-            public static readonly MethodInfo NewLoadSibMod12Address = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.NewLoadSibMod12Address));
-            public static readonly MethodInfo NewLoadSibMod0Offset = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.NewLoadSibMod0Offset));
-            public static readonly MethodInfo NewLoadSibMod12Offset = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.NewLoadSibMod12Offset));
-            public static readonly MethodInfo GetMoffsAddress32 = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.GetMoffsAddress32), BindingFlags.Static | BindingFlags.Public);
-            public static readonly MethodInfo GetModRMAddress32 = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.GetModRMAddress32), BindingFlags.Static | BindingFlags.Public);
             public static readonly MethodInfo ThrowException = typeof(Decoding.RuntimeCalls).GetMethod(nameof(Decoding.RuntimeCalls.ThrowException), BindingFlags.Static | BindingFlags.Public);
             #endregion
         }

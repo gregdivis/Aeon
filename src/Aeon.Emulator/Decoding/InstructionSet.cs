@@ -196,6 +196,7 @@ namespace Aeon.Emulator.Decoding
             allCodes = new OpcodeCollection();
 
             InitializeNativeArrays();
+            RegRmw32Loads.Initialize();
         }
 
         private static void InitializeNativeArrays()
