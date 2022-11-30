@@ -7,6 +7,80 @@ namespace Aeon.Emulator.Decoding
     internal static class RuntimeCalls
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe uint GetModRMAddress16(Processor processor, int mod, int rm, bool offsetOnly)
+        {
+            processor.CachedIP++;
+
+            ushort displacement;
+
+            switch (mod)
+            {
+                case 0:
+                    if (rm == 6)
+                    {
+                        displacement = *(ushort*)processor.CachedIP;
+                        processor.CachedIP += 2;
+                    }
+                    else
+                    {
+                        displacement = 0;
+                    }
+                    break;
+                case 1:
+                    displacement = (ushort)*(sbyte*)processor.CachedIP;
+                    processor.CachedIP++;
+                    break;
+                case 2:
+                    displacement = (ushort)*(short*)processor.CachedIP;
+                    processor.CachedIP += 2;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mod));
+            }
+
+            //ushort offset = mod == 0 && rm == 6 ? displacement : processor.GetRM16Offset(rm, displacement);
+
+            ushort offset = (ushort)(rm switch
+            {
+                0 => (ushort)(processor.BX + processor.SI),
+                1 => (ushort)(processor.BX + processor.DI),
+                2 => (ushort)(processor.BP + processor.SI),
+                3 => (ushort)(processor.BP + processor.DI),
+                4 => processor.SI,
+                5 => processor.DI,
+                6 when mod == 0 => 0,
+                6 when mod != 0 => processor.BP,
+                7 => (ushort)processor.BX,
+                _ => throw new ArgumentOutOfRangeException(nameof(rm))
+            } + displacement);
+
+            if (!offsetOnly)
+            {
+                uint baseAddress;
+                uint* segmentOverride = processor.baseOverrides[(int)processor.SegmentOverride];
+                if (segmentOverride != null)
+                {
+                    baseAddress = *segmentOverride;
+                }
+                else
+                {
+                    baseAddress = rm switch
+                    {
+                        6 when mod == 0 => processor.DSBase,
+                        0 or 1 or 4 or 5 or 7 => processor.DSBase,
+                        2 or 3 or 6 => processor.SSBase,
+                        _ => throw new ArgumentOutOfRangeException(nameof(rm))
+                    };
+                }
+
+                return baseAddress + offset;
+            }
+            else
+            {
+                return offset;
+            }
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint GetModRMAddress32(Processor processor, int mod, int rm, bool offsetOnly)
         {
             uint offset;
