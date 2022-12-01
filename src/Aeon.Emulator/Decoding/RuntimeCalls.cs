@@ -6,6 +6,23 @@ namespace Aeon.Emulator.Decoding
 {
     internal static class RuntimeCalls
     {
+        public static unsafe uint GetMoffsAddress16(Processor p)
+        {
+            var segmentOverride = p.SegmentOverride;
+            uint baseAddress = segmentOverride == SegmentRegister.Default ? p.DSBase : *p.baseOverrides[(int)segmentOverride];
+            uint offset =  *(ushort*)p.CachedIP;
+            p.CachedIP += 2;
+            return baseAddress + offset;
+        }
+        public static unsafe uint GetMoffsAddress32(Processor p)
+        {
+            var segmentOverride = p.SegmentOverride;
+            uint baseAddress = segmentOverride == SegmentRegister.Default ? p.DSBase : *p.baseOverrides[(int)segmentOverride];
+            uint offset = *(uint*)p.CachedIP;
+            p.CachedIP += 4;
+            return baseAddress + offset;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint GetModRMAddress16(Processor processor, int mod, int rm, bool offsetOnly)
         {
