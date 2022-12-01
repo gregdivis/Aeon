@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -1089,6 +1090,9 @@ namespace Aeon.Emulator
             {
                 if (!checkVram || fullAddress is < VramAddress or >= VramUpperBound)
                 {
+                    if (fullAddress >= (uint)this.MemorySize)
+                        ThrowOutOfRange(fullAddress);
+
                     return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
                 }
                 else
@@ -1120,6 +1124,9 @@ namespace Aeon.Emulator
             {
                 if (fullAddress is < VramAddress or > VramUpperBound)
                 {
+                    if (fullAddress >= (uint)this.MemorySize)
+                        ThrowOutOfRange(fullAddress);
+
                     Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
                 }
                 else
@@ -1226,7 +1233,6 @@ namespace Aeon.Emulator
                 uint* dirPtr = (uint*)(RawView + directoryAddress);
                 if ((dirPtr[dir] & PagePresent) == 0)
                     throw new PageFaultException(linearAddress, operation);
-
 
                 uint pageAddress = dirPtr[dir] & 0xFFFFF000u;
                 uint* pagePtr = (uint*)(RawView + pageAddress);
@@ -1354,5 +1360,8 @@ namespace Aeon.Emulator
             if ((registers & Registers.AX) != 0)
                 WriteInstruction(ref ptr, 0x58);
         }
+        [DoesNotReturn]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowOutOfRange(uint address) => throw new InvalidOperationException($"Attempted to access invalid physical address 0x{address:X8}.");
     }
 }

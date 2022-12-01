@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Aeon.Emulator.DebugSupport;
@@ -341,6 +342,7 @@ namespace Aeon.Emulator.Decoding
 
             return null;
         }
+        [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static unsafe void ThrowGetOpcodeException(byte* ip) => throw new NotImplementedException($"Opcode {ip[0]:X2} {ip[1]:X2} ({ip[2]:X2}) not implemented.");
 
