@@ -11,20 +11,14 @@ namespace Aeon.Emulator
     public sealed class Processor : IRegisterContainer
     {
         private PrefixOverrides overrides;
-        private readonly unsafe short** rmOffsets1;
-        private readonly unsafe short** rmOffsets2;
 
         private readonly UnsafeBuffer<uint> gprBuffer = new(RegisterCount);
         private readonly UnsafeBuffer<byte> instructionBuffer = new(16);
         private readonly UnsafeBuffer<nint> wordRegisterPointersBuffer = new(8);
         private readonly UnsafeBuffer<nint> byteRegisterPointersBuffer = new(8);
         private readonly UnsafeBuffer<nint> segmentRegisterPointersBuffer = new(8);
-        private readonly UnsafeBuffer<nint> defaultSegments16Buffer = new(8);
         private readonly UnsafeBuffer<nint> segmentBasesBuffer = new(8);
-        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod0Buffer = new(8);
-        private readonly UnsafeBuffer<nint> defaultSibSegments32Mod12Buffer = new(8);
         private readonly UnsafeBuffer<nint> baseOverrideBuffer = new(8);
-        private readonly UnsafeBuffer<nint> rmOffsets1Buffer = new(17);
 
         internal Processor()
         {
@@ -34,10 +28,7 @@ namespace Aeon.Emulator
                 wordRegisterPointers = (void**)wordRegisterPointersBuffer.ToPointer();
                 byteRegisterPointers = (byte**)byteRegisterPointersBuffer.ToPointer();
                 segmentRegisterPointers = (ushort**)segmentRegisterPointersBuffer.ToPointer();
-                defaultSegments16 = (uint**)defaultSegments16Buffer.ToPointer();
                 segmentBases = (uint*)segmentBasesBuffer.ToPointer();
-                defaultSibSegments32Mod0 = (uint**)defaultSibSegments32Mod0Buffer.ToPointer();
-                defaultSibSegments32Mod12 = (uint**)defaultSibSegments32Mod12Buffer.ToPointer();
 
                 InitializeRegisterOffsets();
                 PAX = wordRegisterPointers[0];
@@ -66,28 +57,8 @@ namespace Aeon.Emulator
 
                 baseOverrides = (uint**)baseOverrideBuffer.ToPointer();
                 InitializeSegmentOverridePointers();
-                InitializeDefaultSegmentPointers();
                 debugRegisterBase = (uint*)(gprBlock + 60); // DR0
                 this.CachedInstruction = instructionBuffer.ToPointer();
-
-                rmOffsets1 = (short**)rmOffsets1Buffer.ToPointer();
-                rmOffsets1[0] = (short*)this.PBX;
-                rmOffsets1[1] = (short*)this.PBX;
-                rmOffsets1[2] = (short*)this.PBP;
-                rmOffsets1[3] = (short*)this.PBP;
-                rmOffsets1[4] = (short*)this.PSI;
-                rmOffsets1[5] = (short*)this.PDI;
-                rmOffsets1[6] = (short*)this.PBP;
-                rmOffsets1[7] = (short*)this.PBX;
-                rmOffsets2 = &rmOffsets1[8];
-                rmOffsets2[0] = (short*)this.PSI;
-                rmOffsets2[1] = (short*)this.PDI;
-                rmOffsets2[2] = (short*)this.PSI;
-                rmOffsets2[3] = (short*)this.PDI;
-                rmOffsets2[4] = (short*)&rmOffsets1[16];
-                rmOffsets2[5] = (short*)&rmOffsets1[16];
-                rmOffsets2[6] = (short*)&rmOffsets1[16];
-                rmOffsets2[7] = (short*)&rmOffsets1[16];
             }
         }
 
@@ -132,35 +103,6 @@ namespace Aeon.Emulator
             baseOverrides[(int)SegmentRegister.DS] = &segmentBases[3];
             baseOverrides[(int)SegmentRegister.FS] = &segmentBases[4];
             baseOverrides[(int)SegmentRegister.GS] = &segmentBases[5];
-        }
-        private unsafe void InitializeDefaultSegmentPointers()
-        {
-            defaultSegments16[0] = &segmentBases[3];
-            defaultSegments16[1] = &segmentBases[3];
-            defaultSegments16[2] = &segmentBases[2];
-            defaultSegments16[3] = &segmentBases[2];
-            defaultSegments16[4] = &segmentBases[3];
-            defaultSegments16[5] = &segmentBases[3];
-            defaultSegments16[6] = &segmentBases[2];
-            defaultSegments16[7] = &segmentBases[3];
-
-            defaultSibSegments32Mod0[0] = &segmentBases[3];
-            defaultSibSegments32Mod0[1] = &segmentBases[3];
-            defaultSibSegments32Mod0[2] = &segmentBases[3];
-            defaultSibSegments32Mod0[3] = &segmentBases[3];
-            defaultSibSegments32Mod0[4] = &segmentBases[2];
-            defaultSibSegments32Mod0[5] = &segmentBases[3];
-            defaultSibSegments32Mod0[6] = &segmentBases[3];
-            defaultSibSegments32Mod0[7] = &segmentBases[3];
-
-            defaultSibSegments32Mod12[0] = &segmentBases[3];
-            defaultSibSegments32Mod12[1] = &segmentBases[3];
-            defaultSibSegments32Mod12[2] = &segmentBases[3];
-            defaultSibSegments32Mod12[3] = &segmentBases[3];
-            defaultSibSegments32Mod12[4] = &segmentBases[2];
-            defaultSibSegments32Mod12[5] = &segmentBases[2];
-            defaultSibSegments32Mod12[6] = &segmentBases[3];
-            defaultSibSegments32Mod12[7] = &segmentBases[3];
         }
 
         #region General Purpose
@@ -668,14 +610,6 @@ namespace Aeon.Emulator
                     return segmentBases[(int)defaultSegment];
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        internal ushort GetRM16Offset(int rm, ushort displacement)
-        {
-            unsafe
-            {
-                return (ushort)(*this.rmOffsets1[rm] + *this.rmOffsets2[rm] + displacement);
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe byte* GetRegisterBytePointer(int rmCode) => byteRegisterPointers[rmCode];
@@ -762,18 +696,6 @@ namespace Aeon.Emulator
         /// Array of pointers to segment override bases.
         /// </summary>
         internal unsafe readonly uint** baseOverrides;
-        /// <summary>
-        /// Array of pointers to default 16-bit segment bases.
-        /// </summary>
-        internal unsafe readonly uint** defaultSegments16;
-        /// <summary>
-        /// Array of pointers to default 32-bit SIB segment bases for MOD=1 or 2.
-        /// </summary>
-        internal unsafe readonly uint** defaultSibSegments32Mod12;
-        /// <summary>
-        /// Array of pointers to default 32-bit SIB segment bases for MOD=0.
-        /// </summary>
-        internal unsafe readonly uint** defaultSibSegments32Mod0;
         /// <summary>
         /// Array of segment base values.
         /// </summary>
