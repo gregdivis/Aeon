@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal abstract class LoadRegRmw : Emitter
     {
@@ -62,12 +62,12 @@ namespace AeonSourceGenerator.Emitters
                 throw new ArgumentException("Invalid addressing mode.");
         }
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
-            writer.AppendLine("\t\tGetModRm(p, out var mod, out var rm);");
+            writer.WriteLine("GetModRm(p, out var mod, out var rm);");
         }
 
-        public override void WriteParameter(StringBuilder writer)
+        public override void WriteParameter(TextWriter writer)
         {
             if (this.OffsetOnly)
             {
@@ -75,25 +75,39 @@ namespace AeonSourceGenerator.Emitters
             }
             else if (!this.ByRef)
             {
-                writer.Append($"arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterValue : arg{this.ParameterIndex}Temp");
+                if (this.MemoryOnly)
+                    writer.Write($"arg{this.ParameterIndex}Temp");
+                else
+                    writer.Write($"arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterValue : arg{this.ParameterIndex}Temp");
             }
             else
             {
                 if (this.WriteOnly)
-                    writer.Append("out ");
+                    writer.Write("out ");
                 else if (this.ByRef)
-                    writer.Append("ref ");
+                    writer.Write("ref ");
 
-                writer.Append($"*(arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterPointer : &arg{this.ParameterIndex}Temp)");
+                if (this.MemoryOnly)
+                    writer.Write($"arg{this.ParameterIndex}Temp");
+                else
+                    writer.Write($"*(arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterPointer : &arg{this.ParameterIndex}Temp)");
             }
         }
 
-        public override void Complete(StringBuilder writer)
+        public override void Complete(IndentedTextWriter writer)
         {
             if (!this.OffsetOnly && this.ByRef)
             {
-                writer.AppendLine($"\t\tif (!arg{this.ParameterIndex}.IsPointer)");
-                writer.AppendLine($"\t\t\tvm.PhysicalMemory.Set(arg{this.ParameterIndex}.Address, arg{this.ParameterIndex}Temp);");
+                if (!this.MemoryOnly)
+                {
+                    writer.WriteLine($"if (!arg{this.ParameterIndex}.IsPointer)");
+                    writer.Indent++;
+                }
+
+                writer.WriteLine($"vm.PhysicalMemory.Set(arg{this.ParameterIndex}.Address, arg{this.ParameterIndex}Temp);");
+
+                if (!this.MemoryOnly)
+                    writer.Indent--;
             }
         }
     }

@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal abstract class Emitter
     {
@@ -19,90 +19,41 @@ namespace AeonSourceGenerator.Emitters
         protected bool WriteOnly => this.state.WriteOnly;
         protected virtual EmitterTypeCode MethodArgType => this.state.MethodArgType;
 
-        public static void WriteCall(StringBuilder writer, EmulateMethodCall method)
+        public static void WriteCall(TextWriter writer, EmulateMethodCall method)
         {
-            writer.Append("\t\t");
-            writer.Append(method.Name);
-            writer.Append('(');
-            writer.Append(method.Arg1);
+            writer.Write(method.Name);
+            writer.Write('(');
+            writer.Write(method.Arg1);
             foreach (var emitter in method.ArgEmitters)
             {
-                writer.Append(", ");
+                writer.Write(", ");
                 emitter.WriteParameter(writer);
             }
 
-            writer.AppendLine(");");
+            writer.WriteLine(");");
         }
 
-        public virtual void Initialize(StringBuilder writer)
+        public virtual void Initialize(IndentedTextWriter writer)
         {
         }
-        public virtual void WriteParameter(StringBuilder writer)
+        public virtual void WriteParameter(TextWriter writer)
         {
-            writer.Append("arg");
-            writer.Append(this.ParameterIndex);
+            writer.Write("arg");
+            writer.Write(this.ParameterIndex);
         }
-        public virtual void Complete(StringBuilder writer)
+        public virtual void Complete(IndentedTextWriter writer)
         {
         }
 
-        //protected void IncrementIPPointer(int n)
-        //{
-        //    if (n != 1)
-        //        this.sb.AppendLine($"p.CachedIP += {n};");
-        //    else
-        //        this.sb.AppendLine($"*p.CachedIP++;");
-        //}
         protected static EmitterType GetUnsignedIntType(int size)
-        {
-            switch (size)
-            {
-                case 1:
-                    return new EmitterType(EmitterTypeCode.Byte);
-
-                case 2:
-                    return new EmitterType(EmitterTypeCode.UShort);
-
-                case 4:
-                    return new EmitterType(EmitterTypeCode.UInt);
-
-                case 6:
-                case 8:
-                    return new EmitterType(EmitterTypeCode.ULong);
-
-                default:
-                    throw new ArgumentException("Invalid size.");
-            }
-        }
-        protected static EmitterType GetSignedIntType(int size)
-        {
-            switch (size)
-            {
-                case 1:
-                    return new EmitterType(EmitterTypeCode.SByte);
-
-                case 2:
-                    return new EmitterType(EmitterTypeCode.Short);
-
-                case 4:
-                    return new EmitterType(EmitterTypeCode.Int);
-
-                case 6:
-                case 8:
-                    return new EmitterType(EmitterTypeCode.Long);
-
-                default:
-                    throw new ArgumentException("Invalid size.");
-            }
-        }
-        protected static EmitterType GetFloatType(int size)
         {
             return size switch
             {
-                4 => new EmitterType(EmitterTypeCode.Float),
-                8 => new EmitterType(EmitterTypeCode.Double),
-                10 => new EmitterType(EmitterTypeCode.Real10),
-                _ => throw new ArgumentException("Invalid size."),
+                1 => new EmitterType(EmitterTypeCode.Byte),
+                2 => new EmitterType(EmitterTypeCode.UShort),
+                4 => new EmitterType(EmitterTypeCode.UInt),
+                6 or 8 => new EmitterType(EmitterTypeCode.ULong),
+                _ => throw new ArgumentException("Invalid size.")
             };
         }
         protected static string CallGetMemoryInt(int size)
@@ -114,28 +65,6 @@ namespace AeonSourceGenerator.Emitters
                 4 => "GetUInt32",
                 8 => "GetUInt64",
                 10 => "GetReal80",
-                _ => throw new ArgumentException("Unsupported type."),
-            };
-        }
-        protected static string CallGetMemoryReal(int size)
-        {
-            return size switch
-            {
-                4 => "GetReal32",
-                8 => "GetReal64",
-                10 => "GetReal80",
-                _ => throw new ArgumentException("Unsupported type."),
-            };
-        }
-        protected static string CallSetMemoryInt(int size)
-        {
-            return size switch
-            {
-                1 => "SetByte",
-                2 => "SetUInt16",
-                4 => "SetUInt32",
-                8 => "SetUInt64",
-                10 => "SetReal80",
                 _ => throw new ArgumentException("Unsupported type."),
             };
         }

@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal sealed class LoadRegRmw32 : LoadRegRmw
     {
@@ -9,23 +9,25 @@ namespace AeonSourceGenerator.Emitters
         {
         }
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
             base.Initialize(writer);
 
             if (this.OffsetOnly)
             {
-                writer.AppendLine($"\t\tvar arg{this.ParameterIndex} = RuntimeCalls.GetModRMAddress32(p, mod, rm, true);");
+                writer.WriteLine($"var arg{this.ParameterIndex} = RuntimeCalls.GetModRMAddress32(p, mod, rm, true);");
             }
             else
             {
                 var memoryOnly = this.MemoryOnly ? "true" : "false";
-                writer.AppendLine($"\t\tvar arg{this.ParameterIndex} = GetRegRmw32<{this.GetRuntimeTypeName()}>(p, mod, rm, {memoryOnly});");
-                writer.AppendLine($"\t\t{this.GetRuntimeTypeName()} arg{this.ParameterIndex}Temp = 0;");
+                writer.WriteLine($"var arg{this.ParameterIndex} = GetRegRmw32<{this.GetRuntimeTypeName()}>(p, mod, rm, {memoryOnly});");
+                writer.WriteLine($"{this.GetRuntimeTypeName()} arg{this.ParameterIndex}Temp = 0;");
                 if (!this.WriteOnly)
                 {
-                    writer.AppendLine($"\t\tif (!arg{this.ParameterIndex}.IsPointer)");
-                    writer.AppendLine($"\t\t\targ{this.ParameterIndex}Temp = vm.PhysicalMemory.Get<{this.GetRuntimeTypeName()}>(arg{this.ParameterIndex}.Address);");
+                    writer.WriteLine($"if (!arg{this.ParameterIndex}.IsPointer)");
+                    writer.Indent++;
+                    writer.WriteLine($"arg{this.ParameterIndex}Temp = vm.PhysicalMemory.Get<{this.GetRuntimeTypeName()}>(arg{this.ParameterIndex}.Address);");
+                    writer.Indent--;
                 }
             }
         }

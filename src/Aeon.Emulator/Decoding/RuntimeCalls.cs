@@ -26,8 +26,6 @@ namespace Aeon.Emulator.Decoding
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint GetModRMAddress16(Processor processor, int mod, int rm, bool offsetOnly)
         {
-            //processor.CachedIP++;
-
             ushort displacement;
 
             switch (mod)
@@ -54,8 +52,6 @@ namespace Aeon.Emulator.Decoding
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mod));
             }
-
-            //ushort offset = mod == 0 && rm == 6 ? displacement : processor.GetRM16Offset(rm, displacement);
 
             ushort offset = (ushort)(rm switch
             {
@@ -100,24 +96,14 @@ namespace Aeon.Emulator.Decoding
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint GetModRMAddress32(Processor processor, int mod, int rm, bool offsetOnly)
         {
-            uint offset;
             SegmentIndex segment;
-
-            switch (mod)
+            var offset = mod switch
             {
-                case 0:
-                default:
-                    offset = GetModRMAddress32Mod0(processor, rm, out segment);
-                    break;
-
-                case 1:
-                    offset = GetModRMAddress32Mod1(processor, rm, out segment);
-                    break;
-
-                case 2:
-                    offset = GetModRMAddress32Mod2(processor, rm, out segment);
-                    break;
-            }
+                0 => GetModRMAddress32Mod0(processor, rm, out segment),
+                1 => GetModRMAddress32Mod1(processor, rm, out segment),
+                2 => GetModRMAddress32Mod2(processor, rm, out segment),
+                _ => throw new ArgumentOutOfRangeException(nameof(mod))
+            };
 
             if (offsetOnly)
             {

@@ -17,12 +17,6 @@ namespace Aeon.Emulator
         /// The instruction's ModR/M value information.
         /// </summary>
         public readonly ModRmInfo ModRmInfo;
-        /// <summary>
-        /// Gets performance statistics for the opcode.
-        /// </summary>
-        public readonly OpcodeInstrumentation Statistics = new();
-
-        internal readonly DecodeAndEmulate[] Emulators;
 
         private readonly byte extendedOpcode;
 
@@ -32,7 +26,6 @@ namespace Aeon.Emulator
             this.ModRmInfo = instInfo.ModRmByte;
             this.extendedOpcode = instInfo.ExtendedRmOpcode;
             this.Operands = instInfo.Operands;
-            this.Emulators = instInfo.NewEmulators;
             this.Name = instInfo.Name;
             this.IsPrefix = instInfo.IsPrefix;
             this.Length = instInfo.IsMultiByte ? 2 : 1;

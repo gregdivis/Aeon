@@ -6,16 +6,8 @@ namespace Aeon.Emulator.Decoding;
 
 internal static partial class InstructionDecoders
 {
-    public static unsafe partial void GetOneBytePointers(delegate*<VirtualMachine, void>** ptrs);
-
-    public static unsafe partial void GetOneByteRmPointers(delegate*<VirtualMachine, void>*** ptrs, Func<int, nint> alloc);
-
-    public static unsafe partial void GetTwoBytePointers(delegate*<VirtualMachine, void>*** ptrs, Func<int, nint> alloc);
-
-    public static unsafe partial void GetTwoByteRmPointers(delegate*<VirtualMachine, void>**** ptrs, Func<int, nint> alloc);
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe T ReadImmediate<T>(Processor p) where T : unmanaged
+    public static unsafe T ReadImmediate<T>(Processor p) where T : unmanaged
     {
         var value = *(T*)p.CachedIP;
         p.CachedIP += sizeof(T);
@@ -23,10 +15,10 @@ internal static partial class InstructionDecoders
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe byte GetReg(Processor p) => (byte)Intrinsics.ExtractBits(*p.CachedIP, 3, 3, 0x38);
+    public static unsafe byte GetReg(Processor p) => (byte)Intrinsics.ExtractBits(*p.CachedIP, 3, 3, 0x38);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe void GetModRm(Processor p, out byte mod, out byte rm)
+    public static unsafe void GetModRm(Processor p, out byte mod, out byte rm)
     {
         rm = (byte)(*p.CachedIP & 0x07u);
         mod = (byte)Intrinsics.ExtractBits(*p.CachedIP, 6, 2, 0xC0);
@@ -34,7 +26,7 @@ internal static partial class InstructionDecoders
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe RmwValue<T> GetRegRmw16<T>(Processor p, int mod, int rm, bool memoryOnly)
+    public static unsafe RmwValue<T> GetRegRmw16<T>(Processor p, int mod, int rm, bool memoryOnly)
         where T : unmanaged
     {
         if (mod != 3)
@@ -53,7 +45,7 @@ internal static partial class InstructionDecoders
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static unsafe RmwValue<T> GetRegRmw32<T>(Processor p, int mod, int rm, bool memoryOnly)
+    public static unsafe RmwValue<T> GetRegRmw32<T>(Processor p, int mod, int rm, bool memoryOnly)
         where T : unmanaged
     {
         if (mod != 3)
@@ -73,9 +65,9 @@ internal static partial class InstructionDecoders
 
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void ThrowMod3Exception() => throw new Mod3Exception();
+    public static void ThrowMod3Exception() => throw new Mod3Exception();
 
-    private readonly ref struct RmwValue<T>
+    public readonly ref struct RmwValue<T>
         where T : unmanaged
     {
         private readonly UIntPtr ptr;

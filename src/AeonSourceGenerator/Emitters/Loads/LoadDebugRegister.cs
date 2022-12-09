@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal sealed class LoadDebugRegister : Emitter
     {
@@ -9,18 +9,18 @@ namespace AeonSourceGenerator.Emitters
         {
         }
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
-            writer.AppendLine($"\t\tvar arg{this.ParameterIndex} = p.GetDebugRegisterPointer(GetReg(p));");
+            writer.WriteLine($"var arg{this.ParameterIndex} = p.GetDebugRegisterPointer(GetReg(p));");
         }
-        public override void WriteParameter(StringBuilder writer)
+        public override void WriteParameter(TextWriter writer)
         {
             if (this.WriteOnly)
-                writer.Append("out ");
+                writer.Write("out ");
             else if (this.ByRef)
-                writer.Append("ref ");
+                writer.Write("ref ");
 
-            writer.Append('*');
+            writer.Write('*');
             base.WriteParameter(writer);
         }
     }

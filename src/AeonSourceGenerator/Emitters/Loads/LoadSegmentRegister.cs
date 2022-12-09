@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal sealed class LoadSegmentRegister : Emitter
     {
@@ -9,39 +9,38 @@ namespace AeonSourceGenerator.Emitters
         {
         }
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
-            // Reg is the middle 3 bits of the ModR/M byte.
-            writer.AppendLine($"\t\tvar arg{this.ParameterIndex}Reg = GetReg(p);");
+            writer.WriteLine($"var arg{this.ParameterIndex}Reg = GetReg(p);");
             if (this.ByRef)
             {
-                writer.Append($"\t\tushort arg{this.ParameterIndex}");
+                writer.Write($"ushort arg{this.ParameterIndex}");
                 if (this.WriteOnly)
-                    writer.AppendLine(";");
+                    writer.WriteLine(';');
                 else
-                    writer.AppendLine($" = *p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg);");
+                    writer.WriteLine($" = *p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg);");
             }
         }
-        public override void WriteParameter(StringBuilder writer)
+        public override void WriteParameter(TextWriter writer)
         {
             if (this.ByRef)
             {
                 if (this.WriteOnly)
-                    writer.Append("out ");
+                    writer.Write("out ");
                 else
-                    writer.Append("ref ");
+                    writer.Write("ref ");
 
-                writer.Append($"arg{this.ParameterIndex}");
+                writer.Write($"arg{this.ParameterIndex}");
             }
             else
             {
-                writer.Append($"*p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg)");
+                writer.Write($"*p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg)");
             }
         }
-        public override void Complete(StringBuilder writer)
+        public override void Complete(IndentedTextWriter writer)
         {
             if (this.ByRef)
-                writer.AppendLine($"\t\tvm.WriteSegmentRegister((SegmentIndex)arg{this.ParameterIndex}Reg, arg{this.ParameterIndex});");
+                writer.WriteLine($"vm.WriteSegmentRegister((SegmentIndex)arg{this.ParameterIndex}Reg, arg{this.ParameterIndex});");
         }
     }
 }

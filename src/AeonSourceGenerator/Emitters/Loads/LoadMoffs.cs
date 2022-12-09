@@ -1,13 +1,13 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal class LoadMoffs : Emitter
     {
         public LoadMoffs(EmitStateInfo state, int valueSize)
             : base(state)
         {
-            if (valueSize != 1 && valueSize != 2 && valueSize != 4 && valueSize != 8)
+            if (valueSize is not 1 and not 2 and not 4 and not 8)
                 throw new ArgumentException("Invalid size.");
 
             this.ValueSize = valueSize;
@@ -27,39 +27,39 @@ namespace AeonSourceGenerator.Emitters
         public bool? RequiresTemp => this.ReturnType == EmitReturnType.Address;
         public EmitterType? TempType => GetUnsignedIntType(this.ValueSize);
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
             bool byteVersion = this.ValueSize == 1;
-            writer.AppendLine($"\t\tuint arg{this.ParameterIndex}Address = RuntimeCalls.GetMoffsAddress{this.AddressMode}(p);");
+            writer.WriteLine($"uint arg{this.ParameterIndex}Address = RuntimeCalls.GetMoffsAddress{this.AddressMode}(p);");
             if (!this.WriteOnly)
             {
-                writer.Append($"\t\tvar arg{this.ParameterIndex} = vm.PhysicalMemory.");
+                writer.Write($"var arg{this.ParameterIndex} = vm.PhysicalMemory.");
                 if (byteVersion)
-                    writer.Append("GetByte");
+                    writer.Write("GetByte");
                 else
-                    writer.Append(CallGetMemoryInt(this.ValueSize));
+                    writer.Write(CallGetMemoryInt(this.ValueSize));
 
-                writer.AppendLine($"(arg{this.ParameterIndex}Address);");
+                writer.WriteLine($"(arg{this.ParameterIndex}Address);");
             }
         }
 
-        public override void WriteParameter(StringBuilder writer)
+        public override void WriteParameter(TextWriter writer)
         {
             if (this.ByRef)
             {
                 if (this.WriteOnly)
-                    writer.Append("out var ");
+                    writer.Write("out var ");
                 else if (this.ByRef)
-                    writer.Append("ref ");
+                    writer.Write("ref ");
             }
 
-            writer.Append($"arg{this.ParameterIndex}");
+            writer.Write($"arg{this.ParameterIndex}");
         }
 
-        public override void Complete(StringBuilder writer)
+        public override void Complete(IndentedTextWriter writer)
         {
             if (this.ByRef)
-                writer.AppendLine($"\t\tvm.PhysicalMemory.Set(arg{this.ParameterIndex}Address, arg{this.ParameterIndex});");
+                writer.WriteLine($"vm.PhysicalMemory.Set(arg{this.ParameterIndex}Address, arg{this.ParameterIndex});");
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal class LoadImmediate : Emitter
     {
@@ -17,9 +17,9 @@ namespace AeonSourceGenerator.Emitters
         public int ImmediateSize { get; }
         public ValueExtend ValueExtend { get; }
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
-            writer.AppendLine($"\t\tvar arg{this.ParameterIndex} = ({this.GetRuntimeTypeName()})ReadImmediate<{this.GetTypeName()}>(p);");
+            writer.WriteLine($"var arg{this.ParameterIndex} = ({this.GetRuntimeTypeName()})ReadImmediate<{this.GetTypeName()}>(p);");
         }
 
         private string GetTypeName()

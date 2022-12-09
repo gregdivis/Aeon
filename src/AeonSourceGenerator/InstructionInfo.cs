@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.CodeAnalysis;
+﻿using System.Text;
 
-namespace AeonSourceGenerator
+namespace Aeon.SourceGenerator
 {
-    internal sealed class InstructionInfo
+    internal sealed class InstructionInfo : IEquatable<InstructionInfo>
     {
-        private static readonly Dictionary<int, OperandFormat> operandFormats = new Dictionary<int, OperandFormat>();
+        private static readonly Dictionary<int, OperandFormat> operandFormats = new();
+        private static readonly char[] Pipe = new[] { '|' };
+        private static readonly char[] Space = new[] { ' ' };
+        private static readonly char[] Slash = new[] { '/' };
+        private static readonly char[] Comma = new[] { ',' };
 
         private InstructionInfo()
         {
@@ -18,11 +19,15 @@ namespace AeonSourceGenerator
             this.Operands = src.Operands;
             this.ModRmByte = src.ModRmByte;
             this.ExtendedRmOpcode = src.ExtendedRmOpcode;
-            this.EmulateMethods = src.EmulateMethods;
-            this.Name = src.Name;
-            this.IsPrefix = src.IsPrefix;
             this.IsMultiByte = src.IsMultiByte;
-            this.ActualMethodNames = src.ActualMethodNames;
+        }
+        private InstructionInfo(ushort opcode, OperandFormat operands, ModRmInfo modRm, byte extendedRmOpcode, bool isMultiByte)
+        {
+            this.Opcode = opcode;
+            this.Operands = operands;
+            this.ModRmByte = modRm;
+            this.ExtendedRmOpcode = extendedRmOpcode;
+            this.IsMultiByte = isMultiByte;
         }
 
         public ushort Opcode { get; private set; }
@@ -39,13 +44,56 @@ namespace AeonSourceGenerator
                 return -1;
             }
         }
-        public IMethodSymbol[] EmulateMethods { get; } = new IMethodSymbol[4];
-        public string Name { get; set; }
-        public bool IsPrefix { get; set; }
         public bool IsMultiByte { get; set; }
         public bool IsAffectedByOperandSize => this.Operands.IndexOfAny(new[] { OperandType.ImmediateFarPointer, OperandType.ImmediateRelativeWord, OperandType.ImmediateWord, OperandType.IndirectFarPointer, OperandType.MemoryOffsetWord, OperandType.RegisterOrMemoryWord, OperandType.RegisterOrMemoryWordNearPointer, OperandType.RegisterWord, OperandType.EffectiveAddress, OperandType.FullLinearAddress }) >= 0;
         public bool IsAffectedByAddressSize => this.Operands.IndexOfAny(new[] { OperandType.IndirectFarPointer, OperandType.MemoryInt16, OperandType.MemoryInt32, OperandType.MemoryFloat32, OperandType.MemoryFloat64, OperandType.MemoryFloat80, OperandType.MemoryInt64, OperandType.MemoryOffsetByte, OperandType.MemoryOffsetWord, OperandType.RegisterOrMemory16, OperandType.RegisterOrMemory32, OperandType.RegisterOrMemoryByte, OperandType.RegisterOrMemoryWord, OperandType.RegisterOrMemoryWordNearPointer, OperandType.EffectiveAddress, OperandType.FullLinearAddress }) >= 0;
-        public string[] ActualMethodNames { get; set; }
+
+        public bool TryGetOperandSize(bool operand32, bool address32, out int size)
+        {
+            size = 0;
+
+            foreach (var operand in this.Operands)
+            {
+                switch (operand)
+                {
+                    case OperandType.None:
+                        return true;
+
+                    case OperandType.ImmediateByte or OperandType.ImmediateByteExtend or OperandType.ImmediateRelativeByte:
+                        size++;
+                        break;
+
+                    case OperandType.ImmediateInt16:
+                        size += 2;
+                        break;
+
+                    case OperandType.ImmediateInt32:
+                        size += 4;
+                        break;
+
+                    case OperandType.ImmediateInt64:
+                        size += 8;
+                        break;
+
+                    case OperandType.ImmediateWord or OperandType.ImmediateRelativeWord:
+                        size += operand32 ? 4 : 2;
+                        break;
+
+                    case OperandType.MemoryOffsetByte or OperandType.MemoryOffsetWord:
+                        size += address32 ? 4 : 2;
+                        break;
+
+                    case OperandType.ImmediateFarPointer:
+                    case OperandType.RegisterOrMemoryByte:
+                    case OperandType.RegisterOrMemoryWord:
+                    case OperandType.RegisterOrMemoryWordNearPointer:
+                    case >= OperandType.IndirectFarPointer and <= OperandType.MemoryFloat80:
+                        return false;
+                }
+            }
+
+            return true;
+        }
 
         public string GetDecodeAndEmulateMethodName(bool operand32, bool address32)
         {
@@ -57,89 +105,28 @@ namespace AeonSourceGenerator
                 return $"Op_{this.Opcode:X4}_O{operandSize}_A{addressSize}";
         }
 
-        public void SetEmulateMethods(int operandSize, int addressSize, IMethodSymbol method)
+        public static bool TryParse(string instructionFormat, out IReadOnlyCollection<InstructionInfo> values)
         {
-            if ((operandSize & 16) == 16 && (addressSize & 16) == 16)
-                this.EmulateMethods[0] = method;
-            if ((operandSize & 32) == 32 && (addressSize & 16) == 16)
-                this.EmulateMethods[1] = method;
-            if ((operandSize & 16) == 16 && (addressSize & 32) == 32)
-                this.EmulateMethods[2] = method;
-            if ((operandSize & 32) == 32 && (addressSize & 32) == 32)
-                this.EmulateMethods[3] = method;
+            values = null;
+            if (string.IsNullOrWhiteSpace(instructionFormat))
+                return false;
+
+            var infos = new List<InstructionInfo>();
+
+            foreach (var format in instructionFormat.Split(Pipe))
+            {
+                if (!TryParseOne(format, infos))
+                    return false;
+            }
+
+            if (infos.Count == 0)
+                return false;
+
+            values = infos;
+            return true;
         }
 
-        public static InstructionInfo Parse(string instructionFormat)
-        {
-            var info = new InstructionInfo();
-
-            var outer = instructionFormat.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-            string[] innerCode;
-            if (!outer[0].Contains("+"))
-                innerCode = outer[0].Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            else
-                innerCode = new string[2] { outer[0].TrimEnd('+'), "+" };
-            info.Opcode = ushort.Parse(innerCode[0], System.Globalization.NumberStyles.HexNumber);
-            if (info.Opcode > 0xFF)
-            {
-                info.Opcode = (ushort)(((info.Opcode & 0xFF) << 8) | ((info.Opcode >> 8) & 0xFF));
-                info.IsMultiByte = true;
-            }
-
-            if (innerCode.Length > 1)
-            {
-                if (innerCode[1][0] == 'r')
-                {
-                    info.ModRmByte = ModRmInfo.All;
-                }
-                else if (innerCode[1][0] == '+')
-                {
-                    info.ModRmByte = ModRmInfo.RegisterPlus;
-                }
-                else
-                {
-                    info.ModRmByte = ModRmInfo.OnlyRm;
-                    info.ExtendedRmOpcode = byte.Parse(new string(innerCode[1][0], 1));
-                }
-            }
-
-            if (outer.Length > 1)
-            {
-                string[] innerOperands = outer[1].Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                int operandCode = (int)ParseOperand(innerOperands[0]);
-
-                if (innerOperands.Length > 1)
-                {
-                    operandCode |= (int)ParseOperand(innerOperands[1]) << 8;
-
-                    if (innerOperands.Length > 2)
-                        operandCode |= (int)ParseOperand(innerOperands[2]) << 16;
-                }
-
-                if (!operandFormats.TryGetValue(operandCode, out var format))
-                {
-                    format = new OperandFormat(operandCode);
-                    operandFormats.Add(operandCode, format);
-                }
-
-                info.Operands = format;
-            }
-            else
-            {
-                if (!operandFormats.TryGetValue(0, out var format))
-                {
-                    format = new OperandFormat(0);
-                    operandFormats.Add(0, format);
-                }
-
-                info.Operands = format;
-            }
-
-            return info;
-        }
-
-        public IEnumerable<InstructionInfo> Expand()
+        private IEnumerable<InstructionInfo> Expand()
         {
             if (this.ModRmByte != ModRmInfo.RegisterPlus)
             {
@@ -149,8 +136,7 @@ namespace AeonSourceGenerator
 
             for (int r = 0; r < 8; r++)
             {
-                var subInst = new InstructionInfo(this);
-                subInst.ModRmByte = ModRmInfo.None;
+                var subInst = new InstructionInfo(this) { ModRmByte = ModRmInfo.None };
                 if (!subInst.IsMultiByte)
                     subInst.Opcode += (ushort)r;
                 else
@@ -197,15 +183,93 @@ namespace AeonSourceGenerator
 
             return sb.ToString();
         }
-        public override bool Equals(object obj)
+        public bool Equals(InstructionInfo other)
         {
-            if (obj is InstructionInfo other)
-                return this.Opcode == other.Opcode && this.Operands == other.Operands && this.ModRmByte == other.ModRmByte && this.ExtendedRmOpcode == other.ExtendedRmOpcode;
-            else
-                return false;
+            return this.Opcode == other.Opcode
+                && this.Operands.Equals(other.Operands)
+                && this.ModRmByte == other.ModRmByte
+                && this.ExtendedRmOpcode == other.ExtendedRmOpcode
+                && this.IsMultiByte == other.IsMultiByte;
         }
-        public override int GetHashCode() => Opcode | ExtendedRmOpcode << 16;
+        public override bool Equals(object obj) => this.Equals(obj as InstructionInfo);
+        public override int GetHashCode() => this.Opcode | this.ExtendedRmOpcode << 16;
 
+        private static bool TryParseOne(string s, List<InstructionInfo> values)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+                return false;
+
+            var outer = s.Split(Space, StringSplitOptions.RemoveEmptyEntries);
+            bool isMultiByte = false;
+
+            string[] innerCode;
+            if (!outer[0].Contains("+"))
+                innerCode = outer[0].Split(Slash, StringSplitOptions.RemoveEmptyEntries);
+            else
+                innerCode = new string[2] { outer[0].TrimEnd('+'), "+" };
+            ushort opcode = ushort.Parse(innerCode[0], System.Globalization.NumberStyles.HexNumber);
+            if (opcode > 0xFF)
+            {
+                opcode = (ushort)(((opcode & 0xFF) << 8) | ((opcode >> 8) & 0xFF));
+                isMultiByte = true;
+            }
+
+            var modRm = ModRmInfo.None;
+            byte extendedRmOpcode = 0;
+
+            if (innerCode.Length > 1)
+            {
+                if (innerCode[1][0] == 'r')
+                {
+                    modRm = ModRmInfo.All;
+                }
+                else if (innerCode[1][0] == '+')
+                {
+                    modRm = ModRmInfo.RegisterPlus;
+                }
+                else
+                {
+                    modRm = ModRmInfo.OnlyRm;
+                    extendedRmOpcode = byte.Parse(new string(innerCode[1][0], 1));
+                }
+            }
+
+            OperandFormat format;
+
+            if (outer.Length > 1)
+            {
+                string[] innerOperands = outer[1].Split(Comma, StringSplitOptions.RemoveEmptyEntries);
+                int operandCode = (int)ParseOperand(innerOperands[0]);
+
+                if (innerOperands.Length > 1)
+                {
+                    operandCode |= (int)ParseOperand(innerOperands[1]) << 8;
+
+                    if (innerOperands.Length > 2)
+                        operandCode |= (int)ParseOperand(innerOperands[2]) << 16;
+                }
+
+                if (!operandFormats.TryGetValue(operandCode, out format))
+                {
+                    format = new OperandFormat(operandCode);
+                    operandFormats.Add(operandCode, format);
+                }
+            }
+            else
+            {
+                if (!operandFormats.TryGetValue(0, out format))
+                {
+                    format = new OperandFormat(0);
+                    operandFormats.Add(0, format);
+                }
+            }
+
+            var info = new InstructionInfo(opcode, format, modRm, extendedRmOpcode, isMultiByte);
+            foreach (var subInfo in info.Expand())
+                values.Add(subInfo);
+
+            return true;
+        }
         private static OperandType ParseOperand(string s)
         {
             return s switch
@@ -273,7 +337,6 @@ namespace AeonSourceGenerator
                 _ => OperandType.None
             };
         }
-
         private static OperandType GetRegisterIndex(int index, OperandType operandType)
         {
             if (operandType == OperandType.RegisterByte)
@@ -352,84 +415,5 @@ namespace AeonSourceGenerator
 
             return operandType;
         }
-    }
-
-    /// <summary>
-    /// Describes the ModR/M byte of an instruction.
-    /// </summary>
-    public enum ModRmInfo : byte
-    {
-        /// <summary>
-        /// The ModR/M byte is not present.
-        /// </summary>
-        None,
-        /// <summary>
-        /// Only the R/M field in the ModR/M byte is used.
-        /// </summary>
-        OnlyRm,
-        /// <summary>
-        /// The entire ModR/M byte is used.
-        /// </summary>
-        All,
-        /// <summary>
-        /// A register code is added to the opcode.
-        /// </summary>
-        RegisterPlus
-    }
-
-    /// <summary>
-    /// Describes any instruction prefixes present.
-    /// </summary>
-    [Flags]
-    public enum PrefixFlags : ushort
-    {
-        /// <summary>
-        /// The instruction has no prefixes.
-        /// </summary>
-        None = 0,
-        /// <summary>
-        /// The CS segment register should be used.
-        /// </summary>
-        CSOverride = (1 << 0),
-        /// <summary>
-        /// The SS segment register should be used.
-        /// </summary>
-        SSOverride = (1 << 1),
-        /// <summary>
-        /// The DS segment register should be used.
-        /// </summary>
-        DSOverride = (1 << 2),
-        /// <summary>
-        /// The ES segment register should be used.
-        /// </summary>
-        ESOverride = (1 << 3),
-        /// <summary>
-        /// The FS segment register should be used.
-        /// </summary>
-        FSOverride = (1 << 4),
-        /// <summary>
-        /// The GS segment register should be used.
-        /// </summary>
-        GSOverride = (1 << 5),
-        /// <summary>
-        /// Specifies the LOCK prefix.
-        /// </summary>
-        Lock = (1 << 6),
-        /// <summary>
-        /// Specifies the REPN prefix for string instructions.
-        /// </summary>
-        REPN = (1 << 7),
-        /// <summary>
-        /// Specifies the REP prefix for string instructions.
-        /// </summary>
-        REP = (1 << 8),
-        /// <summary>
-        /// Specifies the Operand-Size prefix.
-        /// </summary>
-        OperandSize = (1 << 9),
-        /// <summary>
-        /// Specifies the Address-Size prefix.
-        /// </summary>
-        AddressSize = (1 << 10)
     }
 }

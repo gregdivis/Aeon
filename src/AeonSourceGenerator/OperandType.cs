@@ -1,4 +1,4 @@
-﻿namespace AeonSourceGenerator
+﻿namespace Aeon.SourceGenerator
 {
     /// <summary>
     /// Describes the type of an instruction operand.

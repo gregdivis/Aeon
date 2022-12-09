@@ -1,4 +1,4 @@
-﻿namespace AeonSourceGenerator.Emitters
+﻿namespace Aeon.SourceGenerator.Emitters
 {
     internal readonly ref struct EmulateMethodCall
     {

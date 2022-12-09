@@ -525,13 +525,13 @@ namespace Aeon.Emulator
                     return;
             }
 
-            //double ticksPerInst = TimeSpan.TicksPerSecond / (double)this.emulationSpeed;
-            //long targetTicks = (long)(ticksPerInst * IterationInstructionCount);
+            double ticksPerInst = TimeSpan.TicksPerSecond / (double)this.emulationSpeed;
+            long targetTicks = (long)(ticksPerInst * IterationInstructionCount);
 
-            //while (speedTimer.ElapsedTicks < targetTicks)
-            //{
-            //    Thread.SpinWait(10);
-            //}
+            while (speedTimer.ElapsedTicks < targetTicks)
+            {
+                Thread.SpinWait(10);
+            }
         }
 
         private bool RaiseMouseEvent()

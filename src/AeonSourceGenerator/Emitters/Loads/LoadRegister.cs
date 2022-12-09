@@ -1,13 +1,13 @@
-﻿using System.Text;
+﻿using System.CodeDom.Compiler;
 
-namespace AeonSourceGenerator.Emitters
+namespace Aeon.SourceGenerator.Emitters
 {
     internal sealed class LoadRegister : Emitter
     {
         public LoadRegister(EmitStateInfo state, int registerSize)
             : base(state)
         {
-            if (registerSize != 1 && registerSize != 2 && registerSize != 4)
+            if (registerSize is not 1 and not 2 and not 4)
                 throw new ArgumentException("Invalid register size.");
 
             this.RegisterSize = registerSize;
@@ -15,21 +15,20 @@ namespace AeonSourceGenerator.Emitters
 
         public int RegisterSize { get; }
 
-        public override void Initialize(StringBuilder writer)
+        public override void Initialize(IndentedTextWriter writer)
         {
-            // Reg is the middle 3 bits of the ModR/M byte.
-            writer.AppendLine($"\t\tvar arg{this.ParameterIndex}Reg = GetReg(p);");
+            writer.WriteLine($"var arg{this.ParameterIndex}Reg = GetReg(p);");
         }
-        public override void WriteParameter(StringBuilder writer)
+        public override void WriteParameter(TextWriter writer)
         {
             if (this.WriteOnly)
-                writer.Append("out ");
+                writer.Write("out ");
             else if (this.ByRef)
-                writer.Append("ref ");
+                writer.Write("ref ");
 
-            writer.Append($"*({this.GetRuntimeTypeName()}*)p.GetRegister");
-            writer.Append(this.RegisterSize == 1 ? "Byte" : "Word");
-            writer.Append($"Pointer(arg{this.ParameterIndex}Reg)");
+            writer.Write($"*({this.GetRuntimeTypeName()}*)p.GetRegister");
+            writer.Write(this.RegisterSize == 1 ? "Byte" : "Word");
+            writer.Write($"Pointer(arg{this.ParameterIndex}Reg)");
         }
     }
 }
