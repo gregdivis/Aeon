@@ -41,7 +41,6 @@ namespace Aeon.Emulator.Decoding
             }
         }
         public MethodInfo[] EmulateMethods { get; set; }
-        public DecodeAndEmulate[] NewEmulators { get; set; }
         public string Name { get; set; }
         public bool IsPrefix { get; set; }
         public bool IsMultiByte { get; set; }

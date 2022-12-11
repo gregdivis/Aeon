@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Decoding.Emitters
+﻿namespace Aeon.SourceGenerator.Emitters
 {
     internal enum ValueExtend
     {

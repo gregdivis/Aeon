@@ -608,6 +608,15 @@ namespace Aeon.Emulator
                 this.PhysicalWrite(address, value);
         }
 
+        public TValue Get<TValue>(uint address) where TValue : unmanaged => this.PagingEnabled ? this.PagedRead<TValue>(address) : this.PhysicalRead<TValue>(address);
+        public void Set<TValue>(uint address, TValue value) where TValue : unmanaged
+        {
+            if (this.PagingEnabled)
+                this.PagedWrite(address, value);
+            else
+                this.PhysicalWrite(address, value);
+        }
+
         /// <summary>
         /// Reads an ANSI string from emulated memory with a specified length.
         /// </summary>

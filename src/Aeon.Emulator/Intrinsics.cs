@@ -12,7 +12,7 @@ namespace Aeon.Emulator
             if (Bmi1.IsSupported)
                 return Bmi1.BitFieldExtract(value, start, length);
             else
-                return (value & mask) >> start;
+                return (value & mask) >>> start;
         }
         /// <summary>
         /// Returns <paramref name="a"/> &amp; ~<paramref name="b"/>.

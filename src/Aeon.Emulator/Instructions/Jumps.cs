@@ -14,7 +14,7 @@ namespace Aeon.Emulator.Instructions
         }
         [Alternate(nameof(RelativeNearJump), AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static void RelativeNearJump(Processor p, int offset)
+        public static void RelativeNearJump32(Processor p, int offset)
         {
             p.EIP = (uint)((int)p.EIP + offset);
         }

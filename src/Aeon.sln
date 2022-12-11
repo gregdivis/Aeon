@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aeon.Emulator.Input", "Aeon
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AeonPack", "AeonPack\AeonPack.csproj", "{CFE40465-6177-49A2-889C-2A79CA88B76E}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AeonSourceGenerator", "AeonSourceGenerator\AeonSourceGenerator.csproj", "{58743080-F6FF-4D7A-B3C5-5871C7F9B09D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{CFE40465-6177-49A2-889C-2A79CA88B76E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CFE40465-6177-49A2-889C-2A79CA88B76E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CFE40465-6177-49A2-889C-2A79CA88B76E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58743080-F6FF-4D7A-B3C5-5871C7F9B09D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58743080-F6FF-4D7A-B3C5-5871C7F9B09D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58743080-F6FF-4D7A-B3C5-5871C7F9B09D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58743080-F6FF-4D7A-B3C5-5871C7F9B09D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

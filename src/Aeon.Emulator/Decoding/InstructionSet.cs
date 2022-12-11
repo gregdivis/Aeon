@@ -12,14 +12,9 @@ namespace Aeon.Emulator.Decoding
     /// <summary>
     /// Provides methods for decoding and emulating machine code.
     /// </summary>
-    public static class InstructionSet
+    public static partial class InstructionSet
     {
         private static bool initialized;
-
-        /// <summary>
-        /// Gets the collection of defined opcodes.
-        /// </summary>
-        public static OpcodeCollection Opcodes => allCodes;
 
         public static OpcodeInfo Decode(ReadOnlySpan<byte> machineCode)
         {
@@ -62,7 +57,7 @@ namespace Aeon.Emulator.Decoding
         }
 
         [SkipLocalsInit]
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
         internal static void Emulate(VirtualMachine vm, uint count)
         {
             var processor = vm.Processor;
@@ -70,15 +65,15 @@ namespace Aeon.Emulator.Decoding
 
             unsafe
             {
-                uint* eip = (uint*)processor.PIP;
+                ref uint eip = ref processor.EIP;
 
                 for (uint i = 0; i < count; i++)
                 {
-                    uint startEIP = *eip;
+                    uint startEIP = eip;
                     processor.StartEIP = startEIP;
 
                     byte* ip = processor.CachedInstruction;
-                    memory.FetchInstruction(processor.segmentBases[(int)SegmentIndex.CS] + startEIP, ip);
+                    memory.FetchInstruction(processor.CSBase + startEIP, ip);
 
                     uint sizeModeIndex = processor.SizeModeIndex;
 
@@ -86,7 +81,7 @@ namespace Aeon.Emulator.Decoding
                     var inst = OneBytePtrs[sizeModeIndex][byte1];
                     if (inst != null)
                     {
-                        *eip = startEIP + 1;
+                        eip = startEIP + 1;
                         processor.CachedIP = ip + 1;
                         inst(vm);
                         continue;
@@ -98,7 +93,7 @@ namespace Aeon.Emulator.Decoding
                         inst = instSet[ip[1]];
                         if (inst != null)
                         {
-                            *eip = startEIP + 2;
+                            eip = startEIP + 2;
                             processor.CachedIP = ip + 2;
                             inst(vm);
                             continue;
@@ -110,9 +105,12 @@ namespace Aeon.Emulator.Decoding
                     {
                         inst = instSet[Intrinsics.ExtractBits(ip[1], 3, 3, 0x38)];
                         if (inst == null)
+                        {
                             ThrowGetOpcodeException(ip);
+                            return;
+                        }
 
-                        *eip = startEIP + 1;
+                        eip = startEIP + 1;
                         processor.CachedIP = ip + 1;
                         inst(vm);
                         continue;
@@ -127,7 +125,7 @@ namespace Aeon.Emulator.Decoding
                             inst = instSet[Intrinsics.ExtractBits(ip[2], 3, 3, 0x38)];
                             if (inst != null)
                             {
-                                *eip = startEIP + 2;
+                                eip = startEIP + 2;
                                 processor.CachedIP = ip + 2;
                                 inst(vm);
                                 continue;
@@ -136,22 +134,12 @@ namespace Aeon.Emulator.Decoding
                     }
 
                     ThrowGetOpcodeException(ip);
+                    return;
                 }
             }
         }
 
-        internal static void Emulate(VirtualMachine vm, InstructionLog log)
-        {
-            var info = FindOpcode(vm.PhysicalMemory, vm.Processor);
-            if (!info.IsPrefix)
-                log.Write(vm.Processor);
-
-            var method = info.Emulators[vm.Processor.SizeModeIndex];
-            if (method != null)
-                method(vm);
-            else
-                throw GetPartiallyNotImplementedException(vm, info);
-        }
+        internal static void Emulate(VirtualMachine vm, InstructionLog log) => throw new NotImplementedException();
 
         public static void Initialize()
         {
@@ -206,60 +194,28 @@ namespace Aeon.Emulator.Decoding
             unsafe
             {
                 // Allocate first level (processor mode)
-                OneBytePtrs = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
-                RmPtrs = (delegate*<VirtualMachine, void>***)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
-                TwoBytePtrs = (delegate*<VirtualMachine, void>***)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
-                TwoByteRmPtrs = (delegate*<VirtualMachine, void>****)functionPointerAllocator.Allocate(IntPtr.Size * 4, IntPtr.Size).ToPointer();
+                OneBytePtrs = (delegate*<VirtualMachine, void>**)alloc(4);
+                RmPtrs = (delegate*<VirtualMachine, void>***)alloc(4);
+                TwoBytePtrs = (delegate*<VirtualMachine, void>***)alloc(4);
+                TwoByteRmPtrs = (delegate*<VirtualMachine, void>****)alloc(4);
 
                 for (int mode = 0; mode < 4; mode++)
                 {
-                    OneBytePtrs[mode] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    RmPtrs[mode] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    for (int firstByte = 0; firstByte < 256; firstByte++)
-                    {
-                        OneBytePtrs[mode][firstByte] = GetFunctionPointer(oneByteCodes[firstByte], mode);
-
-                        if (rmCodes[firstByte] != null)
-                        {
-                            RmPtrs[mode][firstByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 8, IntPtr.Size).ToPointer();
-                            for (int rm = 0; rm < 8; rm++)
-                                RmPtrs[mode][firstByte][rm] = GetFunctionPointer(rmCodes[firstByte][rm], mode);
-                        }
-                    }
-
-                    TwoBytePtrs[mode] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    for (int firstByte = 0; firstByte < 256; firstByte++)
-                    {
-                        if (twoByteCodes[firstByte] != null)
-                        {
-                            TwoBytePtrs[mode][firstByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-
-                            for (int secondByte = 0; secondByte < 256; secondByte++)
-                                TwoBytePtrs[mode][firstByte][secondByte] = GetFunctionPointer(twoByteCodes[firstByte][secondByte], mode);
-                        }
-                    }
-
-                    TwoByteRmPtrs[mode] = (delegate*<VirtualMachine, void>***)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-                    for (int firstByte = 0; firstByte < 256; firstByte++)
-                    {
-                        if (twoByteRmCodes[firstByte] != null)
-                        {
-                            TwoByteRmPtrs[mode][firstByte] = (delegate*<VirtualMachine, void>**)functionPointerAllocator.Allocate(IntPtr.Size * 256, IntPtr.Size).ToPointer();
-
-                            for (int secondByte = 0; secondByte < 256; secondByte++)
-                            {
-                                if (twoByteRmCodes[firstByte][secondByte] != null)
-                                {
-                                    TwoByteRmPtrs[mode][firstByte][secondByte] = (delegate*<VirtualMachine, void>*)functionPointerAllocator.Allocate(IntPtr.Size * 8, IntPtr.Size).ToPointer();
-                                    for (int rm = 0; rm < 8; rm++)
-                                        TwoByteRmPtrs[mode][firstByte][secondByte][rm] = GetFunctionPointer(twoByteRmCodes[firstByte][secondByte][rm], mode);
-                                }
-                            }
-                        }
-                    }
+                    OneBytePtrs[mode] = (delegate*<VirtualMachine, void>*)alloc(256);
+                    RmPtrs[mode] = (delegate*<VirtualMachine, void>**)alloc(256);
+                    TwoBytePtrs[mode] = (delegate*<VirtualMachine, void>**)alloc(256);
+                    TwoByteRmPtrs[mode] = (delegate*<VirtualMachine, void>***)alloc(256);
                 }
+
+                GetOneBytePointers(OneBytePtrs);
+                GetOneByteRmPointers(RmPtrs, alloc);
+                GetTwoBytePointers(TwoBytePtrs, alloc);
+                GetTwoByteRmPointers(TwoByteRmPtrs, alloc);
+
+                static nint alloc(int count) => functionPointerAllocator.Allocate(sizeof(nint) * count, sizeof(nint));
             }
         }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static Exception GetPartiallyNotImplementedException(VirtualMachine vm, OpcodeInfo info) => new NotImplementedException($"Instruction '{info.Name}' not implemented for {vm.Processor.AddressSize}-bit addressing, {vm.Processor.OperandSize}-bit operand size.");
         private static OpcodeInfo FindOpcode(PhysicalMemory memory, Processor processor)
@@ -326,25 +282,16 @@ namespace Aeon.Emulator.Decoding
                 return null;
             }
         }
-        static readonly System.Reflection.FieldInfo methodPtr =
-            // .NET
-            typeof(Delegate).GetField("_methodPtrAux", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic) ??
-            // Mono
-            typeof(Delegate).GetField("interp_method", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 
-        private static unsafe delegate*<VirtualMachine, void> GetFunctionPointer(OpcodeInfo opcode, int mode)
-        {
-            if (opcode == null)
-                return null;
-
-            if (opcode.Emulators[mode] != null)
-                return (delegate*<VirtualMachine, void>)((IntPtr)methodPtr.GetValue(opcode.Emulators[mode])).ToPointer();
-
-            return null;
-        }
         [DoesNotReturn]
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal static unsafe void ThrowGetOpcodeException(byte* ip) => throw new NotImplementedException($"Opcode {ip[0]:X2} {ip[1]:X2} ({ip[2]:X2}) not implemented.");
+
+        private static unsafe partial void GetOneBytePointers(delegate*<VirtualMachine, void>** ptrs);
+        private static unsafe partial void GetOneByteRmPointers(delegate*<VirtualMachine, void>*** ptrs, Func<int, nint> alloc);
+        private static unsafe partial void GetTwoBytePointers(delegate*<VirtualMachine, void>*** ptrs, Func<int, nint> alloc);
+        private static unsafe partial void GetTwoByteRmPointers(delegate*<VirtualMachine, void>**** ptrs, Func<int, nint> alloc);
+
 
 #pragma warning disable IDE0044 // Add readonly modifier
         // these are not readonly because accessing them is performance critical
@@ -356,10 +303,10 @@ namespace Aeon.Emulator.Decoding
 #pragma warning restore IDE0044 // Add readonly modifier
 
         private static readonly NativeHeap functionPointerAllocator = new(122880);
-        internal unsafe static delegate*<VirtualMachine, void>** OneBytePtrs;
-        internal unsafe static delegate*<VirtualMachine, void>*** RmPtrs;
-        internal unsafe static delegate*<VirtualMachine, void>*** TwoBytePtrs;
-        internal unsafe static delegate*<VirtualMachine, void>**** TwoByteRmPtrs;
+        private unsafe static delegate*<VirtualMachine, void>** OneBytePtrs;
+        private unsafe static delegate*<VirtualMachine, void>*** RmPtrs;
+        private unsafe static delegate*<VirtualMachine, void>*** TwoBytePtrs;
+        private unsafe static delegate*<VirtualMachine, void>**** TwoByteRmPtrs;
 
         private const int ModRmMask = 0x38;
 

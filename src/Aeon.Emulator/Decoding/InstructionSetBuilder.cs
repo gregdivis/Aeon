@@ -11,7 +11,6 @@ namespace Aeon.Emulator.Decoding
     internal sealed class InstructionSetBuilder
     {
         private readonly List<InstructionInfo> opcodes = new List<InstructionInfo>();
-        private readonly EmulatorBuilder emulatorBuilder = new EmulatorBuilder();
 
         /// <summary>
         /// Gets all of the normal one-byte opcodes.
@@ -70,7 +69,6 @@ namespace Aeon.Emulator.Decoding
             foreach (var subInst in inst.Expand())
             {
                 var newInst = subInst;
-                newInst.NewEmulators = emulatorBuilder.GetDelegates(subInst);
                 opcodes.Add(newInst);
             }
         }
