@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Runtime.Versioning;
 
 namespace Aeon.Emulator.Sound
 {
     /// <summary>
     /// Provides access to the Windows MIDI mapper.
     /// </summary>
+    [SupportedOSPlatform("windows")]
     internal sealed class WindowsMidiMapper : MidiDevice
     {
         private IntPtr midiOutHandle;

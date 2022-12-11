@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+#nullable enable
+
 namespace Aeon.Emulator.Sound
 {
     /// <summary>
@@ -9,7 +11,7 @@ namespace Aeon.Emulator.Sound
     /// </summary>
     public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
     {
-        private MidiDevice midiMapper;
+        private MidiDevice? midiMapper;
         private readonly Queue<byte> dataBytes = new();
 
         private const int DataPort = 0x330;
@@ -21,7 +23,7 @@ namespace Aeon.Emulator.Sound
         /// <summary>
         /// Initializes a new instance of the GeneralMidi class.
         /// </summary>
-        public GeneralMidi(string mt32RomsPath = null)
+        public GeneralMidi(string? mt32RomsPath = null)
         {
             this.Mt32RomsPath = mt32RomsPath;
         }
@@ -33,7 +35,7 @@ namespace Aeon.Emulator.Sound
         /// <summary>
         /// Gets or sets the path where MT-32 roms are stored.
         /// </summary>
-        public string Mt32RomsPath { get; }
+        public string? Mt32RomsPath { get; }
         /// <summary>
         /// Gets or sets a value indicating whether to emulate an MT-32 device.
         /// </summary>
@@ -81,9 +83,8 @@ namespace Aeon.Emulator.Sound
             switch (port)
             {
                 case DataPort:
-                    if (this.midiMapper == null)
-                        this.midiMapper = this.UseMT32 && !string.IsNullOrWhiteSpace(this.Mt32RomsPath) ? new Mt32MidiDevice(this.Mt32RomsPath) : new WindowsMidiMapper();
-                    this.midiMapper.SendByte(value);
+                    this.TryCreateMidiMapper();
+                    this.midiMapper?.SendByte(value);
                     break;
 
                 case StatusPort:
@@ -125,6 +126,17 @@ namespace Aeon.Emulator.Sound
         {
             this.midiMapper?.Dispose();
             this.midiMapper = null;
+        }
+
+        private void TryCreateMidiMapper()
+        {
+            if (this.midiMapper == null)
+            {
+                if (this.UseMT32 && !string.IsNullOrWhiteSpace(this.Mt32RomsPath))
+                    this.midiMapper = new Mt32MidiDevice(this.Mt32RomsPath);
+                else if (OperatingSystem.IsWindows())
+                    this.midiMapper = new WindowsMidiMapper();
+            }
         }
 
         [Flags]

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace Aeon.Emulator.Sound
 {
+    [SupportedOSPlatform("windows")]
     internal static class NativeMethods
     {
         [DllImport("winmm.dll", CallingConvention = CallingConvention.Winapi, SetLastError = false)]
