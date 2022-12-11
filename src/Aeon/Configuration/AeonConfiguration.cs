@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Aeon.DiskImages.Archives;
+using Aeon.Emulator.Sound;
 
 namespace Aeon.Emulator.Launcher.Configuration
 {
@@ -25,6 +24,9 @@ namespace Aeon.Emulator.Launcher.Configuration
         public string Id { get; set; }
         [JsonPropertyName("physical-memory")]
         public int? PhysicalMemorySize { get; set; }
+        [JsonPropertyName("midi-engine")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MidiEngine? MidiEngine { get; set; }
 
         [JsonPropertyName("drives")]
         public Dictionary<string, AeonDriveConfiguration> Drives { get; set; } = new Dictionary<string, AeonDriveConfiguration>();

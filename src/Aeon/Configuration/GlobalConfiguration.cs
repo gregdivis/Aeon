@@ -1,7 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Aeon.Emulator.Sound;
 
 namespace Aeon.Emulator.Launcher.Configuration
 {
@@ -11,6 +11,11 @@ namespace Aeon.Emulator.Launcher.Configuration
         public string Mt32RomsPath { get; set; }
         [JsonPropertyName("mt32-enabled")]
         public bool Mt32Enabled { get; set; }
+        [JsonPropertyName("soundfont-path")]
+        public string SoundFontPath { get; set; }
+        [JsonPropertyName("midi-engine")]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public MidiEngine? MidiEngine { get; set; }
 
         public static GlobalConfiguration Load()
         {

@@ -8,8 +8,10 @@
     <Product>Aeon</Product>
     <Title>Aeon Sound Emulation</Title>
     <Description>Emulates sound cards for Aeon</Description>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MeltySynth" Version="2.4.0" />
     <PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
     <PackageReference Include="TinyAudio" Version="0.3.1" />
     <PackageReference Include="Ymf262Emu" Version="1.0.1" />

@@ -113,8 +113,15 @@ namespace Aeon.Emulator.Launcher
             vm.RegisterVirtualDevice(new Sound.PCSpeaker.InternalSpeaker());
             vm.RegisterVirtualDevice(new Sound.Blaster.SoundBlaster(vm));
             vm.RegisterVirtualDevice(new Sound.FM.FmSoundCard());
-            vm.RegisterVirtualDevice(new Sound.GeneralMidi(globalConfig.Mt32Enabled ? globalConfig.Mt32RomsPath : null));
-
+            vm.RegisterVirtualDevice(
+                new Sound.GeneralMidi(
+                    new Sound.GeneralMidiOptions(
+                        config.MidiEngine ?? globalConfig.MidiEngine ?? Sound.MidiEngine.MidiMapper,
+                        globalConfig.SoundFontPath,
+                        globalConfig.Mt32RomsPath
+                    )
+                )
+            );
             vm.RegisterVirtualDevice(new Input.JoystickDevice());
 
             emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 100_000_000;

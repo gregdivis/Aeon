@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-#nullable enable
+﻿#nullable enable
 
 namespace Aeon.Emulator.Sound
 {
@@ -23,9 +19,10 @@ namespace Aeon.Emulator.Sound
         /// <summary>
         /// Initializes a new instance of the GeneralMidi class.
         /// </summary>
-        public GeneralMidi(string? mt32RomsPath = null)
+        /// <param name="options">Options used to initialize MIDI playback.</param>
+        public GeneralMidi(GeneralMidiOptions? options = null)
         {
-            this.Mt32RomsPath = mt32RomsPath;
+            this.Options = options ?? new GeneralMidiOptions(MidiEngine.MidiMapper);
         }
 
         /// <summary>
@@ -33,13 +30,17 @@ namespace Aeon.Emulator.Sound
         /// </summary>
         public GeneralMidiState State { get; private set; }
         /// <summary>
-        /// Gets or sets the path where MT-32 roms are stored.
+        /// Gets the initialization options.
         /// </summary>
-        public string? Mt32RomsPath { get; }
+        public GeneralMidiOptions Options { get; }
         /// <summary>
-        /// Gets or sets a value indicating whether to emulate an MT-32 device.
+        /// Gets a value indicating whether to emulate an MT-32 device.
         /// </summary>
-        public bool UseMT32 => !string.IsNullOrWhiteSpace(this.Mt32RomsPath);
+        public bool UseMT32 => this.Options.Engine == MidiEngine.Mt32 && !string.IsNullOrWhiteSpace(this.Options.Mt32RomsPath);
+        /// <summary>
+        /// Gets a value indicating whether to use MeltySynth for MIDI playback.
+        /// </summary>
+        public bool UseMeltySynth => this.Options.Engine == MidiEngine.MeltySynth && !string.IsNullOrWhiteSpace(this.Options.SoundFontPath);
 
         /// <summary>
         /// Gets the current value of the MIDI status port.
@@ -130,13 +131,12 @@ namespace Aeon.Emulator.Sound
 
         private void TryCreateMidiMapper()
         {
-            if (this.midiMapper == null)
+            this.midiMapper ??= this.Options.Engine switch
             {
-                if (this.UseMT32 && !string.IsNullOrWhiteSpace(this.Mt32RomsPath))
-                    this.midiMapper = new Mt32MidiDevice(this.Mt32RomsPath);
-                else if (OperatingSystem.IsWindows())
-                    this.midiMapper = new WindowsMidiMapper();
-            }
+                MidiEngine.MeltySynth when !string.IsNullOrWhiteSpace(this.Options.SoundFontPath) => new MeltySynthMidiMapper(this.Options.SoundFontPath),
+                MidiEngine.Mt32 when !string.IsNullOrWhiteSpace(this.Options.Mt32RomsPath) => new Mt32MidiDevice(this.Options.Mt32RomsPath),
+                _ => OperatingSystem.IsWindows() ? new WindowsMidiMapper() : null
+            };
         }
 
         [Flags]
@@ -155,20 +155,5 @@ namespace Aeon.Emulator.Sound
             /// </summary>
             InputReady = (1 << 7)
         }
-    }
-
-    /// <summary>
-    /// Specifies the current state of the General MIDI device.
-    /// </summary>
-    public enum GeneralMidiState
-    {
-        /// <summary>
-        /// The device is in normal mode.
-        /// </summary>
-        NormalMode,
-        /// <summary>
-        /// The device is in UART mode.
-        /// </summary>
-        UartMode
     }
 }
