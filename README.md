@@ -27,7 +27,7 @@ You can set up the emulated environment with more detail by creating a json conf
 a `.AeonConfig` extension and launching it with the quick launch program button. This format isn't
 documented yet, but you can find a few basic samples [in the repo](https://github.com/gregdivis/Aeon/tree/master/examples).
 
-# Capabilties
+# Capabilities
 Aeon aims to emulate the hardward and software environment of a typical 486DX PC, which was pretty common in the early 1990s.
 The following is currently emulated:
 
