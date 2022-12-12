@@ -28,53 +28,53 @@ a `.AeonConfig` extension and launching it with the quick launch program button.
 documented yet, but you can find a few basic samples [in the repo](https://github.com/gregdivis/Aeon/tree/master/examples).
 
 # Capabilities
-Aeon aims to emulate the hardward and software environment of a typical 486DX PC, which was pretty common in the early 1990s.
+Aeon aims to emulate the hardware and software environment of a typical 486DX PC, which was pretty common in the early 1990s.
 The following is currently emulated:
 
  - CPU
-  - Core x86 Instruction Set
-    - Nearly all instructions are implemented, but there are still some gaps (generally, I've only implemented new instructions as I find old programs that use them)
-  - x87 FPU (floating point unit/instructions)
-    - Not emulated with true precision (Aeon uses 64-bit floating point math rather than the 80-bit format used in the original x87)
+   - Core x86 Instruction Set
+     - Nearly all instructions are implemented, but there are still some gaps (generally, I've only implemented new instructions as I find old programs that use them)
+   - x87 FPU (floating point unit/instructions)
+     - Not emulated with true precision (Aeon uses 64-bit floating point math rather than the 80-bit format used in the original x87)
  - Memory
-  - Real Mode Memory Model
-  - Protected Mode Memory Model
-    - Still a number of bugs in this, but it is adequate to run most DOS applications that used common DPMI extenders
+   - Real Mode Memory Model
+   - Protected Mode Memory Model
+     - Still a number of bugs in this, but it is adequate to run most DOS applications that used common DPMI extenders
  - Video
-  - Text modes: 80x25, 40x25
-  - Graphical modes:
-	- CGA (320x200 4-color mode 04h)
-	- EGA (320x200, 640x200, 640x320 16-color modes 0Dh, 0Eh, 10h)
-	- VGA (640x480 4-color, 320x200 256-color modes 12h, 13h)
-	- Unchained 13h VGA (mode X)
-	- SVGA VBE 2.0 (linear and windowed)
-  - Display filtering: Scale2x, Scale3x
+   - Text modes: 80x25, 40x25
+   - Graphical modes:
+     - CGA (320x200 4-color mode 04h)
+     - EGA (320x200, 640x200, 640x320 16-color modes 0Dh, 0Eh, 10h)
+     - VGA (640x480 4-color, 320x200 256-color modes 12h, 13h)
+     - Unchained 13h VGA (mode X)
+     - SVGA VBE 2.0 (linear and windowed)
+   - Display filtering: Scale2x, Scale3x
  - BIOS/System
-  - 8259 interrupt controller
-  - 8253/8254 interrupt timer
+   - 8259 interrupt controller
+   - 8253/8254 interrupt timer
  - Peripherals
-  - PS2 keyboard + interrupt handler
-  - PS2 mouse + interrupt handler + mouse driver
-  - Game port
-    - Limited, currently only using DirectInput/XInput
+   - PS2 keyboard + interrupt handler
+   - PS2 mouse + interrupt handler + mouse driver
+   - Game port
+     - Limited, currently only using DirectInput/XInput
  - DOS
-  - Roughly equivalent to MS-DOS 5.0
-  - Command/batch interpreter
-  - Mountable drives:
-    - Host directory
-    - ISO image
-    - BIN/CUE image
-    - Host CD drive
+   - Roughly equivalent to MS-DOS 5.0
+   - Command/batch interpreter
+   - Mountable drives:
+     - Host directory
+     - ISO image
+     - BIN/CUE image
+     - Host CD drive
  - Sound
-  - Internal PC speaker
-    - Timer-based waveform generation only, no direct access
-  - OPL3/Ymf262 FM sythesis (Sound Blaster, Adlib)
-  - Sound Blaster 16 DSP
-    - Primarily Single/auto DMA mode
-  - General MIDI using any of:
-    - Windows MIDI Mapper
-    - [MeltySynth](https://github.com/sinshu/meltysynth) SoundFont-based MIDI synthesis (requires SoundFont)
-    - [mt32emu](https://github.com/munt/munt) Roland MT-32 emulation (requires MT32 roms)
+   - Internal PC speaker
+     - Timer-based waveform generation only, no direct access
+   - OPL3/Ymf262 FM sythesis (Sound Blaster, Adlib)
+   - Sound Blaster 16 DSP
+     - Primarily Single/auto DMA mode
+   - General MIDI using any of:
+     - Windows MIDI Mapper
+     - [MeltySynth](https://github.com/sinshu/meltysynth) SoundFont-based MIDI synthesis (requires SoundFont)
+     - [mt32emu](https://github.com/munt/munt) Roland MT-32 emulation (requires MT32 roms)
 
 
 # Building
