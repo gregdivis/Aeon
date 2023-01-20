@@ -248,7 +248,7 @@ namespace Aeon.Emulator.Dos.VirtualFileSystem
             }
             else
             {
-                throw new InvalidOperationException();
+                return this;
             }
         }
         /// <summary>
