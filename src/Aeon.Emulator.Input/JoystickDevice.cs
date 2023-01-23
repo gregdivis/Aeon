@@ -10,30 +10,14 @@ namespace Aeon.Emulator.Input
     /// </summary>
     public sealed class JoystickDevice : IInputPort, IOutputPort, IDisposable
     {
-        /// <summary>
-        /// 100 kilohms when the value is at its maximum.
-        /// </summary>
-        private const double MaxResistance = 100_000;
-        /// <summary>
-        /// Delay is always at least 24.2 microseconds.
-        /// </summary>
-        private const double MinTime = 24.2;
-        /// <summary>
-        /// Multiplied with the variable resistance to get the delay.
-        /// </summary>
-        private const double ResistanceFactor = 0.011;
-        /// <summary>
-        /// Value of <see cref="ResistanceFactor"/> * <see cref="MaxResistance"/>.
-        /// </summary>
-        private const double Factor = ResistanceFactor * MaxResistance;
+        private const uint PositionCount = 20000;
 
         private VirtualMachine vm;
         private readonly IGameController controller = IGameController.GetDefault();
-        private long xAxisDischargeTicks;
-        private long yAxisDischargeTicks;
+        private uint xDischargeCount;
+        private uint yDischargeCount;
         private readonly Stopwatch dischargeStart = new();
         private string controllerName;
-
         private bool disposed;
 
         /// <summary>
@@ -64,11 +48,23 @@ namespace Aeon.Emulator.Input
                 portValue |= 0x80;
 
             long ticks = this.dischargeStart.ElapsedTicks;
-            if (ticks < this.xAxisDischargeTicks)
-                portValue |= 0x01;
+            if (ticks >= TimeSpan.TicksPerMillisecond * 1000)
+            {
+                this.xDischargeCount = 0;
+                this.yDischargeCount = 0;
+            }
 
-            if (ticks < this.yAxisDischargeTicks)
+            if (this.xDischargeCount > 0)
+            {
+                this.xDischargeCount--;
+                portValue |= 0x01;
+            }
+
+            if (this.yDischargeCount > 0)
+            {
+                this.yDischargeCount--;
                 portValue |= 0x02;
+            }
 
             return (byte)portValue;
         }
@@ -84,8 +80,9 @@ namespace Aeon.Emulator.Input
                     this.vm.WriteMessage($"Using {name} as joystick 1.", MessageLevel.Info);
                 }
 
-                this.xAxisDischargeTicks = ComputeDischargeTime(((double)state.XAxis + 1) / 2);
-                this.yAxisDischargeTicks = ComputeDischargeTime(((double)state.YAxis + 1) / 2);
+                this.xDischargeCount = (uint)(((double)state.XAxis + 1) / 2 * PositionCount);
+                this.yDischargeCount = (uint)(((double)state.YAxis + 1) / 2 * PositionCount);
+
                 this.dischargeStart.Restart();
             }
         }
@@ -114,12 +111,5 @@ namespace Aeon.Emulator.Input
                 this.controller.Dispose();
             }
         }
-
-        /// <summary>
-        /// Returns the amount of time required for <paramref name="value"/> to discharge in <see cref="TimeSpan"/> ticks.
-        /// </summary>
-        /// <param name="value">Value from 0 to 1.</param>
-        /// <returns><see cref="TimeSpan"/> ticks to wait for discharge to complete.</returns>
-        private static long ComputeDischargeTime(double value) => (long)(Math.FusedMultiplyAdd(Factor, value, MinTime) * 10);
     }
 }
