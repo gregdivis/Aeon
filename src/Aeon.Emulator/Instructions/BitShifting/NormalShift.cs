@@ -117,7 +117,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
             }
 
             byte value = dest;
-            dest >>= count;
+            dest >>>= count;
             p.Flags.Update_Shr_Byte(value, count, dest);
         }
 
@@ -126,7 +126,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         public static void WordShiftRight1(Processor p, ref ushort dest)
         {
             ushort value = dest;
-            dest >>= 1;
+            dest >>>= 1;
             p.Flags.Update_Shr1_Word(value, dest);
         }
         [Alternate(nameof(WordShiftRight1), AddressSize = 16 | 32)]
@@ -134,7 +134,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         public static void DWordShiftRight1(Processor p, ref uint dest)
         {
             uint value = dest;
-            dest >>= 1;
+            dest >>>= 1;
             p.Flags.Update_Shr1_DWord(value, dest);
         }
 
@@ -154,7 +154,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
             }
 
             ushort value = dest;
-            dest >>= count;
+            dest >>>= count;
             p.Flags.Update_Shr_Word(value, count, dest);
         }
         [Alternate(nameof(WordShiftRight), AddressSize = 16 | 32)]
@@ -173,7 +173,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
             }
 
             uint value = dest;
-            dest >>= count;
+            dest >>>= count;
             p.Flags.Update_Shr_DWord(value, count, dest);
         }
     }

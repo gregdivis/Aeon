@@ -5,6 +5,11 @@ namespace Aeon.Emulator.Instructions.FPU
 {
     internal static class LoadConstants
     {
+        private static readonly double Ln2 = Math.Log(2.0);
+        private static readonly double Log2e = Math.Log2(Math.E);
+        private static readonly double Log210 = Math.Log2(10);
+        private static readonly double Log102 = Math.Log10(2);
+
         [Opcode("D9EE", Name = "fldz", OperandSize = 16 | 32, AddressSize = 16 | 32)]
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static void LoadZero(VirtualMachine vm)
@@ -53,10 +58,5 @@ namespace Aeon.Emulator.Instructions.FPU
         {
             vm.Processor.FPU.Push(Log102);
         }
-
-        private static readonly double Ln2 = Math.Log(2.0);
-        private static readonly double Log2e = Math.Log(Math.E, 2.0);
-        private static readonly double Log210 = Math.Log(10, 2.0);
-        private static readonly double Log102 = Math.Log(2.0, 10);
     }
 }

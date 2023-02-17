@@ -10,7 +10,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         public static void ByteRotateLeft1(Processor p, ref byte dest)
         {
             byte b = (byte)(dest << 1);
-            byte c = (byte)(dest >> 7);
+            byte c = (byte)(dest >>> 7);
             dest = (byte)(b | c);
             p.Flags.Update_Rol1_Byte(dest);
         }
@@ -30,7 +30,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
             }
 
             byte b = (byte)(dest << count);
-            byte c = (byte)(dest >> (8 - count));
+            byte c = (byte)(dest >>> (8 - count));
             dest = (byte)(b | c);
             p.Flags.Update_Rol_Byte(dest);
         }
@@ -40,7 +40,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         public static void WordRotateLeft1(Processor p, ref ushort dest)
         {
             ushort b = (ushort)(dest << 1);
-            ushort c = (ushort)(dest >> 15);
+            ushort c = (ushort)(dest >>> 15);
             dest = (ushort)(b | c);
             p.Flags.Update_Rol1_Word(dest);
         }
@@ -49,7 +49,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         public static void DWordRotateLeft1(Processor p, ref uint dest)
         {
             uint b = dest << 1;
-            uint c = dest >> 31;
+            uint c = dest >>> 31;
             dest = b | c;
             p.Flags.Update_Rol1_DWord(dest);
         }
@@ -70,7 +70,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
             }
 
             ushort b = (ushort)(dest << count);
-            ushort c = (ushort)(dest >> (16 - count));
+            ushort c = (ushort)(dest >>> (16 - count));
             dest = (ushort)(b | c);
             p.Flags.Update_Rol_Word(dest);
         }
@@ -100,7 +100,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ByteRotateRight1(Processor p, ref byte dest)
         {
-            byte b = (byte)(dest >> 1);
+            byte b = (byte)(dest >>> 1);
             byte c = (byte)(dest << 7);
             dest = (byte)(b | c);
 
@@ -120,7 +120,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
                 return;
             }
 
-            byte b = (byte)(dest >> count);
+            byte b = (byte)(dest >>> count);
             byte c = (byte)(dest << (8 - count));
             dest = (byte)(b | c);
 
@@ -131,7 +131,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WordRotateRight1(Processor p, ref ushort dest)
         {
-            ushort b = (ushort)(dest >> 1);
+            ushort b = (ushort)(dest >>> 1);
             ushort c = (ushort)(dest << 15);
             dest = (ushort)(b | c);
 
@@ -142,9 +142,9 @@ namespace Aeon.Emulator.Instructions.BitShifting
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DWordRotateRight1(Processor p, ref uint dest)
         {
-            uint b = (uint)(dest >> 1);
-            uint c = (uint)(dest << 31);
-            dest = (uint)(b | c);
+            uint b = dest >>> 1;
+            uint c = dest << 31;
+            dest = b | c;
 
             p.Flags.Carry = (dest & 0x80000000) != 0;
             p.Flags.Overflow = (dest & 0xC0000000) == 0x80000000 || (dest & 0xC0000000) == 0x40000000;
@@ -163,7 +163,7 @@ namespace Aeon.Emulator.Instructions.BitShifting
                 return;
             }
 
-            ushort b = (ushort)(dest >> count);
+            ushort b = (ushort)(dest >>> count);
             ushort c = (ushort)(dest << (16 - count));
             dest = (ushort)(b | c);
 
@@ -182,9 +182,9 @@ namespace Aeon.Emulator.Instructions.BitShifting
                 return;
             }
 
-            uint b = (uint)(dest >> count);
-            uint c = (uint)(dest << (32 - count));
-            dest = (uint)(b | c);
+            uint b = dest >>> count;
+            uint c = dest << (32 - count);
+            dest = b | c;
 
             p.Flags.Carry = (dest & 0x80000000) == 0x80000000;
         }

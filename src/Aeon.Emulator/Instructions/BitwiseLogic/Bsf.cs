@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Instructions.BitwiseLogic
 {
@@ -6,36 +7,34 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Opcode("0FBC/r rw,rmw", OperandSize = 16, AddressSize = 16 | 32)]
-        public static void BitScanReverse16(Processor p, ref ushort index, ushort value)
+        public static void BitScanForward16(Processor p, ref ushort index, ushort value)
         {
-            for (int i = 0; i <= 15; i++)
+            int tzcnt = BitOperations.TrailingZeroCount(value);
+            if (tzcnt < 16)
             {
-                if ((value & (1 << i)) != 0)
-                {
-                    index = (ushort)i;
-                    p.Flags.Zero = false;
-                    return;
-                }
+                index = (ushort)tzcnt;
+                p.Flags.Zero = false;
             }
-
-            p.Flags.Zero = true;
+            else
+            {
+                p.Flags.Zero = true;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [Alternate(nameof(BitScanReverse16), OperandSize = 32, AddressSize = 16 | 32)]
+        [Alternate(nameof(BitScanForward16), OperandSize = 32, AddressSize = 16 | 32)]
         public static void BitScanReverse32(Processor p, ref uint index, uint value)
         {
-            for (int i = 0; i <= 31; i++)
+            int tzcnt = BitOperations.TrailingZeroCount(value);
+            if (tzcnt < 32)
             {
-                if ((value & (1 << i)) != 0)
-                {
-                    index = (uint)i;
-                    p.Flags.Zero = false;
-                    return;
-                }
+                index = (uint)tzcnt;
+                p.Flags.Zero = false;
             }
-
-            p.Flags.Zero = true;
+            else
+            {
+                p.Flags.Zero = true;
+            }
         }
     }
 }

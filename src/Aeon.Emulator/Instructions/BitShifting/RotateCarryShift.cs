@@ -13,8 +13,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x0100;
 
-            uint b = (uint)(buffer << 1);
-            uint c = (uint)(buffer >> 8);
+            uint b = buffer << 1;
+            uint c = buffer >>> 8;
             buffer = b | c;
 
             dest = (byte)buffer;
@@ -41,8 +41,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x0100;
 
-            uint b = (uint)(buffer << count);
-            uint c = (uint)(buffer >> (9 - count));
+            uint b = buffer << count;
+            uint c = buffer >>> (9 - count);
             buffer = b | c;
 
             dest = (byte)buffer;
@@ -75,8 +75,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x0000000100000000;
 
-            ulong b = (ulong)(buffer << 1);
-            ulong c = (ulong)(buffer >> 32);
+            ulong b = buffer << 1;
+            ulong c = buffer >>> 32;
             buffer = b | c;
 
             dest = (uint)buffer;
@@ -104,8 +104,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x00010000;
 
-            uint b = (uint)(buffer << count);
-            uint c = (uint)(buffer >> (17 - count));
+            uint b = buffer << count;
+            uint c = buffer >>> (17 - count);
             buffer = b | c;
 
             dest = (ushort)buffer;
@@ -124,8 +124,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x0100;
 
-            uint b = (uint)(buffer >> 1);
-            uint c = (uint)(buffer << 8);
+            uint b = buffer >>> 1;
+            uint c = buffer << 8;
             buffer = b | c;
 
             dest = (byte)buffer;
@@ -152,8 +152,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x0100;
 
-            uint b = (uint)(buffer >> count);
-            uint c = (uint)(buffer << (9 - count));
+            uint b = buffer >>> count;
+            uint c = buffer << (9 - count);
             buffer = b | c;
 
             dest = (byte)buffer;
@@ -169,8 +169,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x00010000;
 
-            uint b = (uint)(buffer >> 1);
-            uint c = (uint)(buffer << 16);
+            uint b = buffer >>> 1;
+            uint c = buffer << 16;
             buffer = b | c;
 
             dest = (ushort)buffer;
@@ -197,8 +197,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x00010000;
 
-            uint b = (uint)(buffer >> count);
-            uint c = (uint)(buffer << (17 - count));
+            uint b = buffer >>> count;
+            uint c = buffer << (17 - count);
             buffer = b | c;
 
             dest = (ushort)buffer;
@@ -214,8 +214,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x100000000;
 
-            ulong b = (ulong)(buffer >> 1);
-            ulong c = (ulong)(buffer << 32);
+            ulong b = buffer >>> 1;
+            ulong c = buffer << 32;
             buffer = b | c;
 
             dest = (uint)buffer;
@@ -242,8 +242,8 @@ namespace Aeon.Emulator.Instructions.BitShifting
             if (p.Flags.Carry)
                 buffer |= 0x100000000;
 
-            ulong b = (ulong)(buffer >> count);
-            ulong c = (ulong)(buffer << (33 - count));
+            ulong b = buffer >>> count;
+            ulong c = buffer << (33 - count);
             buffer = b | c;
 
             dest = (uint)buffer;

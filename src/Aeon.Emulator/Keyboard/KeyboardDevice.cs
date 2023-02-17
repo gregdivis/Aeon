@@ -412,7 +412,7 @@ namespace Aeon.Emulator.Keyboard
             if (port == 0x60)
                 vm.PhysicalMemory.EnableA20 = !vm.PhysicalMemory.EnableA20;
 
-            System.Diagnostics.Debug.WriteLine(string.Format("Keyboard port {0:X}h -> {1:X2}h", port, value));
+            System.Diagnostics.Debug.WriteLine($"Keyboard port {port:X}h -> {value:X2}h");
         }
         void IOutputPort.WriteWord(int port, ushort value) => throw new NotSupportedException();
 

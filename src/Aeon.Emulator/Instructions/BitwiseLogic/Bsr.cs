@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Instructions.BitwiseLogic
 {
@@ -8,36 +9,34 @@ namespace Aeon.Emulator.Instructions.BitwiseLogic
         [Opcode("0FBD/r rw,rmw", OperandSize = 16, AddressSize = 16 | 32)]
         public static void BitScanReverse16(Processor p, ref ushort index, ushort value)
         {
-            for (int i = 15; i >= 0; i--)
+            int tzcnt = BitOperations.LeadingZeroCount(value);
+            if (tzcnt < 16)
             {
-                if ((value & (1 << i)) != 0)
-                {
-                    index = (ushort)i;
-                    p.Flags.Zero = false;
-                    return;
-                }
+                index = (ushort)tzcnt;
+                p.Flags.Zero = false;
             }
-
-            index = 0;
-            p.Flags.Zero = true;
+            else
+            {
+                index = 0;
+                p.Flags.Zero = true;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Alternate(nameof(BitScanReverse16), OperandSize = 32, AddressSize = 16 | 32)]
         public static void BitScanReverse32(Processor p, ref uint index, uint value)
         {
-            for (int i = 31; i >= 0; i--)
+            int tzcnt = BitOperations.LeadingZeroCount(value);
+            if (tzcnt < 32)
             {
-                if ((value & (1 << i)) != 0)
-                {
-                    index = (uint)i;
-                    p.Flags.Zero = false;
-                    return;
-                }
+                index = (uint)tzcnt;
+                p.Flags.Zero = false;
             }
-
-            index = 0;
-            p.Flags.Zero = true;
-       }
+            else
+            {
+                index = 0;
+                p.Flags.Zero = true;
+            }
+        }
     }
 }
