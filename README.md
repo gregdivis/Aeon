@@ -20,8 +20,7 @@ browse to a DOS .exe or .com file. Launching a program this way will create a vi
 the program's directory mounted as the C: drive in the emulated system.
 
 It's also possible to quick launch a command prompt in a directory if you'd like to pass in arguments
-before launching the program. Aeon's DOS command interpreter is very limited, but can perform basic tasks.
-Batch files are not currently supported.
+before launching the program. Batch files are supported.
 
 You can set up the emulated environment with more detail by creating a json configuration file with
 a `.AeonConfig` extension and launching it with the quick launch program button. This format isn't
