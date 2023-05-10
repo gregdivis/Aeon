@@ -146,7 +146,6 @@ namespace Aeon.Emulator.Sound.Blaster
                     break;
             }
         }
-        void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
 
         int IDmaDevice8.Channel => this.DMA;
         int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => this.dsp.DmaWrite(source);

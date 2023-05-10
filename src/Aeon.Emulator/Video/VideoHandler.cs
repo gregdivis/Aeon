@@ -262,7 +262,8 @@ namespace Aeon.Emulator.Video
                             break;
 
                         default:
-                            throw new NotImplementedException($"Video command 11{this.VirtualMachine.Processor.AL:X2}h not implemented.");
+                            System.Diagnostics.Debug.WriteLine($"Video command 11{this.VirtualMachine.Processor.AL:X2}h not implemented.");
+                            break;
                     }
                     break;
 
