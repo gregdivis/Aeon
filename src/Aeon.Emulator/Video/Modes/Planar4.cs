@@ -40,7 +40,7 @@ namespace Aeon.Emulator.Video.Modes
                 {
                     uint colorDontCare = graphics.ColorDontCare.Expanded;
                     uint colorCompare = graphics.ColorCompare * 0x01010101u;
-                    uint results = Intrinsics.AndNot(colorDontCare, this.latches ^ colorCompare);
+                    uint results = ~(colorDontCare & (this.latches ^ colorCompare));
                     byte* bytes = (byte*)&results;
                     return (byte)(bytes[0] | bytes[1] | bytes[2] | bytes[3]);
                 }
