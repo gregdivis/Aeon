@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.DebugSupport
 {
@@ -17,6 +18,7 @@ namespace Aeon.Emulator.DebugSupport
 
         public void Dispose() => this.logWriter.Dispose();
 
+        [SkipLocalsInit]
         internal void Write(Processor processor)
         {
             unsafe

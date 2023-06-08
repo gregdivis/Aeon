@@ -337,7 +337,7 @@ namespace Aeon.Emulator
         /// Emulates the next instruction with logging enabled.
         /// </summary>
         /// <param name="log">Log to which instructions will be written.</param>
-        public void Emulate(InstructionLog log) => InstructionSet.Emulate(this, log);
+        public void Emulate(InstructionLog log) => InstructionSet.Emulate(this, 1, log);
         /// <summary>
         /// Presses a key on the emulated keyboard.
         /// </summary>

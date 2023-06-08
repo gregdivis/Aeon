@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Aeon.Emulator.DebugSupport;
+using Aeon.Emulator.Decoding;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.RuntimeExceptions;
 
@@ -35,20 +36,11 @@ namespace Aeon.Emulator
         /// <summary>
         /// Initializes a new instance of the EmulatorHost class.
         /// </summary>
-        public EmulatorHost()
-            : this(new VirtualMachine(), null)
+        public EmulatorHost() : this(new VirtualMachine(), null)
         {
         }
-        public EmulatorHost(int physicalMemory)
-            : this(new VirtualMachine(physicalMemory), null)
-        {
-        }
-        /// <summary>
-        /// Initializes a new instance of the EmulatorHost class.
-        /// </summary>
-        /// <param name="instructionLog">Log which will be used to record instructions.</param>
-        public EmulatorHost(InstructionLog? instructionLog)
-            : this(new VirtualMachine(), instructionLog)
+        public EmulatorHost(int physicalMemory, InstructionLog? instructionLog = null)
+            : this(new VirtualMachine(physicalMemory), instructionLog)
         {
         }
         /// <summary>
@@ -320,8 +312,7 @@ namespace Aeon.Emulator
                     this.CheckHardwareInterrupts();
                 }
 
-                for (int i = 0; i < count; i++)
-                    vm.Emulate(this.log!);
+                InstructionSet.Emulate(this.VirtualMachine, (uint)count, this.log);
             }
             catch (EmulatedException ex)
             {

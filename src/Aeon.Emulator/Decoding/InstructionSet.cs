@@ -58,7 +58,28 @@ namespace Aeon.Emulator.Decoding
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
-        internal static void Emulate(VirtualMachine vm, uint count)
+        internal static void Emulate(VirtualMachine vm, uint count) => Emulate<NullLogWriter>(vm, count, default);
+
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
+        internal static void Emulate(VirtualMachine vm, uint count, InstructionLog log) => Emulate(vm, count, new LogWriter(log));
+
+        /// <summary>
+        /// Core CPU emulation loop.
+        /// </summary>
+        /// <typeparam name="TLog">Type of the logger (see remarks).</typeparam>
+        /// <param name="vm"><see cref="VirtualMachine"/> instance.</param>
+        /// <param name="count">Number of instructions to emulate.</param>
+        /// <param name="log">Instruction logger (see remarks).</param>
+        /// <remarks>
+        /// This is implemented as a generic to take advantage of how the runtime compiles a different version
+        /// of the method for each value type used as a type parameter. The default null logger is a noop struct
+        /// that does nothing and gets completely removed by inlining. This lets us share this code without
+        /// a performance impact when logging is not used.
+        /// </remarks>
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void Emulate<TLog>(VirtualMachine vm, uint count, TLog log) where TLog : struct, ILogWriter
         {
             var processor = vm.Processor;
             var memory = vm.PhysicalMemory;
@@ -74,6 +95,8 @@ namespace Aeon.Emulator.Decoding
 
                     byte* ip = processor.CachedInstruction;
                     memory.FetchInstruction(processor.CSBase + startEIP, ip);
+
+                    log.Write(processor);
 
                     uint sizeModeIndex = processor.SizeModeIndex;
 
@@ -138,8 +161,6 @@ namespace Aeon.Emulator.Decoding
                 }
             }
         }
-
-        internal static void Emulate(VirtualMachine vm, InstructionLog log) => throw new NotImplementedException();
 
         public static void Initialize()
         {
@@ -365,6 +386,27 @@ namespace Aeon.Emulator.Decoding
             private static bool IsNotNull(object obj) => obj != null;
             private static IEnumerable<T> Append<T>(IEnumerable<T> source1, IEnumerable<T> source2) => source1.Concat(source2);
             private static IEnumerable<T> Expand<T>(IEnumerable<IEnumerable<T>> source) => source.SelectMany(s => s);
+        }
+
+        private interface ILogWriter
+        {
+            void Write(Processor processor);
+        }
+
+        private readonly struct NullLogWriter : ILogWriter
+        {
+            public void Write(Processor processor)
+            {
+            }
+        }
+
+        private readonly struct LogWriter : ILogWriter
+        {
+            private readonly InstructionLog log;
+
+            public LogWriter(InstructionLog log) => this.log = log;
+
+            public void Write(Processor processor) => this.log.Write(processor);
         }
     }
 }
