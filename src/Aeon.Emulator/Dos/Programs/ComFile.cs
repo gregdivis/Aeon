@@ -46,7 +46,7 @@ namespace Aeon.Emulator.Dos.Programs
         {
             int length = (int)stream.Length;
             imageData = new byte[length];
-            stream.Read(imageData, 0, length);
+            stream.ReadExactly(imageData);
         }
     }
 }

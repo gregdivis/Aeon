@@ -115,14 +115,14 @@ namespace Aeon.DiskImages.Archives
                 var mode = (CompressionAlgorithm)this.baseStream.ReadByte();
                 if (mode == CompressionAlgorithm.Uncompressed)
                 {
-                    this.baseStream.Read(this.currentChunk, 0, rawChunkSize);
+                    this.baseStream.ReadExactly(this.currentChunk, 0, rawChunkSize);
                 }
                 else if (mode == CompressionAlgorithm.Brotli)
                 {
                     if (rawChunkSize > (this.decodeBuffer?.Length ?? 0))
                         this.decodeBuffer = new byte[rawChunkSize];
 
-                    this.baseStream.Read(this.decodeBuffer, 0, rawChunkSize);
+                    this.baseStream.ReadExactly(this.decodeBuffer, 0, rawChunkSize);
                     BrotliDecoder.TryDecompress(this.decodeBuffer.AsSpan(0, rawChunkSize), this.currentChunk, out _);
                 }
                 else

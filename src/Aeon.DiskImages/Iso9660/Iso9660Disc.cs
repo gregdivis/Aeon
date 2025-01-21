@@ -68,12 +68,8 @@ namespace Aeon.DiskImages.Iso9660
         /// <param name="buffer">Buffer into which sectors are read.</param>
         public void ReadRaw(int startingSector, int sectorsToRead, Span<byte> buffer)
         {
-            if (buffer == null)
-                throw new ArgumentNullException(nameof(buffer));
-            if (startingSector < 0)
-                throw new ArgumentOutOfRangeException(nameof(startingSector));
-            if (sectorsToRead < 0)
-                throw new ArgumentOutOfRangeException(nameof(sectorsToRead));
+            ArgumentOutOfRangeException.ThrowIfNegative(startingSector);
+            ArgumentOutOfRangeException.ThrowIfNegative(sectorsToRead);
 
             if (sectorsToRead == 0)
                 return;
@@ -84,7 +80,7 @@ namespace Aeon.DiskImages.Iso9660
             lock (this.rawDiscLock)
             {
                 this.rawDisc.Position = startingSector * this.pvd.LogicalBlockSize;
-                this.rawDisc.Read(buffer[..(sectorsToRead * this.pvd.LogicalBlockSize)]);
+                this.rawDisc.ReadExactly(buffer[..(sectorsToRead * this.pvd.LogicalBlockSize)]);
             }
         }
         public void Dispose() => this.rawDisc.Dispose();
@@ -234,7 +230,7 @@ namespace Aeon.DiskImages.Iso9660
                 lock (this.owner.rawDiscLock)
                 {
                     this.owner.rawDisc.Position = this.startPosition + this.Position;
-                    this.owner.rawDisc.Read(buffer, offset, count);
+                    this.owner.rawDisc.ReadExactly(buffer, offset, count);
                     this.Position += count;
                 }
 

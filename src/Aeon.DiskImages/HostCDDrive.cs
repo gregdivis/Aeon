@@ -56,7 +56,7 @@ namespace Aeon.DiskImages
 
             for (uint i = 0; i < count; i++)
             {
-                reader.Read(buffer, 0, 2048);
+                reader.ReadExactly(buffer, 0, 2048);
                 writer.Write(buffer, 0, 2048);
 
                 if (reportProgress != null && currentPercent != (int)((double)i / (double)count))

@@ -158,7 +158,7 @@ namespace Aeon.DiskImages.Archives
                 lock (this.baseStream)
                 {
                     this.baseStream.Position = this.startOffset + this.Position;
-                    this.baseStream.Read(buffer.Slice(0, maxBytes));
+                    this.baseStream.ReadExactly(buffer[..maxBytes]);
                 }
 
                 this.Position += maxBytes;
