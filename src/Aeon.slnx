@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="Aeon.DiskImages/Aeon.DiskImages.csproj" />
+  <Project Path="Aeon.Emulator.Input/Aeon.Emulator.Input.csproj" />
+  <Project Path="Aeon.Emulator.Sound/Aeon.Emulator.Sound.csproj" />
+  <Project Path="Aeon.Emulator/Aeon.Emulator.csproj" />
+  <Project Path="Aeon.Test/Aeon.Test.csproj" />
+  <Project Path="Aeon/Aeon.csproj" />
+  <Project Path="AeonSourceGenerator/AeonSourceGenerator.csproj" />
+</Solution>
