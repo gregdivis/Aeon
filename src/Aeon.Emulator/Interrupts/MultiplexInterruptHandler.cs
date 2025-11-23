@@ -1,23 +1,19 @@
-﻿using System.Collections.Generic;
-
-#nullable disable
-
-namespace Aeon.Emulator.Interrupts
+﻿namespace Aeon.Emulator.Interrupts
 {
     /// <summary>
     /// Emulates the 2F multiplex interrupt.
     /// </summary>
     internal sealed class MultiplexInterruptHandler : IInterruptHandler
     {
-        private Processor processor;
-        private readonly List<IMultiplexInterruptHandler> handlers = new();
+        private Processor? processor;
+        private readonly List<IMultiplexInterruptHandler> handlers = [];
 
-        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x2F };
+        IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => [0x2F];
         public IList<IMultiplexInterruptHandler> Handlers => this.handlers;
 
         void IInterruptHandler.HandleInterrupt(int interrupt)
         {
-            int id = this.processor.AH;
+            int id = this.processor!.AH;
 
             foreach (var handler in this.handlers)
             {

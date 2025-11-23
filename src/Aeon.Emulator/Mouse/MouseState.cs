@@ -1,9 +1,8 @@
-﻿namespace Aeon.Emulator.Mouse
+﻿namespace Aeon.Emulator.Mouse;
+
+internal struct MouseState
 {
-    internal struct MouseState
-    {
-        public int X;
-        public int Y;
-        public MouseButtons PressedButtons;
-    }
+    public int X;
+    public int Y;
+    public MouseButtons PressedButtons;
 }

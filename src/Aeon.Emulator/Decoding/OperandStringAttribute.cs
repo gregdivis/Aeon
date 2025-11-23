@@ -1,12 +1,9 @@
-﻿using System;
+﻿namespace Aeon.Emulator.Decoding;
 
-namespace Aeon.Emulator.Decoding
+[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+internal sealed class OperandStringAttribute : Attribute
 {
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-    internal sealed class OperandStringAttribute : Attribute
-    {
-        public OperandStringAttribute(string operandString) => this.OperandString = operandString;
+    public OperandStringAttribute(string operandString) => this.OperandString = operandString;
 
-        public string OperandString { get; }
-    }
+    public string OperandString { get; }
 }

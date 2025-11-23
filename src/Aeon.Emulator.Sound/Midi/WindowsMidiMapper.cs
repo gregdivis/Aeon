@@ -1,34 +1,32 @@
-﻿using System;
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 
-namespace Aeon.Emulator.Sound
+namespace Aeon.Emulator.Sound;
+
+/// <summary>
+/// Provides access to the Windows MIDI mapper.
+/// </summary>
+[SupportedOSPlatform("windows")]
+internal sealed class WindowsMidiMapper : MidiDevice
 {
-    /// <summary>
-    /// Provides access to the Windows MIDI mapper.
-    /// </summary>
-    [SupportedOSPlatform("windows")]
-    internal sealed class WindowsMidiMapper : MidiDevice
+    private IntPtr midiOutHandle;
+
+    public WindowsMidiMapper()
     {
-        private IntPtr midiOutHandle;
+        _ = NativeMethods.midiOutOpen(out this.midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
+    }
+    ~WindowsMidiMapper() => this.Dispose(false);
 
-        public WindowsMidiMapper()
+    protected override void PlayShortMessage(uint message) => _ = NativeMethods.midiOutShortMsg(this.midiOutHandle, message);
+    protected override void PlaySysex(ReadOnlySpan<byte> data) { }
+    public override void Pause() => _ = NativeMethods.midiOutReset(this.midiOutHandle);
+    public override void Resume() { }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (midiOutHandle != IntPtr.Zero)
         {
-            _ = NativeMethods.midiOutOpen(out this.midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
-        }
-        ~WindowsMidiMapper() => this.Dispose(false);
-
-        protected override void PlayShortMessage(uint message) => _ = NativeMethods.midiOutShortMsg(this.midiOutHandle, message);
-        protected override void PlaySysex(ReadOnlySpan<byte> data) { }
-        public override void Pause() => _ = NativeMethods.midiOutReset(this.midiOutHandle);
-        public override void Resume() { }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (midiOutHandle != IntPtr.Zero)
-            {
-                _ = NativeMethods.midiOutClose(midiOutHandle);
-                midiOutHandle = IntPtr.Zero;
-            }
+            _ = NativeMethods.midiOutClose(midiOutHandle);
+            midiOutHandle = IntPtr.Zero;
         }
     }
 }

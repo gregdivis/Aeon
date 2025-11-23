@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Decoding;
@@ -64,7 +63,6 @@ internal static partial class InstructionDecoders
     }
 
     [DoesNotReturn]
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void ThrowMod3Exception() => throw new Mod3Exception();
 
     public readonly ref struct RmwValue<T>

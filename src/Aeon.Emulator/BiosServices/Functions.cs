@@ -1,8 +1,7 @@
-﻿namespace Aeon.Emulator.BiosServices
+﻿namespace Aeon.Emulator.BiosServices;
+
+internal static class Functions
 {
-    internal static class Functions
-    {
-        public const byte GetExtendedMemorySize = 0x88;
-        public const byte GetConfiguration = 0xC0;
-    }
+    public const byte GetExtendedMemorySize = 0x88;
+    public const byte GetConfiguration = 0xC0;
 }

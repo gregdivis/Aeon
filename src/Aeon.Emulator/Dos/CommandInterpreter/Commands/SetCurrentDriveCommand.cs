@@ -1,16 +1,10 @@
 ﻿using Aeon.Emulator.Dos.VirtualFileSystem;
 
-namespace Aeon.Emulator.CommandInterpreter
+namespace Aeon.Emulator.CommandInterpreter;
+
+public sealed class SetCurrentDriveCommand(DriveLetter driveLetter) : CommandStatement
 {
-    public sealed class SetCurrentDriveCommand : CommandStatement
-    {
-        public SetCurrentDriveCommand(DriveLetter driveLetter)
-        {
-            this.Drive = driveLetter;
-        }
+    public DriveLetter Drive { get; } = driveLetter;
 
-        public DriveLetter Drive { get; }
-
-        internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
-    }
+    internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
 }

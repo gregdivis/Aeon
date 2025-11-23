@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Aeon.Emulator.Keyboard;
+﻿namespace Aeon.Emulator.Keyboard;
 
 /// <summary>
 /// Contains methods for converting between scan codes and keyboard codes.

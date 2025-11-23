@@ -1,12 +1,10 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Aeon.DiskImages;
-using Aeon.DiskImages.Archives;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Launcher.Configuration;
 using Microsoft.Win32;
@@ -63,44 +61,22 @@ namespace Aeon.Emulator.Launcher
                 if (info.FreeSpace != null)
                     vmDrive.FreeSpace = info.FreeSpace.GetValueOrDefault();
 
-                if (config.Archive == null)
+                if (!string.IsNullOrEmpty(info.HostPath))
                 {
-                    if (!string.IsNullOrEmpty(info.HostPath))
-                    {
-                        vmDrive.Mapping = info.ReadOnly ? new MappedFolder(info.HostPath) : new WritableMappedFolder(info.HostPath);
-                    }
-                    else if (!string.IsNullOrEmpty(info.ImagePath))
-                    {
-                        if (Path.GetExtension(info.ImagePath).Equals(".iso", StringComparison.OrdinalIgnoreCase))
-                            vmDrive.Mapping = new ISOImage(info.ImagePath);
-                        else if (Path.GetExtension(info.ImagePath).Equals(".cue", StringComparison.OrdinalIgnoreCase))
-                            vmDrive.Mapping = new CueSheetImage(info.ImagePath);
-                        else
-                            throw new FormatException();
-                    }
+                    vmDrive.Mapping = info.ReadOnly ? new MappedFolder(info.HostPath) : new WritableMappedFolder(info.HostPath);
+                }
+                else if (!string.IsNullOrEmpty(info.ImagePath))
+                {
+                    if (Path.GetExtension(info.ImagePath).Equals(".iso", StringComparison.OrdinalIgnoreCase))
+                        vmDrive.Mapping = new ISOImage(info.ImagePath);
+                    else if (Path.GetExtension(info.ImagePath).Equals(".cue", StringComparison.OrdinalIgnoreCase))
+                        vmDrive.Mapping = new CueSheetImage(info.ImagePath);
                     else
-                    {
                         throw new FormatException();
-                    }
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(info.ImagePath))
-                    {
-                        if (info.ReadOnly)
-                        {
-                            vmDrive.Mapping = new MappedArchive(driveLetter, config.Archive);
-                        }
-                        else
-                        {
-                            var rootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Aeon Emulator", "Files", config.Id, letter.ToUpperInvariant());
-                            vmDrive.Mapping = new DifferencingFolder(driveLetter, config.Archive, rootPath);
-                        }
-                    }
-                    else
-                    {
-                        throw new NotImplementedException();
-                    }
+                    throw new FormatException();
                 }
 
                 vmDrive.HasCommandInterpreter = vmDrive.DriveType == DriveType.Fixed;
@@ -146,7 +122,7 @@ namespace Aeon.Emulator.Launcher
             ApplyConfiguration(this.currentConfig);
             if (!string.IsNullOrEmpty(this.currentConfig.Launch))
             {
-                var launchTargets = this.currentConfig.Launch.Split(new char[] { ' ', '\t' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                var launchTargets = this.currentConfig.Launch.Split([' ', '\t'], 2, StringSplitOptions.RemoveEmptyEntries);
                 if (launchTargets.Length == 1)
                     this.emulatorDisplay.EmulatorHost.LoadProgram(launchTargets[0]);
                 else

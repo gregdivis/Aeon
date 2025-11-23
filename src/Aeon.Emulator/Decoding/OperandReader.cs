@@ -1,52 +1,50 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
-namespace Aeon.Emulator.Decoding
+namespace Aeon.Emulator.Decoding;
+
+internal ref struct OperandReader
 {
-    internal ref struct OperandReader
+    private readonly ReadOnlySpan<byte> data;
+
+    public OperandReader(ReadOnlySpan<byte> data)
     {
-        private ReadOnlySpan<byte> data;
+        this.data = data;
+        this.Position = 0;
+    }
 
-        public OperandReader(ReadOnlySpan<byte> data)
+    public int Position { get; private set; }
+
+    public byte ReadByte()
+    {
+        if (this.Position < 0 || this.Position >= data.Length)
+            throw new InvalidOperationException();
+
+        return this.data[this.Position++];
+    }
+    public sbyte ReadSByte() => (sbyte)ReadByte();
+    public short ReadInt16() => (short)ReadUInt16();
+    public ushort ReadUInt16()
+    {
+        if (MemoryMarshal.TryRead(this.data.Slice(this.Position, 2), out ushort value))
         {
-            this.data = data;
-            this.Position = 0;
+            this.Position += 2;
+            return value;
         }
-
-        public int Position { get; private set; }
-
-        public byte ReadByte()
+        else
         {
-            if (this.Position < 0 || this.Position >= data.Length)
-                throw new InvalidOperationException();
-
-            return this.data[this.Position++];
+            throw new InvalidOperationException();
         }
-        public sbyte ReadSByte() => (sbyte)ReadByte();
-        public short ReadInt16() => (short)ReadUInt16();
-        public ushort ReadUInt16()
+    }
+    public uint ReadUInt32()
+    {
+        if (MemoryMarshal.TryRead(this.data.Slice(this.Position, 4), out ushort value))
         {
-            if (MemoryMarshal.TryRead(this.data.Slice(this.Position, 2), out ushort value))
-            {
-                this.Position += 2;
-                return value;
-            }
-            else
-            {
-                throw new InvalidOperationException();
-            }
+            this.Position += 4;
+            return value;
         }
-        public uint ReadUInt32()
+        else
         {
-            if (MemoryMarshal.TryRead(this.data.Slice(this.Position, 4), out ushort value))
-            {
-                this.Position += 4;
-                return value;
-            }
-            else
-            {
-                throw new InvalidOperationException();
-            }
+            throw new InvalidOperationException();
         }
     }
 }

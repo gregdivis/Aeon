@@ -1,56 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Aeon.Emulator.CommandInterpreter;
 
-namespace Aeon.Emulator.CommandInterpreter
+public abstract class IfCommand(bool not, CommandStatement command) : CommandStatement
 {
-    public abstract class IfCommand : CommandStatement
-    {
-        protected IfCommand(bool not, CommandStatement command)
-        {
-            this.Not = not;
-            this.Command = command;
-        }
+    public bool Not { get; } = not;
+    public CommandStatement Command { get; } = command;
+}
 
-        public bool Not { get; }
-        public CommandStatement Command { get; }
-    }
+public sealed class IfErrorLevelCommand(bool not, int errorLevel, CommandStatement command) : IfCommand(not, command)
+{
+    public int ErrorLevel { get; } = errorLevel;
 
-    public sealed class IfErrorLevelCommand : IfCommand
-    {
-        public IfErrorLevelCommand(bool not, int errorLevel, CommandStatement command) : base(not, command)
-        {
-            this.ErrorLevel = errorLevel;
-        }
+    internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
+}
 
-        public int ErrorLevel { get; }
+public sealed class IfFileExistsCommand(bool not, string fileName, CommandStatement command) : IfCommand(not, command)
+{
+    public string FileName { get; } = fileName;
 
-        internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
-    }
+    internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
+}
 
-    public sealed class IfFileExistsCommand : IfCommand
-    {
-        public IfFileExistsCommand(bool not, string fileName, CommandStatement command) : base(not, command)
-        {
-            this.FileName = fileName;
-        }
+public sealed class IfEqualsCommand(bool not, string value1, string value2, CommandStatement command) : IfCommand(not, command)
+{
+    public string Value1 { get; } = value1;
+    public string Value2 { get; } = value2;
 
-        public string FileName { get; }
-
-        internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
-    }
-
-    public sealed class IfEqualsCommand : IfCommand
-    {
-        public IfEqualsCommand(bool not, string value1, string value2, CommandStatement command) : base(not, command)
-        {
-            this.Value1 = value1;
-            this.Value2 = value2;
-        }
-
-        public string Value1 { get; }
-        public string Value2 { get; }
-
-        internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
-    }
+    internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
 }

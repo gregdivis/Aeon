@@ -1,22 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Aeon.Emulator.CommandInterpreter;
 
-namespace Aeon.Emulator.CommandInterpreter
+public sealed class LaunchCommand(string target, string arguments) : CommandStatement
 {
-    public sealed class LaunchCommand : CommandStatement
-    {
-        public LaunchCommand(string target, string arguments)
-        {
-            this.Target = target;
-            this.Arguments = arguments;
-        }
+    public string Target { get; } = target;
+    public string Arguments { get; } = arguments;
 
-        public string Target { get; }
-        public string Arguments { get; }
-
-        internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
-    }
+    internal override CommandResult Run(CommandProcessor processor) => processor.RunCommand(this);
 }

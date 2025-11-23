@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Aeon.DiskImages.Archives;
 using Aeon.Emulator.Sound;
 
 namespace Aeon.Emulator.Launcher.Configuration
@@ -29,10 +28,7 @@ namespace Aeon.Emulator.Launcher.Configuration
         public MidiEngine? MidiEngine { get; set; }
 
         [JsonPropertyName("drives")]
-        public Dictionary<string, AeonDriveConfiguration> Drives { get; set; } = new Dictionary<string, AeonDriveConfiguration>();
-
-        [JsonIgnore]
-        public ArchiveFile Archive { get; private set; }
+        public Dictionary<string, AeonDriveConfiguration> Drives { get; set; } = [];
 
         public static AeonConfiguration Load(Stream stream)
         {
@@ -40,16 +36,12 @@ namespace Aeon.Emulator.Launcher.Configuration
         }
         public static AeonConfiguration Load(string fileName)
         {
-            if (fileName.EndsWith(".AeonPack", StringComparison.OrdinalIgnoreCase))
-                return LoadArchive(new ArchiveFile(File.OpenRead(fileName)));
-
             using var stream = File.OpenRead(fileName);
             return Load(stream);
         }
         public static AeonConfiguration GetQuickLaunchConfiguration(string hostPath, string launchTarget)
         {
-            if (hostPath == null)
-                throw new ArgumentNullException(nameof(hostPath));
+            ArgumentNullException.ThrowIfNull(hostPath);
 
             var config = new AeonConfiguration
             {
@@ -65,17 +57,6 @@ namespace Aeon.Emulator.Launcher.Configuration
                 }
             };
 
-            return config;
-        }
-
-        private static AeonConfiguration LoadArchive(ArchiveFile archive)
-        {
-            using var configStream = archive.OpenItem("Archive.AeonConfig");
-            if (configStream == null)
-                throw new InvalidDataException("Missing configuration in archive.");
-
-            var config = Load(configStream);
-            config.Archive = archive;
             return config;
         }
     }

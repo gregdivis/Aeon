@@ -1,29 +1,28 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Frozen;
 
-namespace Aeon.Emulator.Sound.Blaster
+namespace Aeon.Emulator.Sound.Blaster;
+
+partial class SoundBlaster
 {
-    partial class SoundBlaster
+    private static readonly FrozenDictionary<byte, byte> commandLengths = new Dictionary<byte, byte>()
     {
-        private static readonly SortedList<byte, byte> commandLengths = new()
-        {
-            [Commands.SetTimeConstant] = 1,
-            [Commands.SingleCycleDmaOutput8] = 2,
-            [Commands.DspIdentification] = 1,
-            [Commands.SetBlockTransferSize] = 2,
-            [Commands.SetSampleRate] = 2,
-            [Commands.SetInputSampleRate] = 2,
-            [Commands.SingleCycleDmaOutput16] = 3,
-            [Commands.AutoInitDmaOutput16] = 3,
-            [Commands.SingleCycleDmaOutput16Fifo] = 3,
-            [Commands.AutoInitDmaOutput16Fifo] = 3,
-            [Commands.SingleCycleDmaOutput8_Alt] = 3,
-            [Commands.AutoInitDmaOutput8_Alt] = 3,
-            [Commands.SingleCycleDmaOutput8Fifo_Alt] = 3,
-            [Commands.AutoInitDmaOutput8Fifo_Alt] = 3,
-            [Commands.PauseForDuration] = 2,
-            [Commands.SingleCycleDmaOutputADPCM4Ref] = 2,
-            [Commands.SingleCycleDmaOutputADPCM2Ref] = 2,
-            [Commands.SingleCycleDmaOutputADPCM3Ref] = 2
-        };
-    }
+        [Commands.SetTimeConstant] = 1,
+        [Commands.SingleCycleDmaOutput8] = 2,
+        [Commands.DspIdentification] = 1,
+        [Commands.SetBlockTransferSize] = 2,
+        [Commands.SetSampleRate] = 2,
+        [Commands.SetInputSampleRate] = 2,
+        [Commands.SingleCycleDmaOutput16] = 3,
+        [Commands.AutoInitDmaOutput16] = 3,
+        [Commands.SingleCycleDmaOutput16Fifo] = 3,
+        [Commands.AutoInitDmaOutput16Fifo] = 3,
+        [Commands.SingleCycleDmaOutput8_Alt] = 3,
+        [Commands.AutoInitDmaOutput8_Alt] = 3,
+        [Commands.SingleCycleDmaOutput8Fifo_Alt] = 3,
+        [Commands.AutoInitDmaOutput8Fifo_Alt] = 3,
+        [Commands.PauseForDuration] = 2,
+        [Commands.SingleCycleDmaOutputADPCM4Ref] = 2,
+        [Commands.SingleCycleDmaOutputADPCM2Ref] = 2,
+        [Commands.SingleCycleDmaOutputADPCM3Ref] = 2
+    }.ToFrozenDictionary();
 }

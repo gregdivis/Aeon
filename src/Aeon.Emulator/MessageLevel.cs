@@ -1,10 +1,9 @@
-﻿namespace Aeon.Emulator
+﻿namespace Aeon.Emulator;
+
+public enum MessageLevel
 {
-    public enum MessageLevel
-    {
-        Debug,
-        Info,
-        Warning,
-        Error
-    }
+    Debug,
+    Info,
+    Warning,
+    Error
 }

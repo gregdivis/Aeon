@@ -1,24 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Aeon.Emulator.CommandInterpreter;
 
-namespace Aeon.Emulator.CommandInterpreter
+internal sealed class BatchInstance(BatchFile batch, string arguments)
 {
-    internal sealed class BatchInstance
-    {
-        private readonly string[] arguments;
+    private readonly string[] arguments = StatementParser.ParseArguments(arguments);
 
-        public BatchInstance(BatchFile batch, string arguments)
-        {
-            this.Batch = batch;
-            this.arguments = StatementParser.ParseArguments(arguments);
-        }
-
-        public BatchFile Batch { get; }
-        public int CurrentLine { get; set; }
-        public ReadOnlySpan<string> Arguments => this.arguments;
-
-    }
+    public BatchFile Batch { get; } = batch;
+    public int CurrentLine { get; set; }
+    public ReadOnlySpan<string> Arguments => this.arguments;
 }

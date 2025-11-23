@@ -1,19 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Company>Aeon</Company>
-    <Version>0.7.1</Version>
-    <Product>Aeon</Product>
-    <Title>Aeon Sound Emulation</Title>
-    <Description>Emulates sound cards for Aeon</Description>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="MeltySynth" Version="2.4.1" />
-    <PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
-    <PackageReference Include="TinyAudio" Version="0.3.1" />
-    <PackageReference Include="Ymf262Emu" Version="1.0.1" />
-    <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Company>Aeon</Company>
+		<Version>0.7.1</Version>
+		<Product>Aeon</Product>
+		<Title>Aeon Sound Emulation</Title>
+		<Description>Emulates sound cards for Aeon</Description>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MeltySynth" Version="2.4.1" />
+		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
+		<PackageReference Include="TinyAudio" Version="0.3.1" />
+		<PackageReference Include="Ymf262Emu" Version="1.0.1" />
+		<ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+	</ItemGroup>
 </Project>

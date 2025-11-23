@@ -1,15 +1,11 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
-namespace Aeon.Emulator
+namespace Aeon.Emulator;
+
+internal readonly struct UnsafeBuffer<T>(int length) where T : unmanaged
 {
-    internal readonly struct UnsafeBuffer<T> where T : unmanaged
-    {
-        private readonly T[] array;
+    private readonly T[] array = GC.AllocateArray<T>(length, pinned: true);
 
-        public UnsafeBuffer(int length) => this.array = GC.AllocateArray<T>(length, pinned: true);
-
-        public unsafe T* ToPointer() => (T*)Unsafe.AsPointer(ref this.array[0]);
-        public void Clear() => Array.Clear(this.array, 0, this.array.Length);
-    }
+    public unsafe T* ToPointer() => (T*)Unsafe.AsPointer(ref this.array[0]);
+    public void Clear() => Array.Clear(this.array, 0, this.array.Length);
 }
