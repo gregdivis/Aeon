@@ -9,6 +9,7 @@
 		<Description>Emulates sound cards for Aeon</Description>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IsAotCompatible>true</IsAotCompatible>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="MeltySynth" Version="2.4.1" />

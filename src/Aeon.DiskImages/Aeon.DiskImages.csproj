@@ -9,6 +9,7 @@
 		<Description>Implements Aeon disk images.</Description>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<IsAotCompatible>true</IsAotCompatible>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="TinyAudio" Version="0.3.1" />

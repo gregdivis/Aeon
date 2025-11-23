@@ -9,6 +9,7 @@
 		<Description>Emulates joysticks for Aeon</Description>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<IsAotCompatible>true</IsAotCompatible>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
