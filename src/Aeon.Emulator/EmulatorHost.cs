@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Decoding;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.RuntimeExceptions;
@@ -21,7 +20,6 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
     private long totalInstructions;
     private readonly SortedSet<Keys> keysPresssed = [];
     private int emulationSpeed = 10_000_000;
-    private readonly InstructionLog? log;
 
     /// <summary>
     /// The smallest number that may be assigned to the EmulationSpeed property.
@@ -31,11 +29,11 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
     /// <summary>
     /// Initializes a new instance of the EmulatorHost class.
     /// </summary>
-    public EmulatorHost() : this(new VirtualMachine(), null)
+    public EmulatorHost() : this(new VirtualMachine())
     {
     }
-    public EmulatorHost(int physicalMemory, InstructionLog? instructionLog = null)
-        : this(new VirtualMachine(physicalMemory), instructionLog)
+    public EmulatorHost(int physicalMemory)
+        : this(new VirtualMachine(physicalMemory))
     {
     }
     /// <summary>
@@ -43,7 +41,7 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="virtualMachine">VirtualMachine instance to host.</param>
     /// <param name="instructionLog">Log which will be used to record instructions.</param>
-    public EmulatorHost(VirtualMachine virtualMachine, InstructionLog? instructionLog)
+    public EmulatorHost(VirtualMachine virtualMachine)
     {
         this.VirtualMachine = virtualMachine ?? throw new ArgumentNullException(nameof(virtualMachine));
         this.VirtualMachine.VideoModeChanged += (s, e) => this.OnVideoModeChanged(e);
@@ -52,8 +50,6 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
         this.VirtualMachine.MouseVisibilityChanged += (s, e) => this.OnMouseVisibilityChanged(e);
         this.VirtualMachine.CursorVisibilityChanged += (s, e) => this.OnCursorVisibilityChanged(e);
         this.VirtualMachine.CurrentProcessChanged += (s, e) => this.OnCurrentProcessChanged(e);
-
-        this.log = instructionLog;
     }
 
     /// <summary>
@@ -300,12 +296,12 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
             if (vm.Processor.Flags.InterruptEnable)
             {
                 while (vm.Processor.InPrefix)
-                    vm.Emulate(this.log!);
+                    vm.Emulate();
 
                 this.CheckHardwareInterrupts();
             }
 
-            InstructionSet.Emulate(this.VirtualMachine, (uint)count, this.log!);
+            InstructionSet.Emulate(this.VirtualMachine, (uint)count);
         }
         catch (EmulatedException ex)
         {
@@ -314,9 +310,9 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
         }
         catch (EnableInstructionTrapException)
         {
-            vm.Emulate(this.log!);
+            vm.Emulate();
             while (vm.Processor.InPrefix)
-                vm.Emulate(this.log!);
+                vm.Emulate();
 
             if (vm.Processor.Flags.Trap)
             {
@@ -443,38 +439,30 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private async Task<EmulatorState> EmulationLoopAsync(bool resume)
     {
-        try
-        {
-            var speedTimer = new Stopwatch();
-            var vm = this.VirtualMachine;
+        var speedTimer = new Stopwatch();
+        var vm = this.VirtualMachine;
 
-            if (resume)
+        if (resume)
+        {
+            foreach (var device in vm.Devices)
+                await device.ResumeAsync().ConfigureAwait(false);
+        }
+        else
+        {
+            vm.InterruptTimer.Reset();
+        }
+
+        while (true)
+        {
+            this.EmulationTightLoop(speedTimer);
+
+            if (this.targetState == EmulatorState.Paused || this.targetState == EmulatorState.Halted)
             {
                 foreach (var device in vm.Devices)
-                    await device.ResumeAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                vm.InterruptTimer.Reset();
-            }
+                    await device.PauseAsync().ConfigureAwait(false);
 
-            while (true)
-            {
-                this.EmulationTightLoop(speedTimer);
-
-                if (this.targetState == EmulatorState.Paused || this.targetState == EmulatorState.Halted)
-                {
-                    foreach (var device in vm.Devices)
-                        await device.PauseAsync().ConfigureAwait(false);
-
-                    return this.targetState;
-                }
+                return this.targetState;
             }
-        }
-        finally
-        {
-            if (this.State != EmulatorState.Paused)
-                this.log?.Dispose();
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
@@ -498,10 +486,7 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
                 interruptTimer.Reset();
             }
 
-            if (this.log == null)
-                this.EmulateInstructions(InstructionBatchCount);
-            else
-                this.EmulateInstructionsWithLogging(InstructionBatchCount);
+            this.EmulateInstructions(InstructionBatchCount);
 
             Interlocked.Add(ref totalInstructions, InstructionBatchCount);
 

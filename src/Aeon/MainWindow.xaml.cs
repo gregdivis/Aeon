@@ -247,20 +247,10 @@ namespace Aeon.Emulator.Launcher
         private void EmulatorDisplay_EmulationError(object sender, EmulationErrorRoutedEventArgs e)
         {
             var end = new TaskDialogItem("End Program", "Terminates the current emulation session.");
-            var debug = new TaskDialogItem("Debug", "View the current emulation session in the Aeon debugger.");
-
-            var selection = ShowTaskDialog("Emulation Error", "An error occurred which caused the emulator to halt: " + e.Message + " What would you like to do?", end, debug);
+            var selection = ShowTaskDialog("Emulation Error", "An error occurred which caused the emulator to halt: " + e.Message + " What would you like to do?", end);
 
             if (selection == end || selection == null)
-            {
                 emulatorDisplay.ResetEmulator();
-            }
-            else if (selection == debug)
-            {
-                var debuggerWindow = new DebuggerWindow { Owner = this, EmulatorHost = this.emulatorDisplay.EmulatorHost };
-                debuggerWindow.Show();
-                debuggerWindow.UpdateDebugger();
-            }
         }
         private void EmulatorDisplay_CurrentProcessChanged(object sender, RoutedEventArgs e)
         {
@@ -294,12 +284,6 @@ namespace Aeon.Emulator.Launcher
                 performanceWindow = null;
             }
         }
-        private void ShowDebugger_Click(object sender, RoutedEventArgs e)
-        {
-            var debuggerWindow = new DebuggerWindow { Owner = this, EmulatorHost = this.emulatorDisplay.EmulatorHost };
-            debuggerWindow.Show();
-            debuggerWindow.UpdateDebugger();
-        }
         private void ShowPalette_Click(object sender, RoutedEventArgs e)
         {
             if (this.paletteWindow != null)
@@ -311,20 +295,6 @@ namespace Aeon.Emulator.Launcher
                 this.paletteWindow = new PaletteDialog { Owner = this, EmulatorDisplay = this.emulatorDisplay, Icon = this.Icon };
                 this.paletteWindow.Closed += PaletteWindow_Closed;
                 paletteWindow.Show();
-            }
-        }
-        private void OpenInstructionLog_Click(object sender, RoutedEventArgs e)
-        {
-            var openFile = new OpenFileDialog
-            {
-                Filter = "Log files (*.AeonLog)|*.AeonLog|All files (*.*)|*.*",
-                Title = "Open Log File..."
-            };
-
-            if (openFile.ShowDialog(this) == true)
-            {
-                var log = LogAccessor.Open(openFile.FileName);
-                InstructionLogWindow.ShowDialog(log);
             }
         }
         private void PaletteWindow_Closed(object sender, EventArgs e)

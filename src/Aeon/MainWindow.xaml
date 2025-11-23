@@ -51,10 +51,8 @@
                     <MenuItem Header="_Performance Window" Click="PerformanceWindow_Click" />
                 </MenuItem>
                 <MenuItem Header="_Debug">
-                    <MenuItem Name="showDebuggerMenuItem" Header="Debugger" Click="ShowDebugger_Click" Tag="__INTERNAL__" />
                     <MenuItem Name="colorPaletteMenuItem" Header="Color Palette" Click="ShowPalette_Click" />
                     <MenuItem Header="Dump Video RAM" Click="DumpVideoRam_Click" />
-                    <MenuItem Header="Open Instruction Log..." Click="OpenInstructionLog_Click" />
                 </MenuItem>
             </Menu>
             <ToolBarTray Name="toolBar" IsLocked="True" Visibility="{Binding IsChecked, ElementName=viewToolBarMenuItem, Converter={StaticResource booleanConverter}}">

@@ -12,7 +12,7 @@ namespace Aeon.Emulator;
 /// <summary>
 /// Emulates the functions of an x86 system.
 /// </summary>
-public sealed class VirtualMachine : IDisposable, IMachineCodeSource
+public sealed class VirtualMachine : IDisposable
 {
     private static bool instructionSetInitialized;
     private static readonly Lock globalInitLock = new();
@@ -332,11 +332,6 @@ public sealed class VirtualMachine : IDisposable, IMachineCodeSource
     /// <param name="count">Number of instructions to emulate.</param>
     public void Emulate(int count) => InstructionSet.Emulate(this, (uint)count);
     /// <summary>
-    /// Emulates the next instruction with logging enabled.
-    /// </summary>
-    /// <param name="log">Log to which instructions will be written.</param>
-    public void Emulate(InstructionLog log) => InstructionSet.Emulate(this, 1, log);
-    /// <summary>
     /// Presses a key on the emulated keyboard.
     /// </summary>
     /// <param name="key">Key to press.</param>
@@ -534,42 +529,6 @@ public sealed class VirtualMachine : IDisposable, IMachineCodeSource
     /// <param name="message">Message to write.</param>
     /// <param name="level">Level of the message.</param>
     public void WriteMessage(ReadOnlySpan<char> message, MessageLevel level = MessageLevel.Debug) => this.MessageLogged?.Invoke(this, new MessageEventArgs(level, new string(message)));
-    /// <summary>
-    /// Returns the logical base address for a given selector.
-    /// </summary>
-    /// <param name="selector">Selector whose base address is returned.</param>
-    /// <returns>Base address of the selector if it is valid; otherwise null.</returns>
-    uint? IMachineCodeSource.GetBaseAddress(ushort selector)
-    {
-        if ((this.Processor.CR0 & CR0.ProtectedModeEnable) == 0)
-            return (uint)selector << 4;
-        else if (selector != 0)
-        {
-            var descriptor = (SegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
-            if (descriptor.Base < this.PhysicalMemory.MemorySize)
-                return descriptor.Base;
-        }
-
-        return null;
-    }
-    /// <summary>
-    /// Reads 16 bytes of data from the machine code source at the specified address.
-    /// </summary>
-    /// <param name="buffer">Buffer into which data is read. Must be at least 16 bytes long.</param>
-    /// <param name="logicalAddress">Logical address in machine code source where instruction is read from.</param>
-    /// <returns>Number of bytes actually read. Should normally return 16.</returns>
-    int IMachineCodeSource.ReadInstruction(byte[] buffer, uint logicalAddress)
-    {
-        unsafe
-        {
-            fixed (byte* ptr = buffer)
-            {
-                this.PhysicalMemory.FetchInstruction(logicalAddress, ptr);
-            }
-        }
-
-        return 16;
-    }
 
     internal void CallInterruptHandler(byte interrupt)
     {

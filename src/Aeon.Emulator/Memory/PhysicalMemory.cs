@@ -13,7 +13,7 @@ namespace Aeon.Emulator;
 /// <summary>
 /// Contains the RAM of an emulated system.
 /// </summary>
-public sealed class PhysicalMemory : IMemorySource
+public sealed class PhysicalMemory
 {
     /// <summary>
     /// Size of the page address cache in dwords.
