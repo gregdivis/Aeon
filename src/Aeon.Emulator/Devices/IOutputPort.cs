@@ -10,7 +10,7 @@ public interface IOutputPort : IVirtualDevice
     /// <summary>
     /// Gets the output ports implemented by the device.
     /// </summary>
-    IEnumerable<int> OutputPorts { get; }
+    ReadOnlySpan<ushort> OutputPorts { get; }
 
     /// <summary>
     /// Writes a single byte to one of the device's supported ports.

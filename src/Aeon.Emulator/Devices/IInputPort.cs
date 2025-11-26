@@ -8,7 +8,7 @@ public interface IInputPort : IVirtualDevice
     /// <summary>
     /// Gets the input ports implemented by the device.
     /// </summary>
-    IEnumerable<int> InputPorts { get; }
+    ReadOnlySpan<ushort> InputPorts { get; }
 
     /// <summary>
     /// Reads a single byte from one of the device's supported ports.

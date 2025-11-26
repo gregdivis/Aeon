@@ -9,7 +9,7 @@ internal sealed class SystemServices : IInterruptHandler
 {
     private VirtualMachine? vm;
 
-    IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => new InterruptHandlerInfo[] { 0x11, 0x12, 0x15 };
+    IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => [0x11, 0x12, 0x15];
 
     void IInterruptHandler.HandleInterrupt(int interrupt)
     {

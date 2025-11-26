@@ -84,7 +84,7 @@ public sealed class InterruptTimer : IInputPort, IOutputPort
     /// </summary>
     public void Reset() => this.pitStopwatch.Restart();
 
-    IEnumerable<int> IInputPort.InputPorts => [0x40];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [0x40];
     byte IInputPort.ReadByte(int port)
     {
         if (!readLowByte)
@@ -100,7 +100,7 @@ public sealed class InterruptTimer : IInputPort, IOutputPort
         }
     }
     ushort IInputPort.ReadWord(int port) => (ushort)(pitStopwatch.ElapsedTicks / pitToStopwatchMultiplier);
-    IEnumerable<int> IOutputPort.OutputPorts => [0x40, 0x43];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x40, 0x43];
     void IOutputPort.WriteByte(int port, byte value)
     {
         if (port == 0x040)

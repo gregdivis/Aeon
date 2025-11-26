@@ -35,8 +35,8 @@ internal sealed class ExtendedMemoryManager : IMultiplexInterruptHandler, ICallb
     /// </summary>
     public int ExtendedMemorySize => this.vm.PhysicalMemory.MemorySize - (int)XmsBaseAddress;
 
-    IEnumerable<int> IInputPort.InputPorts => [0x92];
-    IEnumerable<int> IOutputPort.OutputPorts => [0x92];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [0x92];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x92];
     int IMultiplexInterruptHandler.Identifier => 0x43;
     bool ICallbackProvider.IsHookable => true;
     RealModeAddress ICallbackProvider.CallbackAddress

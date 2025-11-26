@@ -7,11 +7,15 @@
 		<Product>Aeon</Product>
 		<Description>Aeon x86 emulator core library</Description>
 		<Title>Aeon Core</Title>
-		<Version>0.7.1</Version>
+		<Version>0.8.0</Version>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<IsAotCompatible>true</IsAotCompatible>
 	</PropertyGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\AeonSourceGenerator\AeonSourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\AeonSourceGenerator\AeonSourceGenerator.csproj" OutputItemType="Analyzer">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
 	</ItemGroup>
 </Project>

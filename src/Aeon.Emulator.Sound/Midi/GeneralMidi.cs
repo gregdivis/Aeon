@@ -56,7 +56,7 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
         }
     }
 
-    IEnumerable<int> IInputPort.InputPorts => [DataPort, StatusPort];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [DataPort, StatusPort];
     byte IInputPort.ReadByte(int port)
     {
         switch (port)
@@ -76,7 +76,7 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
     }
     ushort IInputPort.ReadWord(int port) => ((IInputPort)this).ReadByte(port);
 
-    IEnumerable<int> IOutputPort.OutputPorts => [0x330, 0x331];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x330, 0x331];
     void IOutputPort.WriteByte(int port, byte value)
     {
         switch (port)
