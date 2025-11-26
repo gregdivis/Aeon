@@ -31,37 +31,10 @@ public sealed class DmaController : IInputPort, IOutputPort
     /// </summary>
     public ReadOnlyCollection<DmaChannel> Channels { get; }
 
-    private static ReadOnlySpan<byte> AllPorts => [0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE];
+    private static ReadOnlySpan<ushort> AllPorts => [0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE];
 
-    IEnumerable<int> IInputPort.InputPorts
-    {
-        get
-        {
-            var ports = new List<int>();
-
-            foreach (byte p in AllPorts)
-                ports.Add(p);
-
-            return ports;
-        }
-    }
-    IEnumerable<int> IOutputPort.OutputPorts
-    {
-        get
-        {
-            var ports = new List<int>();
-
-            foreach (byte p in AllPorts)
-                ports.Add(p);
-
-            ports.Add(ModeRegister8);
-            ports.Add(ModeRegister16);
-            ports.Add(MaskRegister8);
-            ports.Add(MaskRegister16);
-
-            return ports;
-        }
-    }
+    ReadOnlySpan<ushort> IInputPort.InputPorts => AllPorts;
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => (ushort[])[.. AllPorts, ModeRegister8, ModeRegister16, MaskRegister8, MaskRegister16];
 
     byte IInputPort.ReadByte(int port) => GetPortValue(port);
     ushort IInputPort.ReadWord(int port) => GetPortValue(port);

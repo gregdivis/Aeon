@@ -283,34 +283,28 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
         }
     }
 
-    IEnumerable<int> IInputPort.InputPorts
-    {
-        get
-        {
-            return new SortedSet<int>
-            {
-                Ports.AttributeAddress,
-                Ports.AttributeData,
-                Ports.CrtControllerAddress,
-                Ports.CrtControllerAddressAlt,
-                Ports.CrtControllerData,
-                Ports.CrtControllerDataAlt,
-                Ports.DacAddressReadMode,
-                Ports.DacAddressWriteMode,
-                Ports.DacData,
-                Ports.DacStateRead,
-                Ports.FeatureControlRead,
-                Ports.GraphicsControllerAddress,
-                Ports.GraphicsControllerData,
-                Ports.InputStatus0Read,
-                Ports.InputStatus1Read,
-                Ports.InputStatus1ReadAlt,
-                Ports.MiscOutputRead,
-                Ports.SequencerAddress,
-                Ports.SequencerData
-            };
-        }
-    }
+    ReadOnlySpan<ushort> IInputPort.InputPorts =>
+    [
+        Ports.AttributeAddress,
+        Ports.AttributeData,
+        Ports.CrtControllerAddress,
+        Ports.CrtControllerAddressAlt,
+        Ports.CrtControllerData,
+        Ports.CrtControllerDataAlt,
+        Ports.DacAddressReadMode,
+        Ports.DacAddressWriteMode,
+        Ports.DacData,
+        Ports.DacStateRead,
+        Ports.FeatureControlRead,
+        Ports.GraphicsControllerAddress,
+        Ports.GraphicsControllerData,
+        Ports.InputStatus0Read,
+        Ports.InputStatus1Read,
+        Ports.InputStatus1ReadAlt,
+        Ports.MiscOutputRead,
+        Ports.SequencerAddress,
+        Ports.SequencerData
+    ];
     public byte ReadByte(int port)
     {
         switch (port)
@@ -361,31 +355,25 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
     }
     public ushort ReadWord(int port) => this.ReadByte(port);
 
-    IEnumerable<int> IOutputPort.OutputPorts
-    {
-        get
-        {
-            return new SortedSet<int>
-            {
-                Ports.AttributeAddress,
-                Ports.AttributeData,
-                Ports.CrtControllerAddress,
-                Ports.CrtControllerAddressAlt,
-                Ports.CrtControllerData,
-                Ports.CrtControllerDataAlt,
-                Ports.DacAddressReadMode,
-                Ports.DacAddressWriteMode,
-                Ports.DacData,
-                Ports.FeatureControlWrite,
-                Ports.FeatureControlWriteAlt,
-                Ports.GraphicsControllerAddress,
-                Ports.GraphicsControllerData,
-                Ports.MiscOutputWrite,
-                Ports.SequencerAddress,
-                Ports.SequencerData
-            };
-        }
-    }
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts =>
+    [
+        Ports.AttributeAddress,
+        Ports.AttributeData,
+        Ports.CrtControllerAddress,
+        Ports.CrtControllerAddressAlt,
+        Ports.CrtControllerData,
+        Ports.CrtControllerDataAlt,
+        Ports.DacAddressReadMode,
+        Ports.DacAddressWriteMode,
+        Ports.DacData,
+        Ports.FeatureControlWrite,
+        Ports.FeatureControlWriteAlt,
+        Ports.GraphicsControllerAddress,
+        Ports.GraphicsControllerData,
+        Ports.MiscOutputWrite,
+        Ports.SequencerAddress,
+        Ports.SequencerData
+    ];
     public void WriteByte(int port, byte value)
     {
         switch (port)

@@ -99,6 +99,16 @@ public abstract class Presenter : IDisposable
             }
         }
     }
+    public void Update(Span<byte> destination)
+    {
+        unsafe
+        {
+            fixed (byte* ptr = destination)
+            {
+                this.Update((nint)ptr);
+            }
+        }
+    }
 
     public virtual MemoryBitmap? Dump() => null;
 

@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using Aeon.Emulator.DebugSupport;
 using Aeon.Emulator.Decoding;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
@@ -380,7 +379,7 @@ public sealed class VirtualMachine : IDisposable
             foreach (var interrupt in interruptHandler.HandledInterrupts)
             {
                 interruptHandlers[interrupt.Interrupt] = interruptHandler;
-                PhysicalMemory.AddInterruptHandler((byte)interrupt.Interrupt, interrupt.SavedRegisters, interrupt.IsHookable, interrupt.ClearInterruptFlag);
+                PhysicalMemory.AddInterruptHandler(interrupt.Interrupt, interrupt.SavedRegisters, interrupt.IsHookable, interrupt.ClearInterruptFlag);
             }
         }
 
@@ -389,8 +388,8 @@ public sealed class VirtualMachine : IDisposable
 
         if (virtualDevice is IInputPort inputPort)
         {
-            foreach (int port in inputPort.InputPorts)
-                inputPorts[(ushort)port] = inputPort;
+            foreach (ushort port in inputPort.InputPorts)
+                inputPorts[port] = inputPort;
         }
 
         if (virtualDevice is IOutputPort outputPort)

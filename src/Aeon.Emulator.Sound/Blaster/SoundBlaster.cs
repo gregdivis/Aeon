@@ -70,7 +70,7 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
     /// </summary>
     public int DMA { get; }
 
-    IEnumerable<int> IInputPort.InputPorts => [Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [Ports.DspReadData, Ports.DspWrite, Ports.DspReadBufferStatus, Ports.MixerAddress, Ports.MixerData];
     byte IInputPort.ReadByte(int port)
     {
         switch (port)
@@ -106,7 +106,7 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         return (ushort)value;
     }
 
-    IEnumerable<int> IOutputPort.OutputPorts => [Ports.DspReset, Ports.DspWrite, Ports.MixerAddress];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [Ports.DspReset, Ports.DspWrite, Ports.MixerAddress];
     void IOutputPort.WriteByte(int port, byte value)
     {
         switch (port)

@@ -391,7 +391,7 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
             HandleInt16h();
     }
 
-    IEnumerable<int> IInputPort.InputPorts => [0x60, 0x64];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [0x60, 0x64];
     byte IInputPort.ReadByte(int port)
     {
         return port switch
@@ -403,7 +403,7 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     }
     ushort IInputPort.ReadWord(int port) => throw new NotSupportedException();
 
-    IEnumerable<int> IOutputPort.OutputPorts => [0x60, 0x64];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x60, 0x64];
     void IOutputPort.WriteByte(int port, byte value)
     {
         if (port == 0x60)

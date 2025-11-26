@@ -14,6 +14,7 @@ public sealed class TextPresenter : Presenter
     private readonly unsafe ushort*[] pages;
     private readonly byte[] font;
     private readonly unsafe byte* videoRam;
+    private int cursorBlink;
 
     /// <summary>
     /// Initializes a new instance of the TextPresenter class.
@@ -37,6 +38,9 @@ public sealed class TextPresenter : Presenter
         this.font = videoMode.Font;
         this.fontHeight = (uint)videoMode.FontHeight;
     }
+
+#warning refactor
+    public VirtualMachine? VirtualMachine { get; init; }
 
     /// <summary>
     /// Updates the bitmap to match the current state of the video RAM.
@@ -63,6 +67,25 @@ public sealed class TextPresenter : Presenter
 
                     uint* dest = destPtr + y * this.consoleWidth * 8 * this.fontHeight + x * 8;
                     DrawCharacter(dest, textPlane[srcOffset], palette[internalPalette[attrPlane[srcOffset] & 0x0F]], palette[internalPalette[attrPlane[srcOffset] >> 4]]);
+                }
+            }
+
+            if (this.VirtualMachine is not null && this.VirtualMachine.IsCursorVisible)
+            {
+                this.cursorBlink = (this.cursorBlink + 1) % 16;
+                if (cursorBlink >= 8)
+                {
+                    uint stride = this.consoleWidth * 8;
+                    uint color = palette[internalPalette[7]];
+
+                    var cursorPos = this.VirtualMachine.CursorPosition;
+                    uint* dest = destPtr + ((uint)cursorPos.Y * stride * this.fontHeight) + ((uint)cursorPos.X * 8) + (stride * (this.fontHeight - 2));
+                    for (uint x = 0; x < 8; x++)
+                        dest[x] = color;
+
+                    dest += stride;
+                    for (uint x = 0; x < 8; x++)
+                        dest[x] = color;
                 }
             }
         }

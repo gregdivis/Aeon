@@ -24,8 +24,8 @@ public sealed class JoystickDevice : IInputPort, IOutputPort, IDisposable
     {
     }
 
-    public IEnumerable<int> InputPorts => [0x201];
-    public IEnumerable<int> OutputPorts => [0x201];
+    public ReadOnlySpan<ushort> InputPorts => [0x201];
+    public ReadOnlySpan<ushort> OutputPorts => [0x201];
 
     byte IInputPort.ReadByte(int port)
     {

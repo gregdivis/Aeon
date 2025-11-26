@@ -28,8 +28,8 @@ public sealed class InterruptController : IInputPort, IOutputPort, IDisposable
     {
     }
 
-    IEnumerable<int> IInputPort.InputPorts => [CommandPort1, MaskPort1, CommandPort2, MaskPort2];
-    IEnumerable<int> IOutputPort.OutputPorts => [CommandPort1, MaskPort1, CommandPort2, MaskPort2];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [CommandPort1, MaskPort1, CommandPort2, MaskPort2];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [CommandPort1, MaskPort1, CommandPort2, MaskPort2];
     /// <summary>
     /// Gets the base interrupt vector for IRQ 0-7.
     /// </summary>

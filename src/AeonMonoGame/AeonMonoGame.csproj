@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<PublishTrimmed Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishTrimmed>
+		<PublishAot Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishAot>
+		<PublishAot>true</PublishAot>
+	</PropertyGroup>
+	<PropertyGroup>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<ApplicationIcon>Aeon.ico</ApplicationIcon>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</PackageReference>
+		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4.1" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
+		<ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Resource Include="Aeon.ico" />
+	</ItemGroup>
+	<Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">
+		<Message Text="Restoring dotnet tools (this might take a while depending on your internet speed and should only happen upon building your project for the first time, or after upgrading MonoGame, or clearing your nuget cache)" Importance="High" />
+		<Exec Command="dotnet tool restore" />
+	</Target>
+</Project>

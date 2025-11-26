@@ -5,5 +5,6 @@
   <Project Path="Aeon.Emulator/Aeon.Emulator.csproj" />
   <Project Path="Aeon.Test/Aeon.Test.csproj" />
   <Project Path="Aeon/Aeon.csproj" />
+  <Project Path="AeonMonoGame/AeonMonoGame.csproj" Id="0f3e65f4-faf2-431d-b44e-7929f8d0c770" />
   <Project Path="AeonSourceGenerator/AeonSourceGenerator.csproj" />
 </Solution>

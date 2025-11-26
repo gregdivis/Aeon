@@ -35,8 +35,8 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IDisposable
         this.ticksPerSample = (int)(Stopwatch.Frequency / (double)this.outputSampleRate);
     }
 
-    IEnumerable<int> IInputPort.InputPorts => [0x61];
-    IEnumerable<int> IOutputPort.OutputPorts => [0x42, 0x61];
+    ReadOnlySpan<ushort> IInputPort.InputPorts => [0x61];
+    ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x42, 0x61];
 
     /// <summary>
     /// Gets the current frequency in Hz.

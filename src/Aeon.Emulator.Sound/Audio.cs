@@ -4,7 +4,7 @@ namespace Aeon.Emulator.Sound;
 
 internal static class Audio
 {
-    public static AudioPlayer CreatePlayer(bool useCallback = false) => WasapiAudioPlayer.Create(TimeSpan.FromSeconds(0.25), useCallback);
+    public static AudioPlayer CreatePlayer(bool useCallback = false) => AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.25), useCallback);
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer)
     {
@@ -12,7 +12,7 @@ internal static class Audio
 
         while (true)
         {
-            int count = (int)player.WriteData(writeBuffer);
+            int count = player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty)
                 return;
@@ -26,7 +26,7 @@ internal static class Audio
 
         while (true)
         {
-            int count = (int)player.WriteData(writeBuffer);
+            int count = player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty)
                 return;
@@ -40,7 +40,7 @@ internal static class Audio
 
         while (true)
         {
-            int count = (int)player.WriteData(writeBuffer);
+            int count = player.WriteData(writeBuffer);
             writeBuffer = writeBuffer[count..];
             if (writeBuffer.IsEmpty)
                 return;
