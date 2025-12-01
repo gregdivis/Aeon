@@ -60,7 +60,6 @@ public sealed partial class FlagState
 
     public EFlags Value
     {
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         get
         {
             var flags = EFlags.Reserved1;
@@ -94,7 +93,6 @@ public sealed partial class FlagState
                 flags |= EFlags.Virtual8086Mode;
             return flags;
         }
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         set
         {
             this.Carry = value.HasFlag(EFlags.Carry);

@@ -1,6 +1,6 @@
 ﻿namespace Aeon.Emulator.Keyboard;
 
-internal sealed class Functions
+internal static class Functions
 {
     public const byte ReadCharacter = 0x00;
     public const byte CheckForCharacter = 0x01;

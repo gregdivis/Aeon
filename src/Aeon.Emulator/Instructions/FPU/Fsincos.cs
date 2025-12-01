@@ -1,20 +1,15 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿namespace Aeon.Emulator.Instructions.FPU;
 
-namespace Aeon.Emulator.Instructions.FPU
+internal static class Fsincos
 {
-    internal static class Fsincos
+    [Opcode("D9FB", OperandSize = 16 | 32, AddressSize = 16 | 32)]
+    public static void SineCosine(VirtualMachine vm)
     {
-        [Opcode("D9FB", OperandSize = 16 | 32, AddressSize = 16 | 32)]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SineCosine(VirtualMachine vm)
-        {
-            ref var st0 = ref vm.Processor.FPU.ST0_Ref;
+        ref var st0 = ref vm.Processor.FPU.ST0_Ref;
 
-            var (sin, cos) = Math.SinCos(st0);
+        var (sin, cos) = Math.SinCos(st0);
 
-            st0 = sin;
-            vm.Processor.FPU.Push(cos);
-        }
+        st0 = sin;
+        vm.Processor.FPU.Push(cos);
     }
 }

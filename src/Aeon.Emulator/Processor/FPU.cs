@@ -225,7 +225,7 @@ public sealed class FPU
     /// Pushes a value onto the next ST register.
     /// </summary>
     /// <param name="value">Value to push.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Push(double value)
     {
         top = (top - 1u) & 0x7u;
@@ -246,7 +246,7 @@ public sealed class FPU
     /// <summary>
     /// Pops the value at ST0.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Pop()
     {
         unsafe
@@ -321,7 +321,7 @@ public sealed class FPU
     /// </summary>
     /// <param name="value">Value to round.</param>
     /// <returns>Rounded value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double Round(double value)
     {
         var mode = this.RoundingMode;

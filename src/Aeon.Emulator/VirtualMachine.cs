@@ -5,6 +5,7 @@ using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.Memory;
 using Aeon.Emulator.RuntimeExceptions;
+using Aeon.Emulator.Video.Rendering;
 
 namespace Aeon.Emulator;
 
@@ -225,6 +226,13 @@ public sealed class VirtualMachine : IDisposable
     internal bool BigStackPointer { get; set; }
 
     /// <summary>
+    /// Returns a <see cref="VideoRenderer"/> which can be used to generate RGBA bitmaps from the current video mode.
+    /// </summary>
+    /// <typeparam name="TPixelFormat">Output pixel format.</typeparam>
+    /// <returns><see cref="VideoRenderer"/> instance for the current display mode or <see langword="null"/> if no renderer is available or the state is invalid.</returns>
+    public VideoRenderer? GetRenderer<TPixelFormat>() where TPixelFormat : IOutputPixelFormat => VideoRenderer.Create<TPixelFormat>(this);
+
+    /// <summary>
     /// Loads an executable file into the virtual machine.
     /// </summary>
     /// <param name="image">Executable file to load.</param>
@@ -250,7 +258,6 @@ public sealed class VirtualMachine : IDisposable
     /// Raises a hardware/software interrupt on the virtual machine.
     /// </summary>
     /// <param name="interrupt">Interrupt to raise.</param>
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void RaiseInterrupt(byte interrupt)
     {
         if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))     // Real mode

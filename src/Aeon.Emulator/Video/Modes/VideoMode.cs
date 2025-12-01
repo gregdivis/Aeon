@@ -108,6 +108,16 @@ public abstract class VideoMode
     /// Gets a pointer to the emulated video RAM.
     /// </summary>
     public IntPtr VideoRam { get; }
+    public Span<byte> VideoRamSpan
+    {
+        get
+        {
+            unsafe
+            {
+                return new Span<byte>(this.VideoRam.ToPointer(), VideoHandler.TotalVramBytes);
+            }
+        }
+    }
     /// <summary>
     /// Gets the current EGA/VGA compatibility map.
     /// </summary>

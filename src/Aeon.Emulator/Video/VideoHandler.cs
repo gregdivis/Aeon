@@ -85,6 +85,17 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
     /// Gets a pointer to the emulated video RAM.
     /// </summary>
     public IntPtr VideoRam { get; }
+    public Span<byte> VideoRamSpan
+    {
+        get
+        {
+            unsafe
+            {
+                return new Span<byte>(this.VideoRam.ToPointer(), TotalVramBytes);
+            }
+        }
+    }
+
     /// <summary>
     /// Gets the virtual machine instance which owns the VideoHandler.
     /// </summary>

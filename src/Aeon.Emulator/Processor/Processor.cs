@@ -514,9 +514,9 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     public SegmentRegister SegmentOverride
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.overrides.Segment;
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => this.overrides.Segment = value;
     }
     /// <summary>
@@ -524,9 +524,9 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     public RepeatPrefix RepeatPrefix
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.overrides.Repeat;
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => this.overrides.Repeat = value;
     }
     /// <summary>
@@ -582,7 +582,7 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     internal uint SizeModeIndex
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => (uint)this.SizeOverride ^ this.GlobalSize;
     }
 
@@ -591,7 +591,7 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     internal bool InPrefix
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.PrefixCount != 0;
     }
     #endregion
@@ -625,7 +625,7 @@ public sealed class Processor : IRegisterContainer
     /// <remarks>
     /// This method must be called explicitly by instructions with no operands.
     /// </remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void InstructionEpilog() => this.overrides = default;
 
     internal byte[] GetCurrentState()
@@ -665,7 +665,7 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     internal byte SizeOverride
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.overrides.Size;
     }
     /// <summary>
@@ -678,13 +678,13 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     internal uint PrefixCount
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.overrides.Count;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void IncrementPrefixCount() => this.overrides.IncrementCount();
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetSizeOverrideFlag(byte flag) => this.overrides.SetSizeFlag(flag);
 
     /// <summary>
@@ -716,9 +716,9 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     internal bool TemporaryInterruptMask
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.overrides.InterruptMask;
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => this.overrides.InterruptMask = value;
     }
     #endregion
@@ -749,16 +749,16 @@ public sealed class Processor : IRegisterContainer
 
         public RepeatPrefix Repeat
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             readonly get => (RepeatPrefix)(this.repeatAndInterruptMask & 0b11);
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => this.repeatAndInterruptMask = (byte)((this.repeatAndInterruptMask & 0b100u) | (uint)value);
         }
         public bool InterruptMask
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             readonly get => (this.repeatAndInterruptMask & 0b100) == 0b100;
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
                 if (value)
@@ -768,9 +768,9 @@ public sealed class Processor : IRegisterContainer
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementCount() => this.Count++;
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetSizeFlag(byte flag) => this.Size |= flag;
     }
 }

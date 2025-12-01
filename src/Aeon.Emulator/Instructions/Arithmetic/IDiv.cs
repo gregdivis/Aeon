@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Aeon.Emulator.Instructions.Arithmetic;
+﻿namespace Aeon.Emulator.Instructions.Arithmetic;
 
 internal static class IDiv
 {

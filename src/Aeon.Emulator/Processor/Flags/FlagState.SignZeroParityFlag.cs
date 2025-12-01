@@ -57,21 +57,18 @@ partial class FlagState
             this.result = result;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private bool CalculateSign()
         {
             bool value = (this.result & (1 << 31)) != 0;
             this.overrides.Sign = value;
             return value;
         }
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private bool CalculateZero()
         {
             bool value = this.result == 0;
             this.overrides.Zero = value;
             return value;
         }
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private bool CalculateParity()
         {
             bool value = (BitOperations.PopCount(this.result & 0xFFu) & 1) == 0;
