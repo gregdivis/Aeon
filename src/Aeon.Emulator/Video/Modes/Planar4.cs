@@ -46,7 +46,6 @@ internal abstract class Planar4 : VideoMode
             }
         }
     }
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     internal override void SetVramByte(uint offset, byte value)
     {
         offset %= 65536u;

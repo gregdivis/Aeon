@@ -225,7 +225,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="segment">Segment whose descriptor is returned.</param>
     /// <returns>Descriptor of the specified segment.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Descriptor GetDescriptor(uint segment)
     {
         uint selectorIndex = segment >> 3;
@@ -258,7 +257,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="interrupt">Interrupt to get handler address for.</param>
     /// <returns>Segment and offset of the interrupt handler.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public RealModeAddress GetRealModeInterruptAddress(byte interrupt)
     {
         ushort offset = GetUInt16(0, (ushort)(interrupt * 4));
@@ -270,13 +268,11 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="interrupt">Interrupt whose descriptor is returned.</param>
     /// <returns>Interrupt descriptor for the specified interrupt.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public Descriptor GetInterruptDescriptor(byte interrupt)
     {
         unsafe
         {
             ulong value = GetUInt64(this.IDTAddress + (interrupt * 8u));
-            //ulong value = *(ulong*)(this.RawView + this.IDTAddress + (interrupt * 8u));
             var descriptor = (Descriptor*)&value;
             return *descriptor;
         }
@@ -388,7 +384,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of byte to read.</param>
     /// <returns>Byte at the specified address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public byte GetByte(uint address)
     {
         return this.PagingEnabled ? this.PagedRead<byte>(address) : this.PhysicalRead<byte>(address);
@@ -406,7 +401,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of byte to write.</param>
     /// <param name="value">Value to write to the specified address.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void SetByte(uint address, byte value)
     {
         if (this.PagingEnabled)
@@ -421,14 +415,12 @@ public sealed class PhysicalMemory
     /// <param name="segment">Segment of unsigned 16-bit integer to read.</param>
     /// <param name="offset">Offset of unsigned 16-bit integer to read.</param>
     /// <returns>Unsigned 16-bit integer at the specified segment and offset.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public ushort GetUInt16(uint segment, uint offset) => this.RealModeRead<ushort>(segment, offset);
     /// <summary>
     /// Reads an unsigned 16-bit integer from emulated memory.
     /// </summary>
     /// <param name="address">Physical address of unsigned 16-bit integer to read.</param>
     /// <returns>Unsigned 16-bit integer at the specified address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public ushort GetUInt16(uint address)
     {
         return this.PagingEnabled ? this.PagedRead<ushort>(address) : this.PhysicalRead<ushort>(address);
@@ -446,7 +438,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of unsigned 16-bit integer to write.</param>
     /// <param name="value">Value to write to the specified address.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void SetUInt16(uint address, ushort value)
     {
         if (this.PagingEnabled)
@@ -467,7 +458,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of unsigned 32-bit integer to read.</param>
     /// <returns>Unsigned 32-bit integer at the specified address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public uint GetUInt32(uint address)
     {
         return this.PagingEnabled ? this.PagedRead<uint>(address) : this.PhysicalRead<uint>(address);
@@ -485,7 +475,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of unsigned 32-bit integer to write.</param>
     /// <param name="value">Value to write to the specified address.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void SetUInt32(uint address, uint value)
     {
         if (this.PagingEnabled)
@@ -506,7 +495,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of unsigned 64-bit integer to read.</param>
     /// <returns>Unsigned 64-bit integer at the specified address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public ulong GetUInt64(uint address)
     {
         return this.PagingEnabled ? this.PagedRead<ulong>(address) : this.PhysicalRead<ulong>(address);
@@ -524,7 +512,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Physical address of unsigned 64-bit integer to write.</param>
     /// <param name="value">Value to write to the specified address.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void SetUInt64(uint address, ulong value)
     {
         if (this.PagingEnabled)
@@ -538,7 +525,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Address of value to read.</param>
     /// <returns>32-bit System.Single value read from the specified address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public float GetReal32(uint address)
     {
         return this.PagingEnabled ? this.PagedRead<float>(address) : this.PhysicalRead<float>(address);
@@ -549,7 +535,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Address where value will be written.</param>
     /// <param name="value">32-bit System.Single value to write at the specified address.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void SetReal32(uint address, float value)
     {
         if (this.PagingEnabled)
@@ -563,7 +548,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Address of value to read.</param>
     /// <returns>64-bit System.Double value read from the specified address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public double GetReal64(uint address)
     {
         return this.PagingEnabled ? this.PagedRead<double>(address) : this.PhysicalRead<double>(address);
@@ -574,7 +558,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Address where value will be written.</param>
     /// <param name="value">64-bit System.Double value to write at the specified address.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public void SetReal64(uint address, double value)
     {
         if (this.PagingEnabled)
@@ -605,7 +588,9 @@ public sealed class PhysicalMemory
             this.PhysicalWrite(address, value);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TValue Get<TValue>(uint address) where TValue : unmanaged => this.PagingEnabled ? this.PagedRead<TValue>(address) : this.PhysicalRead<TValue>(address);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Set<TValue>(uint address, TValue value) where TValue : unmanaged
     {
         if (this.PagingEnabled)
@@ -624,7 +609,7 @@ public sealed class PhysicalMemory
     public string GetString(uint segment, uint offset, int length)
     {
         var ptr = GetPointer(segment, offset);
-        return System.Runtime.InteropServices.Marshal.PtrToStringAnsi(ptr, length);
+        return Marshal.PtrToStringAnsi(ptr, length);
     }
     /// <summary>
     /// Reads an ANSI string from emulated memory with a maximum length and end sentinel character.
@@ -831,7 +816,6 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="segment">Segment whose descriptor is written.</param>
     /// <param name="descriptor">Descriptor to write.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     internal void SetDescriptor(uint segment, Descriptor descriptor)
     {
         uint selectorIndex = segment >> 3;
@@ -1001,7 +985,7 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="address">Address where bytes will be read from.</param>
     /// <param name="buffer">Buffer into which bytes will be written.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal unsafe void FetchInstruction(uint address, byte* buffer)
     {
         if (this.PagingEnabled)
@@ -1062,7 +1046,6 @@ public sealed class PhysicalMemory
         }
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
     private unsafe void PagedFetchInstruction(uint address, byte* buffer)
     {
         uint fullPagedAddress = GetPagedPhysicalAddress(address, PageFaultCause.InstructionFetch);
@@ -1083,7 +1066,7 @@ public sealed class PhysicalMemory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void RealModeWrite<T>(uint segment, uint offset, T value) where T : unmanaged => this.PhysicalWrite(this.GetRealModePhysicalAddress(segment, offset), value);
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private T PhysicalRead<T>(uint address, bool mask = true, bool checkVram = true) where T : unmanaged
     {
         uint fullAddress = mask ? (address & this.addressMask) : address;
@@ -1117,7 +1100,7 @@ public sealed class PhysicalMemory
             }
         }
     }
-    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PhysicalWrite<T>(uint address, T value, bool mask = true) where T : unmanaged
     {
         uint fullAddress = mask ? (address & this.addressMask) : address;
@@ -1143,8 +1126,6 @@ public sealed class PhysicalMemory
         }
     }
 
-    [SkipLocalsInit]
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private T PagedRead<T>(uint logicalAddress, PageFaultCause mode = PageFaultCause.Read, bool checkVram = true) where T : unmanaged
     {
         uint physicalAddress = GetPagedPhysicalAddress(logicalAddress, mode);
@@ -1165,7 +1146,6 @@ public sealed class PhysicalMemory
             }
         }
     }
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private void PagedWrite<T>(uint logicalAddress, T value) where T : unmanaged
     {
         uint physicalAddress = GetPagedPhysicalAddress(logicalAddress, PageFaultCause.Write);
@@ -1191,7 +1171,7 @@ public sealed class PhysicalMemory
     /// <param name="linearAddress">Paged linear address.</param>
     /// <param name="operation">Type of operation attempted in case of a page fault.</param>
     /// <returns>Physical address of the supplied linear address.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint GetPagedPhysicalAddress(uint linearAddress, PageFaultCause operation)
     {
         uint pageCacheIndex = linearAddress >> 12;
@@ -1219,7 +1199,6 @@ public sealed class PhysicalMemory
     /// <param name="linearAddress">Paged linear address.</param>
     /// <param name="operation">Type of operation attempted in case of a page fault.</param>
     /// <returns>Physical address of the page.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
     private uint GetPage(uint linearAddress, PageFaultCause operation)
     {
         uint page;
@@ -1251,7 +1230,7 @@ public sealed class PhysicalMemory
     /// <param name="segment">Memory segment or selector.</param>
     /// <param name="offset">Offset into segment.</param>
     /// <returns>Physical address of the specified segment and offset.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint GetRealModePhysicalAddress(uint segment, uint offset) => ((segment << 4) + offset) & this.addressMask;
     /// <summary>
     /// Provides access to emulated memory for a safe context.

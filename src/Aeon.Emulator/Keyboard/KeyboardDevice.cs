@@ -24,17 +24,12 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     private KeyModifiers modifiers;
     private bool leftShiftDown;
     private bool rightShiftDown;
-    private readonly SortedList<Keys, bool> pressedKeys = [];
+    private readonly SortedSet<Keys> pressedKeys = [];
+    private readonly Lock pressedKeysLock = new();
     private int expectedInputByteCount;
     private volatile Keys lastKey;
     private Timer autoRepeatTimer;
     private readonly Lock autoRepeatTimerLock = new();
-
-    public KeyboardDevice()
-    {
-        foreach (Keys k in Enum.GetValues<Keys>())
-            this.pressedKeys[k] = false;
-    }
 
     /// <summary>
     /// Gets a value indicating whether the type-ahead buffer has at least one character in it.
@@ -56,11 +51,10 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     /// <param name="key">Key pressed on the keyboard.</param>
     public void PressKey(Keys key)
     {
-        lock (this.pressedKeys)
+        lock (this.pressedKeysLock)
         {
-            if (!this.pressedKeys[key])
+            if (this.pressedKeys.Add(key))
             {
-                this.pressedKeys[key] = true;
                 this.HardwareEnqueue(key, true);
                 this.lastKey = key;
                 lock (this.autoRepeatTimerLock)
@@ -79,14 +73,11 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     /// <param name="key">Key released on the keyboard.</param>
     public void ReleaseKey(Keys key)
     {
-        lock (this.pressedKeys)
+        lock (this.pressedKeysLock)
         {
             this.lastKey = default;
-            if (this.pressedKeys[key])
-            {
-                this.pressedKeys[key] = false;
+            if (this.pressedKeys.Remove(key))
                 this.HardwareEnqueue(key, false);
-            }
         }
     }
     /// <summary>
@@ -367,11 +358,11 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     }
     private void AutoRepeatTrigger(object obj)
     {
-        lock (this.pressedKeys)
+        lock (this.pressedKeysLock)
         {
             var key = this.lastKey;
 
-            if (this.pressedKeys[key])
+            if (this.pressedKeys.Contains(key))
             {
                 this.HardwareEnqueue(key, true);
                 lock (this.autoRepeatTimerLock)

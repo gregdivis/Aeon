@@ -9,7 +9,6 @@ internal sealed class Scale3x(int width, int height) : Scaler(width, height)
     public override int TargetWidth => this.SourceWidth * 3;
     public override int TargetHeight => this.SourceHeight * 3;
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     protected override void Scale(IntPtr source, IntPtr destination)
     {
         unsafe
@@ -55,7 +54,6 @@ internal sealed class Scale3x(int width, int height) : Scaler(width, height)
 
         }
     }
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     protected override void VectorScale(IntPtr source, IntPtr destination)
     {
         unsafe

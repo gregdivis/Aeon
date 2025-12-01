@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using TinyAudio;
+﻿using TinyAudio;
 using Ymf262Emu;
 
 namespace Aeon.Emulator.Sound.FM;
@@ -129,7 +128,6 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private async Task GenerateWaveformsAsync()
     {
         var buffer = new float[1024];

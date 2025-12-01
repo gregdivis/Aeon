@@ -5,35 +5,21 @@
 /// </summary>
 internal sealed class AttributeController
 {
-    private readonly unsafe byte* internalPalette;
-    private readonly UnsafeBuffer<byte> internalPaletteBuffer = new(16);
+    private readonly byte[] internalPalette = new byte[16];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AttributeController"/> class.
     /// </summary>
     public AttributeController()
     {
-        unsafe
-        {
-            this.internalPalette = this.internalPaletteBuffer.ToPointer();
-            for (int i = 0; i < this.InternalPalette.Length; i++)
-                this.internalPalette[i] = (byte)i;
-        }
+        for (int i = 0; i < this.internalPalette.Length; i++)
+            this.internalPalette[i] = (byte)i;
     }
 
     /// <summary>
     /// Gets the internal palette.
     /// </summary>
-    public Span<byte> InternalPalette
-    {
-        get
-        {
-            unsafe
-            {
-                return new Span<byte>(this.internalPalette, 16);
-            }
-        }
-    }
+    public Span<byte> InternalPalette => this.internalPalette;
     /// <summary>
     /// Gets or sets the Attribute Mode Control register.
     /// </summary>

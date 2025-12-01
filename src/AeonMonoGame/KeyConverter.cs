@@ -1,9 +1,8 @@
 ﻿using System.Collections.Frozen;
-using System.Collections.Generic;
 using A = Aeon.Emulator.Keys;
 using M = Microsoft.Xna.Framework.Input.Keys;
 
-namespace AeonMonoGame;
+namespace Aeon.Emulator.Launcher;
 
 internal static class KeyConverter
 {
@@ -56,7 +55,7 @@ internal static class KeyConverter
         [M.OemQuotes] = A.Apostrophe,
         [M.OemTilde] = A.GraveApostrophe,
         [M.LeftShift] = A.LeftShift,
-        [M.OemBackslash] = A.Backslash,
+        [M.OemPipe] = A.Backslash,
         [M.Z] = A.Z,
         [M.X] = A.X,
         [M.C] = A.C,

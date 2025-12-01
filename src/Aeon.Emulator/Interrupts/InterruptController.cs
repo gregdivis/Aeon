@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace Aeon.Emulator;
+﻿namespace Aeon.Emulator;
 
 /// <summary>
 /// Emulates the Intel 8259 programmable interrupt controller.
@@ -43,7 +41,6 @@ public sealed class InterruptController : IInputPort, IOutputPort, IDisposable
     /// Signals a hardware interrupt request.
     /// </summary>
     /// <param name="irq">Interrupt request from 0 to 15.</param>
-    [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
     public void RaiseHardwareInterrupt(int irq)
     {
         if (this.state1 != State.Ready && this.state2 != State.Ready)

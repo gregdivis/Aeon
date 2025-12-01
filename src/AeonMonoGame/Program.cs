@@ -1,2 +1,4 @@
-﻿using var game = new AeonMonoGame.Game1();
+﻿using Aeon.Emulator.Launcher;
+
+using var game = new AeonGame();
 game.Run();

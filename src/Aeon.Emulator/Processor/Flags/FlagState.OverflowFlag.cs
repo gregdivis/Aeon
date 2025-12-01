@@ -47,7 +47,7 @@ partial class FlagState
             this.currentValue = null;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private bool CalculateValue()
         {
             int signed;

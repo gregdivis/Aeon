@@ -5,11 +5,17 @@
 		<PublishTrimmed Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishTrimmed>
 		<PublishAot Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishAot>
 		<PublishAot>true</PublishAot>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>Aeon.Emulator.Launcher</RootNamespace>
 	</PropertyGroup>
 	<PropertyGroup>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<ApplicationIcon>Aeon.ico</ApplicationIcon>
 	</PropertyGroup>
+	<ItemGroup>
+	  <EmbeddedResource Include="Aeon.bmp" LogicalName="Icon.bmp" />
+	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4.1">
 			<PrivateAssets>all</PrivateAssets>

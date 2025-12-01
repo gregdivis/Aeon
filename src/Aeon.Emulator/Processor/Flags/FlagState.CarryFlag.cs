@@ -54,7 +54,7 @@ partial class FlagState
             this.overrides = default;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private bool CalculateCarryValue()
         {
             int signed;
@@ -119,7 +119,7 @@ partial class FlagState
             return value;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private bool CalculateAuxValue()
         {
             bool value = this.operation switch
