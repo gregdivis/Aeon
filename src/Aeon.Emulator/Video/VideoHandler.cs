@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.Memory;
 
@@ -766,10 +768,16 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
     /// Returns the current value of the input status 1 register.
     /// </summary>
     /// <returns>Current value of the input status 1 register.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static byte GetInputStatus1Value()
     {
-        uint value = InterruptTimer.IsInRealtimeInterval(VerticalBlankingTime, RefreshRate) ? 0x09u : 0x00u;
-        if (InterruptTimer.IsInRealtimeInterval(HorizontalBlankingTime, HorizontalPeriod))
+        uint value = 0;
+
+        long ticks = Stopwatch.GetTimestamp();
+        if ((ticks % RefreshRate) < VerticalBlankingTime)
+            value = 0x09u;
+
+        if ((ticks % HorizontalPeriod) < HorizontalBlankingTime)
             value |= 0x01u;
 
         return (byte)value;
