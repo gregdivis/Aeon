@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Aeon.Emulator.Decoding;
 using Aeon.Emulator.Dos.Programs;
 using Aeon.Emulator.Dos.VirtualFileSystem;
@@ -44,6 +45,8 @@ public sealed class VirtualMachine : IDisposable
     private readonly List<DmaChannel> dmaDeviceChannels = [];
     private readonly SortedList<uint, ICallbackProvider> callbackProviders = [];
     private readonly MultiplexInterruptHandler multiplexHandler;
+    private SparseArray<ushort, IInputPort>? inputPorts2;
+    private SparseArray<ushort, IOutputPort>? outputPorts2;
     private bool disposed;
     private bool showMouse;
     private bool showCursor = true;
@@ -436,6 +439,9 @@ public sealed class VirtualMachine : IDisposable
         if (comspec != null)
             this.EnvironmentVariables["COMSPEC"] = comspec.ToString();
 
+#warning improve initialization
+        this.inputPorts2 = new SparseArray<ushort, IInputPort>(this.inputPorts);
+        this.outputPorts2 = new SparseArray<ushort, IOutputPort>(this.outputPorts);
     }
     /// <summary>
     /// Returns an object containing information about current conventional memory usage.
@@ -538,7 +544,8 @@ public sealed class VirtualMachine : IDisposable
 
     internal void CallInterruptHandler(byte interrupt)
     {
-        var handler = this.interruptHandlers[interrupt];
+        // ensure we avoid a bounds check here as the interruptHandlers array will always contain 256 items
+        var handler = Unsafe.Add(ref MemoryMarshal.GetReference(this.interruptHandlers), interrupt);
         if (handler != null)
             handler.HandleInterrupt(interrupt);
         else
@@ -714,28 +721,28 @@ public sealed class VirtualMachine : IDisposable
     }
     internal byte ReadPortByte(ushort port)
     {
-        if (inputPorts.TryGetValue(port, out var inputPort))
+        if (this.inputPorts2!.TryGetValue(port, out var inputPort))
             return inputPort.ReadByte(port);
         else
             return this.defaultPortHandler.ReadByte(port);
     }
     internal ushort ReadPortWord(ushort port)
     {
-        if (inputPorts.TryGetValue(port, out var inputPort))
+        if (this.inputPorts2!.TryGetValue(port, out var inputPort))
             return inputPort.ReadWord(port);
         else
             return 0xFFFF;
     }
     internal void WritePortByte(ushort port, byte value)
     {
-        if (!outputPorts.TryGetValue(port, out var outputPort))
+        if (!this.outputPorts2!.TryGetValue(port, out var outputPort))
             defaultPortHandler.WriteByte(port, value);
         else
             outputPort.WriteByte(port, value);
     }
     internal void WritePortWord(ushort port, ushort value)
     {
-        if (!outputPorts.TryGetValue(port, out var outputPort))
+        if (!this.outputPorts2!.TryGetValue(port, out var outputPort))
             defaultPortHandler.WriteWord(port, value);
         else
             outputPort.WriteWord(port, value);
@@ -782,6 +789,7 @@ public sealed class VirtualMachine : IDisposable
             throw;
         }
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void UpdateSegment(SegmentIndex segment)
     {
         unsafe
