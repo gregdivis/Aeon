@@ -254,6 +254,10 @@ internal sealed class DosHandler : IInterruptHandler, IDisposable
                     case Functions.FileAttributes_GetFileAttributes:
                         fileControl.GetFileAttributes();
                         break;
+                        
+                    case Functions.FileAttributes_SetFileAttributes:
+                        fileControl.SetFileAttributes();
+                        break;
 
                     default:
                         throw new NotImplementedException($"DOS function 43{vm.Processor.AL:X2}h not implemented.");

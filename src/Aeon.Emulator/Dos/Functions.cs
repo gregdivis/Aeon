@@ -34,6 +34,7 @@ internal static class Functions
     public const byte SetInterruptVector = 0x25;
     public const byte FileAttributes = 0x43;
     public const byte FileAttributes_GetFileAttributes = 0x00;
+    public const byte FileAttributes_SetFileAttributes = 0x01;
     public const byte SetDiskTransferAreaAddress = 0x1A;
     public const byte GetDiskTransferAreaAddress = 0x2F;
     public const byte FindFirstFile = 0x4E;
