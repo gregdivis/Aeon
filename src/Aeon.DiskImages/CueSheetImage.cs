@@ -212,21 +212,15 @@ public sealed partial class CueSheetImage : IMappedDrive, IAudioCD, IRawSectorRe
         this.disc!.ReadRaw(startingSector, sectorsToRead, buffer);
     }
 
-    private sealed class Mode1Stream : Stream
+    private sealed class Mode1Stream(Stream baseStream, int sectors) : Stream
     {
         private const int DataSectorSize = 2048;
         private const int HeaderSize = 16;
         private const long StartOffset = 16 * RawSectorSize;
-        private readonly Stream baseStream;
-        private readonly int sectors;
+        private readonly Stream baseStream = baseStream;
+        private readonly int sectors = sectors;
         private int currentSector;
         private int currentOffset;
-
-        public Mode1Stream(Stream baseStream, int sectors)
-        {
-            this.baseStream = baseStream;
-            this.sectors = sectors;
-        }
 
         public override bool CanRead => true;
         public override bool CanSeek => true;
@@ -320,7 +314,7 @@ public sealed partial class CueSheetImage : IMappedDrive, IAudioCD, IRawSectorRe
     {
         private const double BufferSeconds = 0.1;
         private const int SourceRate = 44100;
-        private readonly AudioPlayer audioPlayer = WasapiAudioPlayer.Create(TimeSpan.FromSeconds(BufferSeconds));
+        private readonly AudioPlayer audioPlayer = AudioPlayer.CreateDefault(TimeSpan.FromSeconds(BufferSeconds), false);
         private readonly Stream audioStream;
         private readonly SemaphoreSlim syncLock = new(1, 1);
         private readonly Stopwatch playbackTimer = new();

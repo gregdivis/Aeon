@@ -1,13 +1,17 @@
-﻿namespace Aeon.Emulator.Instructions;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions;
 
 internal static class Lds
 {
     [Opcode("C5/r rw,mptr", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadDS(VirtualMachine vm, out ushort operand1, uint operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.DS, Intrinsics.HighWord(operand2));
         operand1 = Intrinsics.LowWord(operand2);
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(LoadDS), AddressSize = 16 | 32)]
     public static void LoadDS32(VirtualMachine vm, out uint operand1, ulong operand2)
     {
@@ -19,12 +23,14 @@ internal static class Lds
 internal static class Les
 {
     [Opcode("C4/r rw,mptr", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadES(VirtualMachine vm, out ushort operand1, uint operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.ES, Intrinsics.HighWord(operand2));
         operand1 = Intrinsics.LowWord(operand2);
     }
     [Alternate(nameof(LoadES), AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadES32(VirtualMachine vm, out uint operand1, ulong operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.ES, (ushort)Intrinsics.HighDWord(operand2));
@@ -35,12 +41,14 @@ internal static class Les
 internal static class Lss
 {
     [Opcode("0FB2/r rw,mptr", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadSS(VirtualMachine vm, out ushort operand1, uint operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.SS, Intrinsics.HighWord(operand2));
         operand1 = Intrinsics.LowWord(operand2);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(LoadSS), AddressSize = 16 | 32)]
     public static void LoadSS32(VirtualMachine vm, out uint operand1, ulong operand2)
     {
@@ -52,6 +60,7 @@ internal static class Lss
 internal static class Lfs
 {
     [Opcode("0FB4/r rw,mptr", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadFS(VirtualMachine vm, out ushort operand1, uint operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.FS, Intrinsics.HighWord(operand2));
@@ -59,6 +68,7 @@ internal static class Lfs
     }
 
     [Alternate(nameof(LoadFS), AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadFS32(VirtualMachine vm, out uint operand1, ulong operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.FS, (ushort)Intrinsics.HighDWord(operand2));
@@ -69,6 +79,7 @@ internal static class Lfs
 internal static class Lgs
 {
     [Opcode("0FB5/r rw,mptr", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadGS(VirtualMachine vm, out ushort operand1, uint operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.GS, Intrinsics.HighWord(operand2));
@@ -76,6 +87,7 @@ internal static class Lgs
     }
 
     [Alternate(nameof(LoadGS), AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadGS32(VirtualMachine vm, out uint operand1, ulong operand2)
     {
         vm.WriteSegmentRegister(SegmentIndex.GS, (ushort)Intrinsics.HighDWord(operand2));
@@ -85,24 +97,28 @@ internal static class Lgs
 
 internal static class Lea
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("8D/r rw,addr:rmw", OperandSize = 16, AddressSize = 16)]
     public static void Lea16_16(VirtualMachine vm, out ushort dest, ushort effectiveAddress)
     {
         dest = effectiveAddress;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Lea16_16), OperandSize = 32, AddressSize = 16)]
     public static void Lea32_16(VirtualMachine vm, out uint dest, ushort effectiveAddress)
     {
         dest = effectiveAddress;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Lea16_16), OperandSize = 16, AddressSize = 32)]
     public static void Lea16_32(VirtualMachine vm, out ushort dest, uint effectiveAddress)
     {
         dest = (ushort)effectiveAddress;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Lea16_16), OperandSize = 32, AddressSize = 32)]
     public static void Lea32_32(VirtualMachine vm, out uint dest, uint effectiveAddress)
     {

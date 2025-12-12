@@ -1,9 +1,12 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class SaveRestore
 {
     //http://www.mathemainzel.info/files/x86asmref.html
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DD/6 fulladdr:rmw", Name = "fnsave", OperandSize = 16 | 32, AddressSize = 16)]
     public static void Save(VirtualMachine vm, uint offset)
     {
@@ -28,6 +31,7 @@ internal static class SaveRestore
         fpu.Reset();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Save), AddressSize = 32, OperandSize = 16 | 32)]
     public static void Save32(VirtualMachine vm, uint offset)
     {
@@ -52,6 +56,7 @@ internal static class SaveRestore
         fpu.Reset();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DD/4 fulladdr:rmw", Name = "frstor", OperandSize = 16 | 32, AddressSize = 16)]
     public static void Restore(VirtualMachine vm, uint offset)
     {
@@ -68,6 +73,7 @@ internal static class SaveRestore
                 fpu.SetRegisterValue(i, (double)*(Real10*)&buffer[(i * 10) + 14]);
         }
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Restore), OperandSize = 16 | 32, AddressSize = 32)]
     public static void Restore32(VirtualMachine vm, uint offset)
     {

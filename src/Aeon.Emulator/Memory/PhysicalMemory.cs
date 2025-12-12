@@ -233,24 +233,15 @@ public sealed class PhysicalMemory
         // Check for local descriptor.
         if ((segment & 4) != 0)
         {
-            unsafe
-            {
-                var ldtDescriptor = (SegmentDescriptor)GetDescriptor(this.LDTSelector & 0xFFF8u);
-                baseAddress = ldtDescriptor.Base;
-            }
+            var ldtDescriptor = (SegmentDescriptor)GetDescriptor(this.LDTSelector & 0xFFF8u);
+            baseAddress = ldtDescriptor.Base;
         }
         else
         {
             baseAddress = this.GDTAddress;
         }
 
-        unsafe
-        {
-            ulong value = GetUInt64(baseAddress + (selectorIndex * 8u));
-            //ulong value = *(ulong*)(this.RawView + baseAddress + (selectorIndex * 8u));
-            Descriptor* descriptor = (Descriptor*)&value;
-            return *descriptor;
-        }
+        return Unsafe.BitCast<ulong, Descriptor>(GetUInt64(baseAddress + (selectorIndex * 8u)));
     }
     /// <summary>
     /// Gets the address of an interrupt handler.

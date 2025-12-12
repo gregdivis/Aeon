@@ -361,8 +361,8 @@ internal sealed class FileControl : IDisposable
                 vm.Processor.Flags.Carry = false;
                 break;
 
-            default:
-                throw new InvalidOperationException();
+            //default:
+            //    throw new InvalidOperationException();
         }
 
         vm.Processor.Flags.Carry = false;

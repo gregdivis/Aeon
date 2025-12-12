@@ -4,20 +4,18 @@ using System.Runtime.InteropServices;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Memory;
 
-#nullable disable
-
 namespace Aeon.Emulator.Dos.CD;
 
 /// <summary>
 /// Emulates MSCDEX functions.
 /// </summary>
-internal sealed class Mscdex : IMultiplexInterruptHandler
+internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
 {
     private const ushort Status_Done = 1 << 8;
     private const int LeadInSectors = 200;
 
-    private VirtualMachine vm;
-    private ReservedBlock deviceHeader;
+    private readonly VirtualMachine vm = vm;
+    private ReservedBlock? deviceHeader;
     private readonly List<IAudioCD> paused = [];
 
     int IMultiplexInterruptHandler.Identifier => 0x15;
@@ -70,13 +68,10 @@ internal sealed class Mscdex : IMultiplexInterruptHandler
     }
     void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
     {
-        this.vm = vm;
         this.deviceHeader = vm.PhysicalMemory.Reserve(0xF000, 22);
         vm.PhysicalMemory.SetUInt32(this.deviceHeader.Segment, 0, uint.MaxValue);
         vm.PhysicalMemory.SetUInt16(this.deviceHeader.Segment, 4, 0xC800);
         vm.PhysicalMemory.SetString(this.deviceHeader.Segment, 10, "AEONVMCD", false);
-
-
     }
     Task IVirtualDevice.PauseAsync()
     {
@@ -291,9 +286,9 @@ internal sealed class Mscdex : IMultiplexInterruptHandler
     {
         // First make sure the device header is correct.
         if (this.GetCDRomDrives().Any())
-            vm.PhysicalMemory.SetByte(this.deviceHeader.Segment, 20, (byte)(GetCDRomDrives().First().Key - 'A' + 1));
+            vm.PhysicalMemory.SetByte(this.deviceHeader!.Segment, 20, (byte)(GetCDRomDrives().First().Key - 'A' + 1));
 
-        vm.PhysicalMemory.SetByte(this.deviceHeader.Segment, 21, (byte)GetCDRomDrives().Count());
+        vm.PhysicalMemory.SetByte(this.deviceHeader!.Segment, 21, (byte)GetCDRomDrives().Count());
 
         // Now write the actual device list.
         uint offset = (ushort)vm.Processor.BX;

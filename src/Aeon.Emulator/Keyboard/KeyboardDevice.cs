@@ -1,13 +1,11 @@
 ﻿using System.Collections.Concurrent;
 
-#nullable disable
-
 namespace Aeon.Emulator.Keyboard;
 
 /// <summary>
 /// Emulates a physical keyboard device and handles related interrupts.
 /// </summary>
-internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPort
+internal sealed class KeyboardDevice(VirtualMachine vm) : IInterruptHandler, IInputPort, IOutputPort
 {
     private const ushort LeftShiftUp = 0xAA;
     private const ushort RightShiftUp = 0xB6;
@@ -17,7 +15,7 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     private const int InitialRepeatDelay = 250;
     private const int RepeatDelay = 30;
 
-    private VirtualMachine vm;
+    private readonly VirtualMachine vm = vm;
     private readonly ConcurrentQueue<byte> hardwareQueue = new();
     private readonly List<byte> internalBuffer = [];
     private readonly ConcurrentQueue<ushort> typeBuffer = new();
@@ -28,7 +26,7 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
     private readonly Lock pressedKeysLock = new();
     private int expectedInputByteCount;
     private volatile Keys lastKey;
-    private Timer autoRepeatTimer;
+    private Timer? autoRepeatTimer;
     private readonly Lock autoRepeatTimerLock = new();
 
     /// <summary>
@@ -356,7 +354,7 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
 
         vm.Processor.AL = value;
     }
-    private void AutoRepeatTrigger(object obj)
+    private void AutoRepeatTrigger(object? obj)
     {
         lock (this.pressedKeysLock)
         {
@@ -367,7 +365,7 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
                 this.HardwareEnqueue(key, true);
                 lock (this.autoRepeatTimerLock)
                 {
-                    this.autoRepeatTimer.Change(RepeatDelay, Timeout.Infinite);
+                    this.autoRepeatTimer!.Change(RepeatDelay, Timeout.Infinite);
                 }
             }
         }
@@ -403,6 +401,4 @@ internal sealed class KeyboardDevice : IInterruptHandler, IInputPort, IOutputPor
         System.Diagnostics.Debug.WriteLine($"Keyboard port {port:X}h -> {value:X2}h");
     }
     void IOutputPort.WriteWord(int port, ushort value) => throw new NotSupportedException();
-
-    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
 }

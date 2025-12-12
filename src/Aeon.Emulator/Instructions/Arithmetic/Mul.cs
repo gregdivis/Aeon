@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.Arithmetic;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.Arithmetic;
 
 internal static class Mul
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("F6/4 rmb", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ByteMultiply(Processor p, byte multiplicand)
     {
@@ -10,6 +13,7 @@ internal static class Mul
     }
 
     [Opcode("F7/4 rmw", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WordMultiply(Processor p, ushort multiplicand)
     {
         ref var ax = ref p.AX;
@@ -25,6 +29,7 @@ internal static class Mul
 
         p.Flags.Update_Mul((ushort)dx);
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(WordMultiply), AddressSize = 16 | 32)]
     public static void DWordMultiply(Processor p, uint multiplicand)
     {

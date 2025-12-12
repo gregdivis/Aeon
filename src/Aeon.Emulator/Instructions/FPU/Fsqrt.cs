@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fsqrt
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9FA", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void SquareRoot(VirtualMachine vm)
     {

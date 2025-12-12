@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fucom
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DDE0+ st", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Compare64(Processor p, double value)
     {
@@ -24,6 +27,7 @@ internal static class Fucom
 
 internal static class Fucomp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DDE8+ st", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ComparePop64(Processor p, double value)
     {
@@ -34,6 +38,7 @@ internal static class Fucomp
 
 internal static class Fucompp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DAE9", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void CompareDoublePop64(Processor p)
     {

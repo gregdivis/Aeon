@@ -63,21 +63,21 @@ internal static class Movsb
             else
                 srcBase = *basePtr;
 
-            uint* esi = (uint*)p.PSI;
-            uint* edi = (uint*)p.PDI;
+            ref uint esi =  ref p.ESI;
+            ref uint edi = ref p.EDI;
 
-            byte src = vm.PhysicalMemory.GetByte(srcBase + *esi);
-            vm.PhysicalMemory.SetByte(p.ESBase + *edi, src);
+            byte src = vm.PhysicalMemory.GetByte(srcBase + esi);
+            vm.PhysicalMemory.SetByte(p.ESBase + edi, src);
 
             if (p.Flags.Direction)
             {
-                (*esi)--;
-                (*edi)--;
+                esi--;
+                edi--;
             }
             else
             {
-                (*esi)++;
-                (*edi)++;
+                esi++;
+                edi++;
             }
         }
     }

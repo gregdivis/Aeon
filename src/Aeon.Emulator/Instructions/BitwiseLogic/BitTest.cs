@@ -1,78 +1,54 @@
-﻿namespace Aeon.Emulator.Instructions.BitwiseLogic;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.BitwiseLogic;
 
 internal static class BT
 {
-    [Opcode("0FA3 rmw,rw|0FBA/4 rmw,ib", AddressSize = 16 | 32)]
-    public static void BitTest16(Processor p, ushort value, byte bit)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("0FA3 rmw,rw|0FBA/4 rmw,ib", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void BitTest<TValue>(Processor p, TValue value, byte bit) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        p.Flags.Carry = (value & (1 << bit)) != 0;
-    }
-
-    [Alternate("BitTest16", AddressSize = 16 | 32)]
-    public static void BitTest32(Processor p, uint value, byte bit)
-    {
-        p.Flags.Carry = (value & (1 << bit)) != 0;
+        int mod = Unsafe.SizeOf<TValue>() * 8;
+        p.Flags.Carry = (uint.CreateTruncating(value) & (1u << (bit % mod))) != 0;
     }
 }
 
 internal static class BTC
 {
-    [Opcode("0FBB rmw,rw|0FBA/7 rmw,ib", AddressSize = 16 | 32)]
-    public static void BitTestComplement16(Processor p, ref ushort value, byte bit)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("0FBB rmw,rw|0FBA/7 rmw,ib", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void BitTestComplement<TValue>(Processor p, ref TValue value, byte bit) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        uint mask = 1u << bit;
-        p.Flags.Carry = (value & mask) != 0;
-
-        value ^= (ushort)mask;
-    }
-
-    [Alternate(nameof(BitTestComplement16), AddressSize = 16 | 32)]
-    public static void BitTestComplement32(Processor p, ref uint value, byte bit)
-    {
-        uint mask = 1u << bit;
-        p.Flags.Carry = (value & mask) != 0;
-
-        value ^= mask;
+        int mod = Unsafe.SizeOf<TValue>() * 8;
+        uint mask = 1u << (bit % mod);
+        p.Flags.Carry = (uint.CreateTruncating(value) & mask) != 0;
+        value ^= TValue.CreateTruncating(mask);
     }
 }
 
 internal static class BTR
 {
-    [Opcode("0FB3 rmw,rw|0FBA/6 rmw,ib", AddressSize = 16 | 32)]
-    public static void BitTestReset16(Processor p, ref ushort value, byte bit)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("0FB3 rmw,rw|0FBA/6 rmw,ib", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void BitTestReset<TValue>(Processor p, ref TValue value, byte bit) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        uint mask = 1u << bit;
-        p.Flags.Carry = (value & mask) != 0;
-
-        value &= (ushort)~mask;
-    }
-
-    [Alternate(nameof(BitTestReset16), AddressSize = 16 | 32)]
-    public static void BitTestReset32(Processor p, ref uint value, byte bit)
-    {
-        uint mask = 1u << bit;
-        p.Flags.Carry = (value & mask) != 0;
-
-        value &= ~mask;
+        int mod = Unsafe.SizeOf<TValue>() * 8;
+        uint mask = 1u << (bit % mod);
+        p.Flags.Carry = (uint.CreateTruncating(value) & mask) != 0;
+        value &= TValue.CreateTruncating(~mask);
     }
 }
 
 internal static class BTS
 {
-    [Opcode("0FAB rmw,rw|0FBA/5 rmw,ib", AddressSize = 16 | 32)]
-    public static void BitSet16(Processor p, ref ushort value, byte bit)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("0FAB rmw,rw|0FBA/5 rmw,ib", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void BitSet<TValue>(Processor p, ref TValue value, byte bit) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        uint mask = 1u << bit;
-        p.Flags.Carry = (value & mask) != 0;
-
-        value |= (ushort)mask;
-    }
-    [Alternate(nameof(BitSet16), AddressSize = 16 | 32)]
-    public static void BitSet32(Processor p, ref uint value, byte bit)
-    {
-        uint mask = 1u << bit;
-        p.Flags.Carry = (value & mask) != 0;
-
-        value |= mask;
+        int mod = Unsafe.SizeOf<TValue>() * 8;
+        uint mask = 1u << (bit % mod);
+        p.Flags.Carry = (uint.CreateTruncating(value) & mask) != 0;
+        value |= TValue.CreateTruncating(mask);
     }
 }

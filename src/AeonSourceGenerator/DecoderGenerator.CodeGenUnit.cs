@@ -228,11 +228,10 @@ namespace Aeon.SourceGenerator
 
                 for (int index = 0; index < info.Operands.Count; index++)
                 {
-                    bool returnValue = !(index == 0 && isParam1ByRef) && !(index == 1 && isParam2ByRef);
-                    var (typeCode, writeOnly) = GetMethodArgType(method.Parameters[index + 1]);
-                    var state = new EmitStateInfo(wordSize, returnValue ? EmitReturnType.Value : EmitReturnType.Address, addressSize32 ? 32 : 16, index, typeCode, writeOnly);
-
                     var operand = info.Operands[index];
+                    bool returnValue = !(index == 0 && isParam1ByRef) && !(index == 1 && isParam2ByRef);
+                    var (typeCode, writeOnly) = GetMethodArgType(method.Parameters[index + 1], operand, wordSize);
+                    var state = new EmitStateInfo(wordSize, returnValue ? EmitReturnType.Value : EmitReturnType.Address, addressSize32 ? 32 : 16, index, typeCode, writeOnly);
                     if (!emitterFactories.TryGetValue(operand, out var newEmitter))
                     {
                         if (!LoadKnownRegister.IsKnownRegister(operand))
@@ -250,27 +249,88 @@ namespace Aeon.SourceGenerator
 
                 return emitters;
             }
-            private static (EmitterTypeCode typeCode, bool writeOnly) GetMethodArgType(IParameterSymbol arg)
+            private static (EmitterTypeCode typeCode, bool writeOnly) GetMethodArgType(IParameterSymbol arg, OperandType operand, int wordSize)
             {
-                var code = arg.Type.Name switch
+                EmitterTypeCode code;
+
+                if (arg.Type.Kind == SymbolKind.TypeParameter)
                 {
-                    "Byte" => EmitterTypeCode.Byte,
-                    "SByte" => EmitterTypeCode.SByte,
-                    "Int16" => EmitterTypeCode.Short,
-                    "UInt16" => EmitterTypeCode.UShort,
-                    "Int32" => EmitterTypeCode.Int,
-                    "UInt32" => EmitterTypeCode.UInt,
-                    "Int64" => EmitterTypeCode.Long,
-                    "UInt64" => EmitterTypeCode.ULong,
-                    "Single" => EmitterTypeCode.Float,
-                    "Double" => EmitterTypeCode.Double,
-                    "Real10" => EmitterTypeCode.Real10,
-                    "SegmentIndex" => EmitterTypeCode.SegmentIndex,
-                    "IntPtr" => EmitterTypeCode.IntPtr,
-                    _ => throw new ArgumentException("Unknown type: " + arg.Type.Name)
-                };
+                    if (IsGenericValue(arg, out bool signed))
+                    {
+                        bool isByte = IsGenericOperandByte(operand);
+                        code = (isByte, signed) switch
+                        {
+                            (true, false) => EmitterTypeCode.Byte,
+                            (true, true) => EmitterTypeCode.SByte,
+                            (false, false) when wordSize is 2 => EmitterTypeCode.UShort,
+                            (false, true) when wordSize is 2 => EmitterTypeCode.Short,
+                            (false, false) when wordSize is 4 => EmitterTypeCode.UInt,
+                            (false, true) when wordSize is 4 => EmitterTypeCode.Int,
+                            _ => throw new ArgumentException()
+                        };
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Invalid generic method.");
+                    }
+                }
+                else
+                {
+                    code = arg.Type.Name switch
+                    {
+                        "Byte" => EmitterTypeCode.Byte,
+                        "SByte" => EmitterTypeCode.SByte,
+                        "Int16" => EmitterTypeCode.Short,
+                        "UInt16" => EmitterTypeCode.UShort,
+                        "Int32" => EmitterTypeCode.Int,
+                        "UInt32" => EmitterTypeCode.UInt,
+                        "Int64" => EmitterTypeCode.Long,
+                        "UInt64" => EmitterTypeCode.ULong,
+                        "Single" => EmitterTypeCode.Float,
+                        "Double" => EmitterTypeCode.Double,
+                        "Real10" => EmitterTypeCode.Real10,
+                        "SegmentIndex" => EmitterTypeCode.SegmentIndex,
+                        "IntPtr" => EmitterTypeCode.IntPtr,
+                        _ => throw new ArgumentException("Unknown type: " + arg.Type.Name)
+                    };
+                }
 
                 return (code, arg.RefKind == RefKind.Out);
+
+                static bool IsGenericValue(IParameterSymbol parameter, out bool signed)
+                {
+                    signed = false;
+
+                    if (parameter.Type is not ITypeParameterSymbol typeParameter)
+                        return false;
+
+                    if (typeParameter.TypeParameterKind != TypeParameterKind.Method)
+                        return false;
+
+                    bool hasIface = false;
+                    foreach (var constraint in typeParameter.ConstraintTypes)
+                    {
+                        if (constraint is INamedTypeSymbol c && c.OriginalDefinition.SpecialType == SpecialType.None)
+                        {
+                            if (c.Name == "IBinaryInteger")
+                                hasIface = true;
+                            else if (c.Name == "ISignedNumber")
+                                signed = true;
+                        }
+                    }
+
+                    return hasIface;
+                }
+
+                static bool IsGenericOperandByte(OperandType operand)
+                {
+                    return operand switch
+                    {
+                        OperandType.ImmediateByte or OperandType.RegisterByte or OperandType.RegisterOrMemoryByte or OperandType.RegisterAL or OperandType.RegisterAH or OperandType.RegisterBL or OperandType.RegisterBH or OperandType.RegisterCL or OperandType.RegisterCH or OperandType.RegisterDL or OperandType.RegisterDH or OperandType.MemoryOffsetByte => true,
+                        OperandType.ImmediateWord or OperandType.ImmediateByteExtend or OperandType.RegisterWord or OperandType.RegisterOrMemoryWord or OperandType.RegisterAX or OperandType.RegisterBX or OperandType.RegisterCX or OperandType.RegisterDX or OperandType.RegisterDI or OperandType.RegisterSI or OperandType.RegisterSP or OperandType.RegisterBP or OperandType.MemoryOffsetWord => false,
+                        _ => throw new ArgumentException()
+                    };
+                }
             }
             private static SortedList<OperandType, Func<EmitStateInfo, Emitter>> InitializeLoaders()
             {

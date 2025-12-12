@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fisubr
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DE/5 m16", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ReverseSubtractInt16(Processor p, short value)
     {
@@ -9,6 +12,7 @@ internal static class Fisubr
         st0 = value - st0;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DA/5 m32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ReverseSubtractInt32(Processor p, int value)
     {

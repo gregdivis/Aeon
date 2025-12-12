@@ -1,13 +1,11 @@
-﻿namespace Aeon.Emulator.Instructions.BitwiseLogic;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.BitwiseLogic;
 
 internal static class Not
 {
-    [Opcode("F6/2 rmb", OperandSize = 16 | 32, AddressSize = 16 | 32)]
-    public static void ByteNot(VirtualMachine vm, ref byte dest) => dest = (byte)~dest;
-
-    [Opcode("F7/2 rmw", AddressSize = 16 | 32)]
-    public static void WordNot(VirtualMachine vm, ref ushort dest) => dest = (ushort)~dest;
-
-    [Alternate(nameof(WordNot), AddressSize = 16 | 32)]
-    public static void DWordNot(VirtualMachine vm, ref uint dest) => dest = ~dest;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("F6/2 rmb|F7/2 rmw", OperandSize = 16 | 32, AddressSize = 16 | 32)]
+    public static void GenericNot<TValue>(VirtualMachine vm, ref TValue dest) where TValue : unmanaged, IBinaryInteger<TValue> => dest = ~dest;
 }

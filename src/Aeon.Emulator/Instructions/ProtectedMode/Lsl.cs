@@ -1,8 +1,11 @@
-﻿namespace Aeon.Emulator.Instructions.ProtectedMode;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.ProtectedMode;
 
 internal static class Lsl
 {
     [Opcode("0F03/r rw,rmw", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadSegmentLimit16(VirtualMachine vm, out ushort dest, ushort selector)
     {
         var descriptor = vm.PhysicalMemory.GetDescriptor(selector);
@@ -18,6 +21,7 @@ internal static class Lsl
         //}
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(LoadSegmentLimit16), AddressSize = 16 | 32)]
     public static void LoadSegmentLimit32(VirtualMachine vm, out uint dest, uint selector)
     {

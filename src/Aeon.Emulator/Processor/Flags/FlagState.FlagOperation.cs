@@ -44,6 +44,9 @@ partial class FlagState
         Rol1_Word,
         Rol1_DWord,
         Rol,
+        Ror_Byte,
+        Ror_Word,
+        Ror_DWord,
         Shld_Word,
         Shld_DWord
     }

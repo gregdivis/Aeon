@@ -1,15 +1,13 @@
-﻿#nullable disable
-
-namespace Aeon.Emulator.Mouse;
+﻿namespace Aeon.Emulator.Mouse;
 
 /// <summary>
 /// Provides the emulated mouse driver interface.
 /// </summary>
-internal sealed class MouseHandler : IInterruptHandler
+internal sealed class MouseHandler(VirtualMachine vm) : IInterruptHandler
 {
     private const byte CallbackInterrupt = 0x45;
 
-    private VirtualMachine vm;
+    private readonly VirtualMachine vm = vm;
     private MouseState currentState;
     private MouseState callbackState;
     private CallbackMask callbackMask;
@@ -223,7 +221,7 @@ internal sealed class MouseHandler : IInterruptHandler
         };
     }
 
-    private void HandleVideoModeChanged(object sender, VideoModeChangedEventArgs e)
+    private void HandleVideoModeChanged(object? sender, VideoModeChangedEventArgs e)
     {
         if (e.TrueModeChange)
             this.SetDefaultMax();
@@ -380,9 +378,5 @@ internal sealed class MouseHandler : IInterruptHandler
         }
     }
 
-    void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-    {
-        this.vm = vm;
-        this.vm.VideoModeChanged += this.HandleVideoModeChanged;
-    }
+    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => vm.VideoModeChanged += this.HandleVideoModeChanged;
 }

@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Aeon.Emulator.Decoding;
 using Aeon.Emulator.Dos.Programs;
@@ -36,17 +38,16 @@ public sealed class VirtualMachine : IDisposable
     public readonly InterruptTimer InterruptTimer;
 
     private readonly IInterruptHandler[] interruptHandlers = new IInterruptHandler[256];
-    private readonly SortedList<ushort, IInputPort> inputPorts = [];
-    private readonly SortedList<ushort, IOutputPort> outputPorts = [];
+    private readonly SparseArray<ushort, IInputPort> inputPorts;
+    private readonly SparseArray<ushort, IOutputPort> outputPorts;
     private readonly DefaultPortHandler defaultPortHandler = new();
-    private readonly List<IVirtualDevice> allDevices = [];
+    private readonly IVirtualDevice[] allDevices;
     private readonly ExpandedMemoryManager emm;
     private readonly ExtendedMemoryManager xmm;
     private readonly List<DmaChannel> dmaDeviceChannels = [];
-    private readonly SortedList<uint, ICallbackProvider> callbackProviders = [];
+    private readonly ICallbackProvider[] callbackProviders;
     private readonly MultiplexInterruptHandler multiplexHandler;
-    private SparseArray<ushort, IInputPort>? inputPorts2;
-    private SparseArray<ushort, IOutputPort>? outputPorts2;
+    private readonly RealTimeClockHandler realTimeClock;
     private bool disposed;
     private bool showMouse;
     private bool showCursor = true;
@@ -54,17 +55,16 @@ public sealed class VirtualMachine : IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="VirtualMachine"/> class.
     /// </summary>
-    public VirtualMachine() : this(16)
+    public VirtualMachine() : this(null)
     {
     }
     /// <summary>
     /// Initializes a new instance of the <see cref="VirtualMachine"/> class.
     /// </summary>
     /// <param name="physicalMemorySize">Physical memory size in megabytes.</param>
-    public VirtualMachine(int physicalMemorySize)
+    public VirtualMachine(VirtualMachineInitializationOptions? options)
     {
-        if (physicalMemorySize < 1 || physicalMemorySize > 2048)
-            throw new ArgumentOutOfRangeException(nameof(physicalMemorySize));
+        options ??= new VirtualMachineInitializationOptions();
 
         lock (globalInitLock)
         {
@@ -75,40 +75,106 @@ public sealed class VirtualMachine : IDisposable
             }
         }
 
-        this.PhysicalMemory = new PhysicalMemory(physicalMemorySize * 1024 * 1024);
-        this.Keyboard = new Keyboard.KeyboardDevice();
+        this.PhysicalMemory = new PhysicalMemory(options.PhysicalMemorySize * 1024 * 1024);
+        this.Keyboard = new Keyboard.KeyboardDevice(this);
         this.ConsoleIn = new ConsoleInStream(this.Keyboard);
         this.Video = new Video.VideoHandler(this);
         this.ConsoleOut = new ConsoleOutStream(this.Video.TextConsole);
         this.Dos = new Dos.DosHandler(this);
-        this.Mouse = new Mouse.MouseHandler();
+        this.Mouse = new Mouse.MouseHandler(this);
         this.InterruptTimer = new InterruptTimer();
-        this.emm = new ExpandedMemoryManager();
-        this.xmm = new ExtendedMemoryManager();
+        this.emm = new ExpandedMemoryManager(this);
+        this.xmm = new ExtendedMemoryManager(this);
         this.DmaController = new DmaController();
         this.Console = new VirtualConsole(this);
-        this.multiplexHandler = new MultiplexInterruptHandler();
+        this.multiplexHandler = new MultiplexInterruptHandler(this.Processor);
+        this.realTimeClock = new RealTimeClockHandler(this);
         this.PhysicalMemory.Video = this.Video;
 
         this.Dos.InitializationComplete();
 
-        this.RegisterVirtualDevice(this.Dos);
-        this.RegisterVirtualDevice(this.Video);
-        this.RegisterVirtualDevice(this.Keyboard);
-        this.RegisterVirtualDevice(this.Mouse);
-        this.RegisterVirtualDevice(new RealTimeClockHandler());
-        this.RegisterVirtualDevice(new ErrorHandler());
-        this.RegisterVirtualDevice(this.InterruptController);
-        this.RegisterVirtualDevice(this.InterruptTimer);
-        this.RegisterVirtualDevice(this.emm);
-        this.RegisterVirtualDevice(this.DmaController);
-        this.RegisterVirtualDevice(this.multiplexHandler);
-        this.RegisterVirtualDevice(new BiosServices.SystemServices());
-        this.RegisterVirtualDevice(this.xmm);
-        this.RegisterVirtualDevice(new Dos.CD.Mscdex());
-        this.RegisterVirtualDevice(new LowLevelDisk.LowLevelDiskInterface());
+        var inputPorts = new SortedList<ushort, IInputPort>();
+        var outputPorts = new SortedList<ushort, IOutputPort>();
+        var callbacks = new List<ICallbackProvider>();
+        var allDevices = new List<IVirtualDevice>();
+
+        RegisterDevice(this.Dos);
+        RegisterDevice(this.Video);
+        RegisterDevice(this.Video.Vbe);
+        RegisterDevice(this.Keyboard);
+        RegisterDevice(this.Mouse);
+        RegisterDevice(this.realTimeClock);
+        RegisterDevice(new ErrorHandler());
+        RegisterDevice(this.InterruptController);
+        RegisterDevice(this.InterruptTimer);
+        RegisterDevice(this.emm);
+        RegisterDevice(this.DmaController);
+        RegisterDevice(this.multiplexHandler);
+        RegisterDevice(new BiosServices.SystemServices(this));
+        RegisterDevice(this.xmm);
+        RegisterDevice(new Dos.CD.Mscdex(this));
+        RegisterDevice(new LowLevelDisk.LowLevelDiskInterface(this));
+        foreach (var getDevice in options.AdditionalDevices)
+            RegisterDevice(getDevice(this));
+
+        this.inputPorts = new SparseArray<ushort, IInputPort>(inputPorts);
+        this.outputPorts = new SparseArray<ushort, IOutputPort>(outputPorts);
+        this.callbackProviders = [.. callbacks];
+        this.allDevices = [.. allDevices];
 
         this.PhysicalMemory.AddTimerInterruptHandler();
+
+        this.PhysicalMemory.ReserveBaseMemory();
+
+        var comspec = this.FileSystem.CommandInterpreterPath;
+        if (comspec != null)
+            this.EnvironmentVariables["COMSPEC"] = comspec.ToString();
+
+        void RegisterDevice(IVirtualDevice virtualDevice)
+        {
+            if (virtualDevice is IInterruptHandler interruptHandler)
+            {
+                foreach (var interrupt in interruptHandler.HandledInterrupts)
+                {
+                    interruptHandlers[interrupt.Interrupt] = interruptHandler;
+                    PhysicalMemory.AddInterruptHandler(interrupt.Interrupt, interrupt.SavedRegisters, interrupt.IsHookable, interrupt.ClearInterruptFlag);
+                }
+            }
+
+            if (virtualDevice is IMultiplexInterruptHandler multiplex)
+                this.multiplexHandler.Handlers.Add(multiplex);
+
+            if (virtualDevice is IInputPort inputPort)
+            {
+                foreach (var port in inputPort.InputPorts)
+                    inputPorts[port] = inputPort;
+            }
+
+            if (virtualDevice is IOutputPort outputPort)
+            {
+                foreach (var port in outputPort.OutputPorts)
+                    outputPorts[port] = outputPort;
+            }
+
+            if (virtualDevice is IDmaDevice8 dmaDevice)
+            {
+                if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count)
+                    throw new ArgumentException("Invalid DMA channel on DMA device.");
+
+                DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
+                dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
+            }
+
+            if (virtualDevice is ICallbackProvider callbackProvider)
+            {
+                int id = callbacks.Count;
+                callbackProvider.CallbackAddress = this.PhysicalMemory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
+                callbacks.Add(callbackProvider);
+            }
+
+            allDevices.Add(virtualDevice);
+            virtualDevice.DeviceRegistered(this);
+        }
     }
 
     /// <summary>
@@ -147,7 +213,7 @@ public sealed class VirtualMachine : IDisposable
     /// <summary>
     /// Gets information about the current emulated video mode.
     /// </summary>
-    public Video.VideoMode? VideoMode => this.Video?.CurrentMode;
+    public Video.VideoMode VideoMode => this.Video?.CurrentMode!;
     /// <summary>
     /// Gets a collection of all virtual devices registered with the virtual machine.
     /// </summary>
@@ -377,73 +443,6 @@ public sealed class VirtualMachine : IDisposable
         mouseEvent.RaiseEvent(this.Mouse);
     }
     /// <summary>
-    /// Registers a virtual device with the virtual machine.
-    /// </summary>
-    /// <param name="virtualDevice">Virtual device to register.</param>
-    public void RegisterVirtualDevice(IVirtualDevice virtualDevice)
-    {
-        ArgumentNullException.ThrowIfNull(virtualDevice);
-
-        if (virtualDevice is IInterruptHandler interruptHandler)
-        {
-            foreach (var interrupt in interruptHandler.HandledInterrupts)
-            {
-                interruptHandlers[interrupt.Interrupt] = interruptHandler;
-                PhysicalMemory.AddInterruptHandler(interrupt.Interrupt, interrupt.SavedRegisters, interrupt.IsHookable, interrupt.ClearInterruptFlag);
-            }
-        }
-
-        if (virtualDevice is IMultiplexInterruptHandler multiplex)
-            this.multiplexHandler.Handlers.Add(multiplex);
-
-        if (virtualDevice is IInputPort inputPort)
-        {
-            foreach (ushort port in inputPort.InputPorts)
-                inputPorts[port] = inputPort;
-        }
-
-        if (virtualDevice is IOutputPort outputPort)
-        {
-            foreach (int port in outputPort.OutputPorts)
-                outputPorts[(ushort)port] = outputPort;
-        }
-
-        if (virtualDevice is IDmaDevice8 dmaDevice)
-        {
-            if (dmaDevice.Channel < 0 || dmaDevice.Channel >= DmaController.Channels.Count)
-                throw new ArgumentException("Invalid DMA channel on DMA device.");
-
-            DmaController.Channels[dmaDevice.Channel].Device = dmaDevice;
-            dmaDeviceChannels.Add(DmaController.Channels[dmaDevice.Channel]);
-        }
-
-        if (virtualDevice is ICallbackProvider callbackProvider)
-        {
-            int id = callbackProviders.Count;
-            callbackProvider.CallbackAddress = this.PhysicalMemory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
-            callbackProviders.Add((uint)id, callbackProvider);
-        }
-
-        allDevices.Add(virtualDevice);
-        virtualDevice.DeviceRegistered(this);
-    }
-    /// <summary>
-    /// Informs the VirtualMachine instance that initialization is complete and no more devices will be added.
-    /// This must be called prior to emulation.
-    /// </summary>
-    public void EndInitialization()
-    {
-        this.PhysicalMemory.ReserveBaseMemory();
-
-        var comspec = this.FileSystem.CommandInterpreterPath;
-        if (comspec != null)
-            this.EnvironmentVariables["COMSPEC"] = comspec.ToString();
-
-#warning improve initialization
-        this.inputPorts2 = new SparseArray<ushort, IInputPort>(this.inputPorts);
-        this.outputPorts2 = new SparseArray<ushort, IOutputPort>(this.outputPorts);
-    }
-    /// <summary>
     /// Returns an object containing information about current conventional memory usage.
     /// </summary>
     /// <returns>Information about current conventional memory usage.</returns>
@@ -472,6 +471,13 @@ public sealed class VirtualMachine : IDisposable
                 channel.Transfer(this.PhysicalMemory);
         }
     }
+    /// <summary>
+    /// Updates the emulated BIOS clock with the number of 55 msec ticks since midnight.
+    /// </summary>
+    /// <remarks>
+    /// This should be called periodically to keep the BIOS clock value correct.
+    /// </remarks>
+    public void UpdateRealTimeClock() => this.realTimeClock.Update();
     /// <summary>
     /// Raises the appropriate interrupt handler for a runtime exception if possible.
     /// </summary>
@@ -553,34 +559,14 @@ public sealed class VirtualMachine : IDisposable
     }
     internal void CallCallback(byte id)
     {
-        if (this.callbackProviders.TryGetValue(id, out var provider))
-            provider.InvokeCallback();
+        var p = this.callbackProviders;
+        if (id < p.Length)
+            p[id].InvokeCallback();
         else
             ThrowHelper.ThrowNoCallbackHandlerException(id);
     }
-    internal void PushToStack(ushort value)
-    {
-        var p = this.Processor;
-        unsafe
-        {
-            uint address = p.segmentBases[(int)SegmentIndex.SS];
-
-            if (!this.BigStackPointer)
-            {
-                ref ushort sp = ref p.SP;
-                sp -= 2;
-                address += sp;
-            }
-            else
-            {
-                ref uint esp = ref p.ESP;
-                esp -= 2;
-                address += esp;
-            }
-
-            this.PhysicalMemory.SetUInt16(address, value);
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void PushToStack(ushort value) => this.PushToStackGeneric(value);
     internal void PushToStack(ushort value1, ushort value2)
     {
         this.PushToStack(value1);
@@ -592,29 +578,8 @@ public sealed class VirtualMachine : IDisposable
         this.PushToStack(value2);
         this.PushToStack(value3);
     }
-    internal void PushToStack32(uint value)
-    {
-        var p = this.Processor;
-        unsafe
-        {
-            uint address = p.segmentBases[(int)SegmentIndex.SS];
-
-            if (!this.BigStackPointer)
-            {
-                ref ushort sp = ref p.SP;
-                sp -= 4;
-                address += sp;
-            }
-            else
-            {
-                ref uint esp = ref p.ESP;
-                esp -= 4;
-                address += esp;
-            }
-
-            this.PhysicalMemory.SetUInt32(address, value);
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void PushToStack32(uint value) => this.PushToStackGeneric(value);
     internal void PushToStack32(uint value1, uint value2)
     {
         this.PushToStack32(value1);
@@ -626,52 +591,44 @@ public sealed class VirtualMachine : IDisposable
         this.PushToStack32(value2);
         this.PushToStack32(value3);
     }
-    internal ushort PopFromStack()
-    {
-        ushort value;
-        unsafe
-        {
-            if (!this.BigStackPointer)
-            {
-                var sp = (ushort*)this.Processor.PSP;
-                uint address = this.Processor.segmentBases[(int)SegmentIndex.SS] + *sp;
-                value = this.PhysicalMemory.GetUInt16(address);
-                *sp += 2;
-            }
-            else
-            {
-                var esp = (uint*)this.Processor.PSP;
-                uint address = this.Processor.segmentBases[(int)SegmentIndex.SS] + *esp;
-                value = this.PhysicalMemory.GetUInt16(address);
-                *esp += 2;
-            }
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ushort PopFromStack() => this.PopFromStack<ushort>();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal uint PopFromStack32() => this.PopFromStack<uint>();
 
-        return value;
-    }
-    internal uint PopFromStack32()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void PushToStackGeneric<TValue>(TValue value) where TValue : unmanaged
     {
-        uint value;
-        unsafe
-        {
-            if (!this.BigStackPointer)
-            {
-                var sp = (ushort*)this.Processor.PSP;
-                uint address = this.Processor.segmentBases[(int)SegmentIndex.SS] + *sp;
-                value = this.PhysicalMemory.GetUInt32(address);
-                *sp += 4;
-            }
-            else
-            {
-                var esp = (uint*)this.Processor.PSP;
-                uint address = this.Processor.segmentBases[(int)SegmentIndex.SS] + *esp;
-                value = this.PhysicalMemory.GetUInt32(address);
-                *esp += 4;
-            }
-        }
+        var p = this.Processor;
+        uint address = p.GetSegmentBasePointer((int)SegmentIndex.SS);
+        address = this.BigStackPointer ? AdjustStack<uint>(p, address) : AdjustStack<ushort>(p, address);
+        this.PhysicalMemory.Set(address, value);
 
-        return value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static uint AdjustStack<TAddress>(Processor p, uint baseAddress) where TAddress : unmanaged, IBinaryInteger<TAddress>
+        {
+            ref TAddress sp = ref Unsafe.As<uint, TAddress>(ref p.ESP);
+            sp -= TAddress.CreateTruncating(Unsafe.SizeOf<TValue>());
+            return baseAddress + uint.CreateTruncating(sp);
+        }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal TValue PopFromStack<TValue>() where TValue : unmanaged
+    {
+        return this.BigStackPointer ? Pop<uint>(this.Processor, this.PhysicalMemory) : Pop<ushort>(this.Processor, this.PhysicalMemory);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static TValue Pop<TAddress>(Processor processor, PhysicalMemory physicalMemory) where TAddress : unmanaged, IBinaryInteger<TAddress>
+        {
+            ref TAddress sp = ref Unsafe.As<uint, TAddress>(ref processor.ESP);
+            uint address = processor.GetSegmentBasePointer((int)SegmentIndex.SS) + uint.CreateTruncating(sp);
+            var value = physicalMemory.Get<TValue>(address);
+            sp += TAddress.CreateTruncating(Unsafe.SizeOf<TValue>());
+            return value;
+        }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void AddToStackPointer(uint value)
     {
@@ -721,28 +678,28 @@ public sealed class VirtualMachine : IDisposable
     }
     internal byte ReadPortByte(ushort port)
     {
-        if (this.inputPorts2!.TryGetValue(port, out var inputPort))
+        if (this.inputPorts!.TryGetValue(port, out var inputPort))
             return inputPort.ReadByte(port);
         else
             return this.defaultPortHandler.ReadByte(port);
     }
     internal ushort ReadPortWord(ushort port)
     {
-        if (this.inputPorts2!.TryGetValue(port, out var inputPort))
+        if (this.inputPorts!.TryGetValue(port, out var inputPort))
             return inputPort.ReadWord(port);
         else
             return 0xFFFF;
     }
     internal void WritePortByte(ushort port, byte value)
     {
-        if (!this.outputPorts2!.TryGetValue(port, out var outputPort))
+        if (!this.outputPorts!.TryGetValue(port, out var outputPort))
             defaultPortHandler.WriteByte(port, value);
         else
             outputPort.WriteByte(port, value);
     }
     internal void WritePortWord(ushort port, ushort value)
     {
-        if (!this.outputPorts2!.TryGetValue(port, out var outputPort))
+        if (!this.outputPorts!.TryGetValue(port, out var outputPort))
             defaultPortHandler.WriteWord(port, value);
         else
             outputPort.WriteWord(port, value);
@@ -757,86 +714,56 @@ public sealed class VirtualMachine : IDisposable
     /// setting the segment register on the processor directly. This method also updates
     /// the precalculated base address for the segment.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteSegmentRegister(SegmentIndex segment, ushort value)
     {
-        ushort oldValue;
-        unsafe
-        {
-            oldValue = *this.Processor.segmentRegisterPointers[(int)segment];
-            *this.Processor.segmentRegisterPointers[(int)segment] = value;
-        }
+        var processor = this.Processor;
+        ref ushort segmentRegisterPtr = ref processor.GetSegmentRegisterPointer((int)segment);
+        ref uint basePtr = ref processor.GetSegmentBasePointer((int)segment);
 
-        try
+        if (!processor.CR0.HasFlag(CR0.ProtectedModeEnable))
         {
-            this.UpdateSegment(segment);
+            segmentRegisterPtr = value;
+            basePtr = (uint)value << 4;
+            this.BigStackPointer = false;
         }
-        catch (SegmentNotPresentException)
+        else
         {
-            unsafe
+            var descriptor = this.PhysicalMemory.GetDescriptor(value);
+            if (value == 0 || descriptor.DescriptorType == DescriptorType.Segment)
             {
-                *this.Processor.segmentRegisterPointers[(int)segment] = oldValue;
-            }
+                var segmentDescriptor = (SegmentDescriptor)descriptor;
 
-            throw;
-        }
-        catch (GeneralProtectionFaultException)
-        {
-            unsafe
-            {
-                *this.Processor.segmentRegisterPointers[(int)segment] = oldValue;
-            }
-
-            throw;
-        }
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void UpdateSegment(SegmentIndex segment)
-    {
-        unsafe
-        {
-            ushort value = *this.Processor.segmentRegisterPointers[(int)segment];
-
-            if (!this.Processor.CR0.HasFlag(CR0.ProtectedModeEnable))
-            {
-                this.Processor.segmentBases[(int)segment] = (uint)value << 4;
-                this.BigStackPointer = false;
-            }
-            else
-            {
-                var descriptor = this.PhysicalMemory.GetDescriptor(value);
-                if (value != 0 && descriptor.DescriptorType != DescriptorType.Segment)
+                if (value <= 3u || segmentDescriptor.IsPresent)
                 {
-                    ThrowHelper.ThrowGeneralProtectionFaultException(value);
+                    segmentRegisterPtr = value;
+                    basePtr = segmentDescriptor.Base;
+
+                    if (segment == SegmentIndex.CS)
+                    {
+                        if ((segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) == 0)
+                            processor.GlobalSize = 0;
+                        else
+                            processor.GlobalSize = 3;
+                    }
+                    else if (segment == SegmentIndex.SS)
+                    {
+                        this.BigStackPointer = (segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) != 0;
+                        processor.TemporaryInterruptMask = true;
+                    }
                 }
                 else
                 {
-                    var segmentDescriptor = (SegmentDescriptor)descriptor;
-
-                    if (value > 3u && !segmentDescriptor.IsPresent)
-                    {
-                        ThrowHelper.ThrowSegmentNotPresentException(value);
-                    }
-                    else
-                    {
-                        this.Processor.segmentBases[(int)segment] = segmentDescriptor.Base;
-
-                        if (segment == SegmentIndex.CS)
-                        {
-                            if ((segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) == 0)
-                                this.Processor.GlobalSize = 0;
-                            else
-                                this.Processor.GlobalSize = 3;
-                        }
-                        else if (segment == SegmentIndex.SS)
-                        {
-                            this.BigStackPointer = (segmentDescriptor.Attributes2 & SegmentDescriptor.BigMode) != 0;
-                            this.Processor.TemporaryInterruptMask = true;
-                        }
-                    }
+                    ThrowHelper.ThrowSegmentNotPresentException(value);
                 }
+            }
+            else
+            {
+                ThrowHelper.ThrowGeneralProtectionFaultException(value);
             }
         }
     }
+
     internal void TaskSwitch32(ushort selector, bool clearBusyFlag, bool? nestedTaskFlag)
     {
         if (selector == 0)
@@ -993,7 +920,6 @@ public sealed class VirtualMachine : IDisposable
                         d.Dispose();
                 }
 
-                this.allDevices.Clear();
                 this.PhysicalMemory.InternalDispose();
             }
 

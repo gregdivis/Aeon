@@ -5,6 +5,7 @@ namespace Aeon.Emulator.Decoding;
 
 internal static class RuntimeCalls
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe uint GetMoffsAddress16(Processor p)
     {
         var segmentOverride = p.SegmentOverride;
@@ -13,6 +14,7 @@ internal static class RuntimeCalls
         p.CachedIP += 2;
         return baseAddress + offset;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe uint GetMoffsAddress32(Processor p)
     {
         var segmentOverride = p.SegmentOverride;
@@ -125,7 +127,6 @@ internal static class RuntimeCalls
         }
     }
     [DoesNotReturn]
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static void ThrowException(Exception ex) => throw ex;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

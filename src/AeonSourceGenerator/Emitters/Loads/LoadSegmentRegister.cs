@@ -2,13 +2,8 @@
 
 namespace Aeon.SourceGenerator.Emitters
 {
-    internal sealed class LoadSegmentRegister : Emitter
+    internal sealed class LoadSegmentRegister(EmitStateInfo state) : Emitter(state)
     {
-        public LoadSegmentRegister(EmitStateInfo state)
-            : base(state)
-        {
-        }
-
         public override void Initialize(IndentedTextWriter writer)
         {
             writer.WriteLine($"var arg{this.ParameterIndex}Reg = GetReg(p);");
@@ -18,7 +13,7 @@ namespace Aeon.SourceGenerator.Emitters
                 if (this.WriteOnly)
                     writer.WriteLine(';');
                 else
-                    writer.WriteLine($" = *p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg);");
+                    writer.WriteLine($" = p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg);");
             }
         }
         public override void WriteParameter(TextWriter writer)
@@ -34,7 +29,7 @@ namespace Aeon.SourceGenerator.Emitters
             }
             else
             {
-                writer.Write($"*p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg)");
+                writer.Write($"p.GetSegmentRegisterPointer(arg{this.ParameterIndex}Reg)");
             }
         }
         public override void Complete(IndentedTextWriter writer)

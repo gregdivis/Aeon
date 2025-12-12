@@ -1,13 +1,17 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fcom
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D8/2 mf32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Compare32(Processor p, float value)
     {
         Compare64(p, value);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DC/2 mf64|D8D0+ st", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Compare64(Processor p, double value)
     {
@@ -33,6 +37,7 @@ internal static class Fcom
 
 internal static class Fcomp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D8/3 mf32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ComparePop32(Processor p, float value)
     {
@@ -40,6 +45,7 @@ internal static class Fcomp
         p.FPU.Pop();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DC/3 mf64|D8D8+ st", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ComparePop64(Processor p, double value)
     {
@@ -50,6 +56,7 @@ internal static class Fcomp
 
 internal static class Fcompp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DED9", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void CompareDoublePop64(Processor p)
     {

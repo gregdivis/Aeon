@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.AsciiAdjust;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.AsciiAdjust;
 
 internal static class AAS
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("3F", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void AdjustAfterSubtraction(Processor p)
     {

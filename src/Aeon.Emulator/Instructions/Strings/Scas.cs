@@ -17,7 +17,7 @@ internal static class Scasb
     private static void ScanSingleByte(VirtualMachine vm)
     {
         byte dest = vm.PhysicalMemory.GetByte(vm.Processor.ESBase + vm.Processor.DI);
-        Cmp.ByteCompare(vm.Processor, vm.Processor.AL, dest);
+        Cmp.GenericCompare(vm.Processor, vm.Processor.AL, dest);
 
         if (!vm.Processor.Flags.Direction)
             vm.Processor.DI++;
@@ -60,7 +60,7 @@ internal static class Scasb
     private static void ScanSingleByte32(VirtualMachine vm)
     {
         byte dest = vm.PhysicalMemory.GetByte(vm.Processor.ESBase + vm.Processor.EDI);
-        Cmp.ByteCompare(vm.Processor, vm.Processor.AL, dest);
+        Cmp.GenericCompare(vm.Processor, vm.Processor.AL, dest);
 
         if (!vm.Processor.Flags.Direction)
             vm.Processor.EDI++;
@@ -106,7 +106,7 @@ internal static class Scasw
     private static void ScanSingleWord(VirtualMachine vm)
     {
         ushort dest = vm.PhysicalMemory.GetUInt16(vm.Processor.ESBase + vm.Processor.DI);
-        Cmp.WordCompare(vm.Processor, (ushort)vm.Processor.AX, dest);
+        Cmp.GenericCompare(vm.Processor, (ushort)vm.Processor.AX, dest);
 
         if (!vm.Processor.Flags.Direction)
             vm.Processor.DI += 2;
@@ -149,7 +149,7 @@ internal static class Scasw
     private static void ScanSingleWord32(VirtualMachine vm)
     {
         ushort dest = vm.PhysicalMemory.GetUInt16(vm.Processor.ESBase + vm.Processor.EDI);
-        Cmp.WordCompare(vm.Processor, (ushort)vm.Processor.AX, dest);
+        Cmp.GenericCompare(vm.Processor, (ushort)vm.Processor.AX, dest);
 
         if (!vm.Processor.Flags.Direction)
             vm.Processor.EDI += 2;
@@ -192,7 +192,7 @@ internal static class Scasw
     private static void ScanSingleDWord(VirtualMachine vm)
     {
         uint dest = vm.PhysicalMemory.GetUInt32(vm.Processor.ESBase + vm.Processor.DI);
-        Cmp.DWordCompare(vm.Processor, (uint)vm.Processor.EAX, dest);
+        Cmp.GenericCompare(vm.Processor, (uint)vm.Processor.EAX, dest);
 
         if (!vm.Processor.Flags.Direction)
             vm.Processor.DI += 4;
@@ -235,7 +235,7 @@ internal static class Scasw
     private static void ScanSingleDWord32(VirtualMachine vm)
     {
         uint dest = vm.PhysicalMemory.GetUInt32(vm.Processor.ESBase + vm.Processor.EDI);
-        Cmp.DWordCompare(vm.Processor, (uint)vm.Processor.EAX, dest);
+        Cmp.GenericCompare(vm.Processor, (uint)vm.Processor.EAX, dest);
 
         if (!vm.Processor.Flags.Direction)
             vm.Processor.EDI += 4;

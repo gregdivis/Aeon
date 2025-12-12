@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.BitShifting;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.BitShifting;
 
 internal static class Rcl
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D0/2 rmb", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ByteRotateCarryLeft1(Processor p, ref byte dest)
     {
@@ -18,6 +21,7 @@ internal static class Rcl
         p.Flags.Carry = (buffer & 0x0100) == 0x0100;
         p.Flags.Overflow = (buffer & 0x0180) == 0x0100 || (buffer & 0x0180) == 0x0080;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D2/2 rmb,cl|C0/2 rmb,ib", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ByteRotateCarryLeft(Processor p, ref byte dest, byte count)
     {
@@ -46,6 +50,7 @@ internal static class Rcl
     }
 
     [Opcode("D1/2 rmw", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WordRotateCarryLeft1(Processor p, ref ushort dest)
     {
         uint buffer = dest;
@@ -61,6 +66,7 @@ internal static class Rcl
         p.Flags.Carry = (buffer & 0x00010000) != 0;
         p.Flags.Overflow = (buffer & 0x00018000) == 0x00010000 || (buffer & 0x00018000) == 0x00008000;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(WordRotateCarryLeft1), AddressSize = 16 | 32)]
     public static void DWordRotateCarryLeft1(Processor p, ref uint dest)
     {
@@ -78,6 +84,7 @@ internal static class Rcl
         p.Flags.Overflow = (buffer & 0x0000000180000000) == 0x0000000100000000 || (buffer & 0x0000000180000000) == 0x0000000080000000;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D3/2 rmw,cl|C1/2 rmw,ib", AddressSize = 16 | 32)]
     public static void WordRotateCarryLeft(Processor p, ref ushort dest, byte count)
     {

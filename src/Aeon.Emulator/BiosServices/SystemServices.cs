@@ -1,13 +1,11 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace Aeon.Emulator.BiosServices;
+﻿namespace Aeon.Emulator.BiosServices;
 
 /// <summary>
 /// Implements BIOS system services.
 /// </summary>
-internal sealed class SystemServices : IInterruptHandler
+internal sealed class SystemServices(VirtualMachine vm) : IInterruptHandler
 {
-    private VirtualMachine? vm;
+    private readonly VirtualMachine vm = vm;
 
     IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => [0x11, 0x12, 0x15];
 
@@ -15,19 +13,19 @@ internal sealed class SystemServices : IInterruptHandler
     {
         if (interrupt == 0x11)
         {
-            vm!.Processor.AX = unchecked((short)0xD426);
+            vm.Processor.AX = unchecked((short)0xD426);
             return;
         }
 
         if (interrupt == 0x12)
         {
-            vm!.Processor.AX = 640;
+            vm.Processor.AX = 640;
             return;
         }
 
         bool error = false;
 
-        switch (vm!.Processor.AH)
+        switch (vm.Processor.AH)
         {
             case Functions.GetConfiguration:
                 vm.WriteSegmentRegister(SegmentIndex.ES, PhysicalMemory.BiosConfigurationAddress.Segment);
@@ -48,6 +46,4 @@ internal sealed class SystemServices : IInterruptHandler
         vm.Processor.Flags.Carry = error;
         vm.PhysicalMemory.SetUInt16(vm.Processor.SS, (ushort)(vm.Processor.SP + 4), (ushort)vm.Processor.Flags.Value);
     }
-    [MemberNotNull(nameof(vm))]
-    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
 }

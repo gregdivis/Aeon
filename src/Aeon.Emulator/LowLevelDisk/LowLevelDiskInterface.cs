@@ -1,19 +1,21 @@
-﻿#nullable disable
-
-namespace Aeon.Emulator.LowLevelDisk;
+﻿namespace Aeon.Emulator.LowLevelDisk;
 
 internal sealed class LowLevelDiskInterface : IInterruptHandler, IDisposable
 {
-    private VirtualMachine vm;
+    private readonly VirtualMachine vm;
     private readonly Timer diskMotorTimer;
 
-    public LowLevelDiskInterface() => this.diskMotorTimer = new Timer(this.UpdateDiskMotorTimer);
+    public LowLevelDiskInterface(VirtualMachine vm)
+    {
+        this.vm = vm;
+        this.diskMotorTimer = new Timer(this.UpdateDiskMotorTimer);
+    }
 
     public IEnumerable<InterruptHandlerInfo> HandledInterrupts => [0x13];
 
     public void HandleInterrupt(int interrupt)
     {
-        switch (vm.Processor.AH)
+        switch (this.vm.Processor.AH)
         {
             case Functions.GetDriveParameters:
                 GetDriveParameters();
@@ -28,12 +30,11 @@ internal sealed class LowLevelDiskInterface : IInterruptHandler, IDisposable
     public void Resume() => this.diskMotorTimer.Change(5000, Timeout.Infinite);
     public void DeviceRegistered(VirtualMachine vm)
     {
-        this.vm = vm;
         this.diskMotorTimer.Change(5000, Timeout.Infinite);
     }
     public void Dispose() => this.diskMotorTimer.Dispose();
 
-    private void UpdateDiskMotorTimer(object state)
+    private void UpdateDiskMotorTimer(object? state)
     {
         this.vm.PhysicalMemory.Bios.DiskMotorTimer = 0;
         this.diskMotorTimer.Change(5000, Timeout.Infinite);

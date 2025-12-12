@@ -68,16 +68,16 @@ internal static partial class InstructionDecoders
     public readonly ref struct RmwValue<T>
         where T : unmanaged
     {
-        private readonly UIntPtr ptr;
+        private readonly nuint ptr;
 
         public unsafe RmwValue(void* regPtr)
         {
-            this.ptr = new UIntPtr(regPtr);
+            this.ptr = (nuint)regPtr;
             this.IsPointer = true;
         }
         public RmwValue(uint address)
         {
-            this.ptr = new UIntPtr(address);
+            this.ptr = address;
             this.IsPointer = false;
         }
 
@@ -88,17 +88,11 @@ internal static partial class InstructionDecoders
             {
                 unsafe
                 {
-                    return ref *(T*)this.ptr.ToPointer();
+                    return ref Unsafe.AsRef<T>((void*)this.ptr);
                 }
             }
         }
-        public unsafe T* RegisterPointer
-        {
-            get
-            {
-                return (T*)this.ptr.ToPointer();
-            }
-        }
-        public uint Address => this.ptr.ToUInt32();
+        public unsafe T* RegisterPointer => (T*)this.ptr;
+        public uint Address => (uint)this.ptr;
     }
 }

@@ -1,11 +1,9 @@
-﻿#nullable disable
-
-namespace Aeon.Emulator.Memory;
+﻿namespace Aeon.Emulator.Memory;
 
 /// <summary>
 /// Provides DOS applications with EMS memory.
 /// </summary>
-internal sealed class ExpandedMemoryManager : IInterruptHandler
+internal sealed class ExpandedMemoryManager(VirtualMachine vm) : IInterruptHandler
 {
     /// <summary>
     /// Size of each EMS page in bytes.
@@ -25,9 +23,9 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
     private const int LastHandle = 254;
     private const int SegmentsPerPage = PageSize / 16;
 
-    private VirtualMachine vm;
+    private readonly VirtualMachine vm = vm;
     private readonly SortedList<int, EmsHandle> handles = [];
-    private readonly byte[][] mappedPages = new byte[MaximumPhysicalPages][];
+    private readonly byte[]?[] mappedPages = new byte[MaximumPhysicalPages][];
 
     /// <summary>
     /// Gets the total number of allocated EMS pages.
@@ -168,9 +166,8 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
     }
     void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
     {
-        this.vm = vm;
-        this.vm.PhysicalMemory.SetString(0xF100, 0x000A, "EMMXXXX0");
-        this.vm.PhysicalMemory.Reserve(PageFrameSegment, PageSize * MaximumPhysicalPages);
+        vm.PhysicalMemory.SetString(0xF100, 0x000A, "EMMXXXX0");
+        vm.PhysicalMemory.Reserve(PageFrameSegment, PageSize * MaximumPhysicalPages);
     }
 
     /// <summary>
@@ -299,7 +296,7 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
 
         if (logicalPageIndex != 0xFFFF)
         {
-            byte[] logicalPage = handle.GetLogicalPage(logicalPageIndex);
+            var logicalPage = handle.GetLogicalPage(logicalPageIndex);
             if (logicalPage == null)
             {
                 // Return "logical page out of range" code.
@@ -341,7 +338,7 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
     /// <param name="physicalPageIndex">Physical page to copy from.</param>
     private void UnmapPage(int physicalPageIndex)
     {
-        byte[] currentPage = mappedPages[physicalPageIndex];
+        var currentPage = mappedPages[physicalPageIndex];
         if (currentPage != null)
         {
             ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
@@ -456,7 +453,7 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
 
             if (logicalPageIndex != 0xFFFF)
             {
-                byte[] logicalPage = handle.GetLogicalPage(logicalPageIndex);
+                var logicalPage = handle.GetLogicalPage(logicalPageIndex);
                 if (logicalPage == null)
                 {
                     // Return "logical page out of range" code.
@@ -513,7 +510,7 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
             for (int i = 0; i < MaximumPhysicalPages; i++)
             {
                 if (handle.SavedPageMap[i] != null && handle.SavedPageMap[i] != mappedPages[i])
-                    MapPage(handle.SavedPageMap[i], i);
+                    MapPage(handle.SavedPageMap[i]!, i);
             }
         }
 
@@ -590,7 +587,7 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
             {
                 ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
                 IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
-                System.Runtime.InteropServices.Marshal.Copy(physicalPtr, mappedPages[i], 0, PageSize);
+                System.Runtime.InteropServices.Marshal.Copy(physicalPtr, mappedPages[i]!, 0, PageSize);
             }
         }
     }
@@ -605,7 +602,7 @@ internal sealed class ExpandedMemoryManager : IInterruptHandler
             {
                 ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
                 IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
-                System.Runtime.InteropServices.Marshal.Copy(mappedPages[i], 0, physicalPtr, PageSize);
+                System.Runtime.InteropServices.Marshal.Copy(mappedPages[i]!, 0, physicalPtr, PageSize);
             }
         }
     }

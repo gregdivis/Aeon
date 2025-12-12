@@ -35,4 +35,6 @@ internal static class ThrowHelper
     internal static void ThrowInvalidTaskSegmentSelectorException() => throw new InvalidOperationException("Invalid task segment selector.");
     [DoesNotReturn]
     internal static void ThrowNullCallException() => throw new InvalidOperationException("Attempted to call function at address 0.");
+    [DoesNotReturn]
+    internal static void ThrowHaltException() => throw new HaltException();
 }

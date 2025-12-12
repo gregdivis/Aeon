@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fbstp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DF/6 mf80", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreBCD(VirtualMachine vm, out Real10 value)
     {

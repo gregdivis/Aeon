@@ -1,13 +1,17 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fsub
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D8/4 mf32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void SubtractST032(VirtualMachine vm, float value)
     {
         vm.Processor.FPU.ST0_Ref -= value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DC/4 mf64|D8E0+ st|DCE8 st0", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void SubtractST064(VirtualMachine vm, double value)
     {
