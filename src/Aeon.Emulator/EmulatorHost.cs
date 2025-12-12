@@ -30,8 +30,8 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
     public EmulatorHost() : this(new VirtualMachine())
     {
     }
-    public EmulatorHost(int physicalMemory)
-        : this(new VirtualMachine(physicalMemory))
+    public EmulatorHost(VirtualMachineInitializationOptions? options)
+        : this(new VirtualMachine(options))
     {
     }
     /// <summary>
@@ -138,8 +138,6 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(fileName);
         if (commandLineArguments != null && commandLineArguments.Length > 127)
             throw new ArgumentException("Command line length must not exceed 127 characters.");
-
-        this.VirtualMachine.EndInitialization();
 
         var image = ProgramImage.Load(fileName, VirtualMachine);
         this.VirtualMachine.LoadImage(image, commandLineArguments);
@@ -253,6 +251,8 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
 
         try
         {
+            vm.UpdateRealTimeClock();
+
             if (p.Flags.InterruptEnable & !p.TemporaryInterruptMask)
             {
                 while (p.InPrefix)

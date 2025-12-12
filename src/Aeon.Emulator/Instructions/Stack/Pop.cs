@@ -1,16 +1,15 @@
-﻿namespace Aeon.Emulator.Instructions.Stack;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.Stack;
 
 internal static class Pop
 {
-    [Opcode("8F/0 rmw|58+ rw", AddressSize = 16 | 32)]
-    public static void PopWord(VirtualMachine vm, out ushort dest)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("8F/0 rmw|58+ rw", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void GenericPop<TValue>(VirtualMachine vm, out TValue dest) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        dest = vm.PopFromStack();
-    }
-    [Alternate(nameof(PopWord), AddressSize = 16 | 32)]
-    public static void PopDWord(VirtualMachine vm, out uint dest)
-    {
-        dest = vm.PopFromStack32();
+        dest = vm.PopFromStack<TValue>();
     }
 
     [Opcode("9D", Name = "popf", AddressSize = 16 | 32)]

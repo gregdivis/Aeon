@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.AsciiAdjust;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.AsciiAdjust;
 
 internal static class AAD
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D5 ib", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void AdjustBeforeDivision(Processor p, byte value)
     {

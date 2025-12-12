@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.ProtectedMode;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.ProtectedMode;
 
 internal static class Ver
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("0F00/4 rm16", Name = "verr", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void VerifyRead(VirtualMachine vm, ushort segment)
     {
@@ -21,6 +24,7 @@ internal static class Ver
         vm.Processor.Flags.Zero = false;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("0F00/5 rm16", Name = "verw", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void VerifyWrite(VirtualMachine vm, ushort segment)
     {

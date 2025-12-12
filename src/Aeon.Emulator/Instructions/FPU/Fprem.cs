@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fprem
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9F8", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void DivideInt16(Processor p)
     {

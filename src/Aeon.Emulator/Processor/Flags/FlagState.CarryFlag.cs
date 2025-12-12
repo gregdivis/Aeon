@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator;
 
@@ -30,27 +31,27 @@ partial class FlagState
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetLazy(FlagOperation operation, uint a)
+        public void SetLazy<TValue>(FlagOperation operation, TValue a) where TValue : unmanaged, IBinaryInteger<TValue>
         {
             this.operation = operation;
-            this.a = a;
+            this.a = uint.CreateTruncating(a);
             this.overrides = default;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetLazy(FlagOperation operation, uint a, uint b)
+        public void SetLazy<TValue>(FlagOperation operation, TValue a, TValue b) where TValue : unmanaged, IBinaryInteger<TValue>
         {
             this.operation = operation;
-            this.a = a;
-            this.b = b;
+            this.a = uint.CreateTruncating(a);
+            this.b = uint.CreateTruncating(b);
             this.overrides = default;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetLazy(FlagOperation operation, uint a, uint b, uint c)
+        public void SetLazy<TValue>(FlagOperation operation, TValue a, TValue b, TValue c) where TValue : unmanaged, IBinaryInteger<TValue>
         {
             this.operation = operation;
-            this.a = a;
-            this.b = b;
-            this.c = c;
+            this.a = uint.CreateTruncating(a);
+            this.b = uint.CreateTruncating(b);
+            this.c = uint.CreateTruncating(c);
             this.overrides = default;
         }
 
@@ -108,6 +109,10 @@ partial class FlagState
                 FlagOperation.Rol1_DWord => (this.a & 1) == 1,
 
                 FlagOperation.Rol => (this.a & 1) == 1,
+
+                FlagOperation.Ror_Byte => (this.a & 0x80) == 0x80,
+                FlagOperation.Ror_Word => (this.a & 0x8000) == 0x8000,
+                FlagOperation.Ror_DWord => (this.a & 0x80000000) == 0x80000000,
 
                 FlagOperation.Shld_Word => (((this.a << (int)this.c) | (this.b >> (int)(16 - (this.c & 0xFu)))) & 0x1_0000u) == 0x1_0000u,
                 FlagOperation.Shld_DWord => ((((ulong)this.a << (int)this.c) | (this.b >> (int)(32 - (this.c & 0xFu)))) & 0x1_0000_0000u) == 0x1_0000_0000u,

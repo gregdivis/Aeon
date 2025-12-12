@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.Arithmetic;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.Arithmetic;
 
 internal static class IDiv
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("F6/7 rmb", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ByteDivide(Processor p, sbyte divisor)
     {
@@ -18,6 +21,7 @@ internal static class IDiv
     }
 
     [Opcode("F7/7 rmw", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void WordDivide(Processor p, short divisor)
     {
         if (divisor != 0)
@@ -41,6 +45,7 @@ internal static class IDiv
             ThrowHelper.ThrowEmulatedDivideByZeroException();
         }
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(WordDivide), AddressSize = 16 | 32)]
     public unsafe static void DWordDivide(Processor p, int divisor)
     {

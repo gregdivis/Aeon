@@ -1,13 +1,11 @@
-﻿#nullable disable
-
-namespace Aeon.Emulator.Memory;
+﻿namespace Aeon.Emulator.Memory;
 
 /// <summary>
 /// Provides DOS applications with XMS memory.
 /// </summary>
-internal sealed class ExtendedMemoryManager : IMultiplexInterruptHandler, ICallbackProvider, IInputPort, IOutputPort
+internal sealed class ExtendedMemoryManager(VirtualMachine vm) : IMultiplexInterruptHandler, ICallbackProvider, IInputPort, IOutputPort
 {
-    private VirtualMachine vm;
+    private readonly VirtualMachine vm = vm;
     private RealModeAddress callbackAddress;
     private int a20EnableCount;
     private readonly LinkedList<XmsBlock> xms = new();
@@ -165,11 +163,7 @@ internal sealed class ExtendedMemoryManager : IMultiplexInterruptHandler, ICallb
     ushort IInputPort.ReadWord(int port) => throw new NotSupportedException();
     void IOutputPort.WriteByte(int port, byte value) => this.vm.PhysicalMemory.EnableA20 = (value & 0x02) != 0;
     void IOutputPort.WriteWord(int port, ushort value) => throw new NotSupportedException();
-    void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-    {
-        this.vm = vm;
-        this.InitializeMemoryMap();
-    }
+    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.InitializeMemoryMap();
 
     /// <summary>
     /// Attempts to allocate a block of extended memory.
@@ -205,7 +199,7 @@ internal sealed class ExtendedMemoryManager : IMultiplexInterruptHandler, ICallb
 
         var freeNode = this.xms.Find(smallestFreeBlock.Value);
 
-        var newNodes = freeNode.Value.Allocate(handle, length);
+        var newNodes = freeNode!.Value.Allocate(handle, length);
         this.xms.Replace((XmsBlock)smallestFreeBlock, newNodes);
 
         this.handles.Add(handle, 0);
@@ -295,7 +289,7 @@ internal sealed class ExtendedMemoryManager : IMultiplexInterruptHandler, ICallb
     /// <param name="firstBlock">Free block to merge.</param>
     private void MergeFreeBlocks(XmsBlock firstBlock)
     {
-        var firstNode = this.xms.Find(firstBlock);
+        var firstNode = this.xms.Find(firstBlock)!;
 
         if (firstNode.Next != null)
         {

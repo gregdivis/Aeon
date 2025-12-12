@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fstenv
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9/6 m64", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreEnvironment(VirtualMachine vm, out ulong buffer)
     {

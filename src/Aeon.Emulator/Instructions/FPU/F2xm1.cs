@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class F2xm1
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9F0", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Compute2xMinus1(Processor p)
     {

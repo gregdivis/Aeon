@@ -1,59 +1,44 @@
-﻿namespace Aeon.Emulator.Instructions.BitShifting;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.BitShifting;
 
 internal static class Shld
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("0FA4/r rmw,rw,ib|0FA5/r rmw,rw,cl", AddressSize = 16 | 32)]
     public static void Shld16(Processor p, ref ushort dest, ushort src, byte count)
     {
-        int actualCount = count % 32;
-
+        int actualCount = count & 0x1F;
         if (actualCount == 0)
             return;
 
-        if (actualCount > 16)
-        {
-            dest = (ushort)(src << (32 - actualCount));
-            return;
-        }
+        uint full = ((uint)dest << 16) | src;
+        uint shifted = full << actualCount;
+        ushort result = (ushort)full;
 
-        int result = (dest << actualCount) | (src >> (16 - (actualCount % 16)));
-        if ((result & 0x00010000) != 0)
-            p.Flags.Carry = true;
-        else
-            p.Flags.Carry = false;
+        p.Flags.Carry = (shifted & 0x80000000u) != 0;
+        if (actualCount == 1)
+            p.Flags.Overflow = ((result ^ dest) & 0x8000) != 0;
 
-        if (count == 1)
-        {
-            if (((result ^ dest) & 0x8000) == 0x8000)
-                p.Flags.Overflow = true;
-            else
-                p.Flags.Overflow = false;
-        }
-
-        p.Flags.Update_Value_Word((ushort)(uint)result);
-        dest = (ushort)(uint)result;
+        p.Flags.Update_Value_Word(result);
+        dest = result;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Shld16), AddressSize = 16 | 32)]
     public static void Shld32(Processor p, ref uint dest, uint src, byte count)
     {
-        int actualCount = count % 32;
-
+        int actualCount = count & 0x1F;
         if (actualCount == 0)
             return;
 
-        uint result = (dest << actualCount) | (src >> (32 - actualCount));
-        if ((dest & (1 << (actualCount - 1))) != 0)
-            p.Flags.Carry = true;
-        else
-            p.Flags.Carry = false;
+        ulong full = ((ulong)dest << 32) | src;
+        ulong shifted = full << actualCount;
+        uint result = (uint)(shifted >>> 32);
 
-        if (count == 1)
-        {
-            if (((result ^ dest) & 0x80000000) == 0x80000000)
-                p.Flags.Overflow = true;
-            else
-                p.Flags.Overflow = false;
-        }
+        p.Flags.Carry = (shifted & 0x8000000000000000UL) != 0;
+
+        if (actualCount == 1)
+            p.Flags.Overflow = ((result ^ dest) & 0x80000000u) != 0;
 
         p.Flags.Update_Value_DWord(result);
         dest = result;

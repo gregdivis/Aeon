@@ -1,4 +1,6 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Misc
 {
@@ -21,6 +23,7 @@ internal static class Misc
 
 internal static class StatusWord
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DD/7 m16|DFE0 ax", Name = "fstsw", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreStatusWord(Processor p, out ushort dest)
     {
@@ -30,12 +33,14 @@ internal static class StatusWord
 
 internal static class ControlWord
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9/5 m16", Name = "fldcw", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void LoadControlWord(Processor p, ushort src)
     {
         p.FPU.ControlWord = src;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9/7 m16", Name = "fstcw", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreControlWord(Processor p, out ushort dest)
     {

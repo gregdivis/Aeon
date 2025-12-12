@@ -21,7 +21,7 @@ internal static class Cmpsb
         byte src = vm.PhysicalMemory.GetByte(srcBase + vm.Processor.SI);
         byte dest = vm.PhysicalMemory.GetByte(vm.Processor.ESBase + vm.Processor.DI);
 
-        Cmp.ByteCompare(vm.Processor, src, dest);
+        Cmp.GenericCompare(vm.Processor, src, dest);
 
         if (!vm.Processor.Flags.Direction)
         {
@@ -75,7 +75,7 @@ internal static class Cmpsb
         byte src = vm.PhysicalMemory.GetByte(srcBase + vm.Processor.ESI);
         byte dest = vm.PhysicalMemory.GetByte(vm.Processor.ESBase + vm.Processor.EDI);
 
-        Cmp.ByteCompare(vm.Processor, src, dest);
+        Cmp.GenericCompare(vm.Processor, src, dest);
 
         if (!vm.Processor.Flags.Direction)
         {
@@ -130,7 +130,7 @@ internal static class Cmpsw
         ushort src = vm.PhysicalMemory.GetUInt16(srcSegment + vm.Processor.SI);
         ushort dest = vm.PhysicalMemory.GetUInt16(vm.Processor.ESBase + vm.Processor.DI);
 
-        Cmp.WordCompare(vm.Processor, src, dest);
+        Cmp.GenericCompare(vm.Processor, src, dest);
 
         if (!vm.Processor.Flags.Direction)
         {
@@ -182,7 +182,7 @@ internal static class Cmpsw
         ushort src = vm.PhysicalMemory.GetUInt16(srcSegment + vm.Processor.ESI);
         ushort dest = vm.PhysicalMemory.GetUInt16(vm.Processor.ESBase + vm.Processor.EDI);
 
-        Cmp.WordCompare(vm.Processor, src, dest);
+        Cmp.GenericCompare(vm.Processor, src, dest);
 
         if (!vm.Processor.Flags.Direction)
         {
@@ -234,7 +234,7 @@ internal static class Cmpsw
         uint src = vm.PhysicalMemory.GetUInt32(srcSegment + vm.Processor.ESI);
         uint dest = vm.PhysicalMemory.GetUInt32(vm.Processor.ESBase + vm.Processor.EDI);
 
-        Cmp.DWordCompare(vm.Processor, src, dest);
+        Cmp.GenericCompare(vm.Processor, src, dest);
 
         if (!vm.Processor.Flags.Direction)
         {

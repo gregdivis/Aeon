@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.AsciiAdjust;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.AsciiAdjust;
 
 internal static class AAA
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("37", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void AdjustAfterAddition(Processor p)
     {

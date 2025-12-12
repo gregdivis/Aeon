@@ -1,24 +1,30 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fst
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9/2 mf32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreReal32(Processor p, out float value)
     {
         value = (float)p.FPU.ST0_Ref;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DD/2 mf64", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreReal64(Processor p, out double value)
     {
         value = p.FPU.ST0_Ref;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DDD0", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreReal64_0(VirtualMachine vm)
     {
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DDD1", Name = "fst st1", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreReal64_1(VirtualMachine vm)
     {
@@ -64,6 +70,7 @@ internal static class Fst
 
 internal static class Fstp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9/3 mf32", Name = "fstp", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreRealPop32(Processor p, out float value)
     {
@@ -71,6 +78,7 @@ internal static class Fstp
         p.FPU.Pop();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DB/7 mf80", Name = "fstp", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreRealPop80(Processor p, out Real10 value)
     {
@@ -78,6 +86,7 @@ internal static class Fstp
         p.FPU.Pop();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DD/3 mf64", Name = "fstp", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreRealPop64(Processor p, out double value)
     {

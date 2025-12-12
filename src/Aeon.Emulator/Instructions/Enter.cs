@@ -1,8 +1,11 @@
-﻿namespace Aeon.Emulator.Instructions;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions;
 
 internal static class Enter
 {
     [Opcode("C8 i16,ib", AddressSize = 16 | 32)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Enter16(VirtualMachine vm, ushort frameSize, byte nestingLevel)
     {
         uint level = nestingLevel & 0x1Fu;
@@ -17,6 +20,7 @@ internal static class Enter
         vm.Processor.BP = (ushort)frameTemp;
         vm.Processor.SP = (ushort)(vm.Processor.BP - frameSize);
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Enter16), AddressSize = 16 | 32)]
     public static void Enter32(VirtualMachine vm, ushort frameSize, byte nestingLevel)
     {

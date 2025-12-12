@@ -1,4 +1,6 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fxch
 {
@@ -7,6 +9,7 @@ internal static class Fxch
     {
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9C9", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange1(Processor p)
     {
@@ -17,6 +20,7 @@ internal static class Fxch
         st1 = temp;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9CA", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange2(Processor p)
     {
@@ -27,6 +31,7 @@ internal static class Fxch
         st2 = temp;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9CB", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange3(Processor p)
     {
@@ -37,6 +42,7 @@ internal static class Fxch
         st3 = temp;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9CC", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange4(Processor p)
     {
@@ -47,6 +53,7 @@ internal static class Fxch
         st4 = temp;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9CD", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange5(Processor p)
     {
@@ -57,6 +64,7 @@ internal static class Fxch
         st5 = temp;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9CE", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange6(Processor p)
     {
@@ -67,6 +75,7 @@ internal static class Fxch
         st6 = temp;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9CF", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Exchange7(Processor p)
     {

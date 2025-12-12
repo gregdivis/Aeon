@@ -6,4 +6,6 @@
   <Project Path="Aeon.Test/Aeon.Test.csproj" />
   <Project Path="AeonMonoGame/AeonMonoGame.csproj" Id="0f3e65f4-faf2-431d-b44e-7929f8d0c770" />
   <Project Path="AeonSourceGenerator/AeonSourceGenerator.csproj" />
+  <Project Path="MooParser/MooParser.csproj" Id="ff806412-dd95-4948-a812-9415d0ff7f7f" />
+  <Project Path="SingleStepTests/SingleStepTests.csproj" Id="f06bb0b3-086e-4150-aa74-117a3aebd91d" />
 </Solution>

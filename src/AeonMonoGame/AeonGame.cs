@@ -12,12 +12,12 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Aeon.Emulator.Launcher;
 
-public class AeonGame : Game
+public sealed class AeonGame : Game
 {
     private SpriteBatch? _spriteBatch;
     private EmulatorHost? emulator;
     private Texture2D? framebufferTexture;
-    private SpriteFont? messageFont;
+    private Texture2D? messageFont;
     private VideoRenderTarget? renderTarget;
     private readonly Microsoft.Xna.Framework.Input.Keys[] pressedKeysBuffer = new Microsoft.Xna.Framework.Input.Keys[8];
     private readonly HashSet<Microsoft.Xna.Framework.Input.Keys> pressedKeys = [];
@@ -26,6 +26,9 @@ public class AeonGame : Game
     private long instructionsPerSecond;
     private readonly Stopwatch ipsCounter = new();
     private MouseState previousMouseState;
+    private bool mouseAbsoluteMode;
+    private bool mouseCaptured;
+    private bool hasFocus;
 
     public AeonGame()
     {
@@ -37,16 +40,22 @@ public class AeonGame : Game
     protected override void Initialize()
     {
         this.Window.Title = "Aeon";
-        this.emulator = new EmulatorHost();
+        this.emulator = new EmulatorHost(
+            new VirtualMachineInitializationOptions
+            {
+                PhysicalMemorySize = 32,
+                AdditionalDevices =
+                [
+                    _ => new InternalSpeaker(),
+                    vm => new SoundBlaster(vm),
+                    _ => new FmSoundCard(),
+                    _ => new GeneralMidi(new GeneralMidiOptions(MidiEngine.MidiMapper))
+                ]
+            }
+        );
         this.videoModeChanges = 1;
         this.UpdateVideoMode();
         this.emulator.VideoModeChanged += (s, e) => Interlocked.Increment(ref this.videoModeChanges);
-        var vm = this.emulator.VirtualMachine;
-        vm.RegisterVirtualDevice(new InternalSpeaker());
-        vm.RegisterVirtualDevice(new SoundBlaster(vm));
-        vm.RegisterVirtualDevice(new FmSoundCard());
-        vm.RegisterVirtualDevice(new GeneralMidi(new GeneralMidiOptions(MidiEngine.MidiMapper)));
-
         this.emulator.VirtualMachine.FileSystem.Drives[DriveLetter.C].Mapping = new WritableMappedFolder(@"C:\DOS");
         this.emulator.VirtualMachine.FileSystem.Drives[DriveLetter.C].HasCommandInterpreter = true;
         this.emulator.VirtualMachine.FileSystem.Drives[DriveLetter.C].DriveType = DriveType.Fixed;
@@ -58,10 +67,22 @@ public class AeonGame : Game
         base.Initialize();
     }
 
+    protected override void OnActivated(object sender, EventArgs args)
+    {
+        this.hasFocus = true;
+        base.OnActivated(sender, args);
+    }
+
+    protected override void OnDeactivated(object sender, EventArgs args)
+    {
+        this.hasFocus = false;
+        base.OnDeactivated(sender, args);
+    }
+
     protected override void LoadContent() 
     {
         this._spriteBatch = new SpriteBatch(GraphicsDevice);
-        this.messageFont = this.Content.Load<SpriteFont>("PressStart2P");
+        this.messageFont = Texture2D.CreateEmuFont(this.GraphicsDevice, Fonts.VGA8x16);
     }
 
     private void RaiseMouseEvents(EmulatorHost emulator, MouseState p, MouseState c)
@@ -87,8 +108,19 @@ public class AeonGame : Game
             double yRatio = (double)this.renderTarget.Height / this.GraphicsDevice.Viewport.Height;
             int virtualX = (int)(xRatio * c.X);
             int virtualY = (int)(yRatio * c.Y);
-            if (virtualX >= 0 && virtualX < emulator.VirtualMachine.VideoMode!.PixelWidth && virtualY >= 0 && virtualY < emulator.VirtualMachine.VideoMode.PixelHeight)
-                emulator.MouseEvent(new MouseMoveAbsoluteEvent(virtualX, virtualY));
+
+            if (this.mouseAbsoluteMode)
+            {
+                if (virtualX >= 0 && virtualX < emulator.VirtualMachine.VideoMode!.PixelWidth && virtualY >= 0 && virtualY < emulator.VirtualMachine.VideoMode.PixelHeight)
+                    emulator.MouseEvent(new MouseMoveAbsoluteEvent(virtualX, virtualY));
+            }
+            else if (this.mouseCaptured)
+            {
+                int deltaX = virtualX - (this.renderTarget.Width / 2);
+                int deltaY = virtualY - (this.renderTarget.Height / 2);
+                emulator.MouseEvent(new MouseMoveRelativeEvent(deltaX, deltaY));
+                Microsoft.Xna.Framework.Input.Mouse.SetPosition(this.GraphicsDevice.Viewport.Width / 2, this.GraphicsDevice.Viewport.Height / 2);
+            }
         }
     }
 
@@ -103,54 +135,57 @@ public class AeonGame : Game
             }
 
             var mouseState = Microsoft.Xna.Framework.Input.Mouse.GetState(this.Window);
-            if (this.previousMouseState != mouseState)
+            if (this.previousMouseState != mouseState && (this.hasFocus || this.mouseAbsoluteMode))
             {
                 RaiseMouseEvents(this.emulator, this.previousMouseState, mouseState);
                 this.previousMouseState = mouseState;
             }
 
-            var state = Microsoft.Xna.Framework.Input.Keyboard.GetState();
-            int count = state.GetPressedKeyCount();
-            if (count > 0)
+            if (this.hasFocus)
             {
-                state.GetPressedKeys(this.pressedKeysBuffer);
-                for (int i = 0; i < count; i++)
+                var state = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+                int count = state.GetPressedKeyCount();
+                if (count > 0)
                 {
-                    var key = this.pressedKeysBuffer[i];
-                    if (this.pressedKeys.Add(key) && key.TryConvert(out var aeonKey))
-                        this.emulator.PressKey(aeonKey);
-                }
-            }
-
-            List<Microsoft.Xna.Framework.Input.Keys>? released = null;
-
-            foreach (var pressed in this.pressedKeys)
-            {
-                bool found = false;
-
-                for (int i = 0; i < count; i++)
-                {
-                    if (this.pressedKeysBuffer[i] == pressed)
+                    state.GetPressedKeys(this.pressedKeysBuffer);
+                    for (int i = 0; i < count; i++)
                     {
-                        found = true;
-                        break;
+                        var key = this.pressedKeysBuffer[i];
+                        if (this.pressedKeys.Add(key) && key.TryConvert(out var aeonKey))
+                            this.emulator.PressKey(aeonKey);
                     }
                 }
 
-                if (!found)
-                {
-                    released ??= [];
-                    released.Add(pressed);
-                }
-            }
+                List<Microsoft.Xna.Framework.Input.Keys>? released = null;
 
-            if (released is not null)
-            {
-                foreach (var key in released)
+                foreach (var pressed in this.pressedKeys)
                 {
-                    this.pressedKeys.Remove(key);
-                    if (key.TryConvert(out var aeonKey))
-                        this.emulator.ReleaseKey(aeonKey);
+                    bool found = false;
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (this.pressedKeysBuffer[i] == pressed)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        released ??= [];
+                        released.Add(pressed);
+                    }
+                }
+
+                if (released is not null)
+                {
+                    foreach (var key in released)
+                    {
+                        this.pressedKeys.Remove(key);
+                        if (key.TryConvert(out var aeonKey))
+                            this.emulator.ReleaseKey(aeonKey);
+                    }
                 }
             }
 
@@ -194,7 +229,7 @@ public class AeonGame : Game
                              color: Color.White);
 
             if (this.instructionsPerSecond > 0)
-                _spriteBatch.DrawString(this.messageFont, $"IPS: {this.instructionsPerSecond:#,#}", new Vector2(GraphicsDevice.Viewport.Width - 300, GraphicsDevice.Viewport.Height - 20), Color.White);
+                _spriteBatch.DrawString(this.messageFont!, $"IPS: {this.instructionsPerSecond:#,#}", new Vector2(GraphicsDevice.Viewport.Width - 180, GraphicsDevice.Viewport.Height - 20), Color.White);
 
             _spriteBatch.End();
         }

@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator;
 
@@ -172,6 +173,17 @@ public sealed partial class FlagState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Update_Value<TValue>(TValue value) where TValue : unmanaged, IBinaryInteger<TValue>
+    {
+        if (Unsafe.SizeOf<TValue>() == 1)
+            this.Update_Value_Byte(byte.CreateTruncating(value));
+        else if (Unsafe.SizeOf<TValue>() == 2)
+            this.Update_Value_Word(ushort.CreateTruncating(value));
+        else
+            this.Update_Value_DWord(uint.CreateTruncating(value));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Update_Value_Byte(byte value) => this.signZeroParity.SetLazyByte(value);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Update_Value_Word(ushort value) => this.signZeroParity.SetLazyWord(value);
@@ -205,293 +217,168 @@ public sealed partial class FlagState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Add_Byte(byte a, byte b, byte result)
+    public void Update_Add<TValue>(TValue a, TValue b, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Add_Byte, a, b);
-        this.overflow.SetLazy(FlagOperation.Add_Byte, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Add_Word(ushort a, ushort b, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Add_Word, a, b);
-        this.overflow.SetLazy(FlagOperation.Add_Word, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Add_DWord(uint a, uint b, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Add_DWord, a, b);
-        this.overflow.SetLazy(FlagOperation.Add_DWord, a, b);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Add_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Add_Word
+            : FlagOperation.Add_DWord;
+        this.carry.SetLazy(op, a, b);
+        this.overflow.SetLazy(op, a, b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Adc_Byte(byte a, byte b, uint c, byte result)
+    public void Update_Adc<TValue>(TValue a, TValue b, TValue c, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Adc_Byte, a, b, c);
-        this.overflow.SetLazy(FlagOperation.Adc_Byte, a, b, c);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Adc_Word(ushort a, ushort b, uint c, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Adc_Word, a, b, c);
-        this.overflow.SetLazy(FlagOperation.Adc_Word, a, b, c);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Adc_DWord(uint a, uint b, uint c, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Adc_DWord, a, b, c);
-        this.overflow.SetLazy(FlagOperation.Adc_DWord, a, b, c);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Adc_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Adc_Word
+            : FlagOperation.Adc_DWord;
+        this.carry.SetLazy(op, a, b, c);
+        this.overflow.SetLazy(op, a, b, c);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sub_Byte(byte a, byte b, byte result)
+    public void Update_Sub<TValue>(TValue a, TValue b, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Sub_Byte, a, b);
-        this.overflow.SetLazy(FlagOperation.Sub_Byte, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sub_Word(ushort a, ushort b, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Sub_Word, a, b);
-        this.overflow.SetLazy(FlagOperation.Sub_Word, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sub_DWord(uint a, uint b, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Sub_DWord, a, b);
-        this.overflow.SetLazy(FlagOperation.Sub_DWord, a, b);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Sub_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Sub_Word
+            : FlagOperation.Sub_DWord;
+        this.carry.SetLazy(op, a, b);
+        this.overflow.SetLazy(op, a, b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sbb_Byte(byte a, byte b, uint c, byte result)
+    public void Update_Sbb<TValue>(TValue a, TValue b, TValue c, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Sbb_Byte, a, b, c);
-        this.overflow.SetLazy(FlagOperation.Sbb_Byte, a, b, c);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sbb_Word(ushort a, ushort b, uint c, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Sbb_Word, a, b, c);
-        this.overflow.SetLazy(FlagOperation.Sbb_Word, a, b, c);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sbb_DWord(uint a, uint b, uint c, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Sbb_DWord, a, b, c);
-        this.overflow.SetLazy(FlagOperation.Sbb_DWord, a, b, c);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Sbb_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Sbb_Word
+            : FlagOperation.Sbb_DWord;
+        this.carry.SetLazy(op, a, b, c);
+        this.overflow.SetLazy(op, a, b, c);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Inc_Byte(byte a, byte result)
+    public void Update_Inc<TValue>(TValue a, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.overflow.SetLazy(FlagOperation.Inc_Byte, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Inc_Word(ushort a, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.overflow.SetLazy(FlagOperation.Inc_Word, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Inc_DWord(uint a, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.overflow.SetLazy(FlagOperation.Inc_DWord, a);
+        this.Update_Value(result);
+        this.overflow.SetLazy(
+            Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Inc_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Inc_Word
+            : FlagOperation.Inc_DWord,
+            a
+        );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Dec_Byte(byte a, byte result)
+    public void Update_Dec<TValue>(TValue a, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.overflow.SetLazy(FlagOperation.Dec_Byte, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Dec_Word(ushort a, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.overflow.SetLazy(FlagOperation.Dec_Word, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Dec_DWord(uint a, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.overflow.SetLazy(FlagOperation.Dec_DWord, a);
+        this.Update_Value(result);
+        this.overflow.SetLazy(
+            Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Dec_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Dec_Word
+            : FlagOperation.Dec_DWord,
+            a
+        );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sar1_Byte(byte a, byte result)
+    public void Update_Sar1<TValue>(TValue a, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Sar1, a);
-        this.overflow.Value = false;
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sar1_Word(ushort a, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Sar1, a);
-        this.overflow.Value = false;
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sar1_DWord(uint a, uint result)
-    {
-        this.Update_Value_DWord(result);
+        this.Update_Value(result);
         this.carry.SetLazy(FlagOperation.Sar1, a);
         this.overflow.Value = false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sar_Byte(byte a, byte b, byte result)
+    public void Update_Sar<TValue>(TValue a, TValue b, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Sar_Byte, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sar_Word(ushort a, ushort b, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Sar_Word, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Sar_DWord(uint a, uint b, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Sar_DWord, a, b);
+        this.Update_Value(result);
+        this.carry.SetLazy(
+            Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Sar_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Sar_Word
+            : FlagOperation.Sar_DWord
+            , a, b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shl1_Byte(byte a, byte result)
+    public void Update_Shl1<TValue>(TValue a, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Shl1_Byte, a);
-        this.overflow.SetLazy(FlagOperation.Shl1_Byte, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shl1_Word(ushort a, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Shl1_Word, a);
-        this.overflow.SetLazy(FlagOperation.Shl1_Word, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shl1_DWord(uint a, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Shl1_DWord, a);
-        this.overflow.SetLazy(FlagOperation.Shl1_DWord, a);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Shl1_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Shl1_Word
+            : FlagOperation.Shl1_DWord;
+
+        this.carry.SetLazy(op, a);
+        this.overflow.SetLazy(op, a);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shl_Byte(byte a, byte b, byte result)
+    public void Update_Shl<TValue>(TValue a, TValue b, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Shl_Byte, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shl_Word(ushort a, ushort b, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Shl_Word, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shl_DWord(uint a, uint b, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Shl_DWord, a, b);
+        this.Update_Value(result);
+        this.carry.SetLazy(Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Shl_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Shl_Word
+            : FlagOperation.Shl_DWord, a, b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shr1_Byte(byte a, byte result)
+    public void Update_Shr1<TValue>(TValue a, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Shr1_Byte, a);
-        this.overflow.SetLazy(FlagOperation.Shr1_Byte, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shr1_Word(ushort a, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Shr1_Word, a);
-        this.overflow.SetLazy(FlagOperation.Shr1_Word, a);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shr1_DWord(uint a, uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Shr1_DWord, a);
-        this.overflow.SetLazy(FlagOperation.Shr1_DWord, a);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Shr1_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Shr1_Word
+            : FlagOperation.Shr1_DWord;
+        this.carry.SetLazy(op, a);
+        this.overflow.SetLazy(op, a);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shr_Byte(byte a, byte b, byte result)
+    public void Update_Shr<TValue>(TValue a, TValue b, TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Shr, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shr_Word(ushort a, ushort b, ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Shr, a, b);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Shr_DWord(uint a, uint b, uint result)
-    {
-        this.Update_Value_DWord(result);
+        this.Update_Value(result);
         this.carry.SetLazy(FlagOperation.Shr, a, b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Rol1_Byte(byte result)
+    public void Update_Rol1<TValue>(TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
-        this.carry.SetLazy(FlagOperation.Rol1_Byte, result);
-        this.overflow.SetLazy(FlagOperation.Rol1_Byte, result);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Rol1_Word(ushort result)
-    {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Rol1_Word, result);
-        this.overflow.SetLazy(FlagOperation.Rol1_Word, result);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Rol1_DWord(uint result)
-    {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Rol1_DWord, result);
-        this.overflow.SetLazy(FlagOperation.Rol1_DWord, result);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Rol1_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Rol1_Word
+            : FlagOperation.Rol1_DWord;
+        this.carry.SetLazy(op, result);
+        this.overflow.SetLazy(op, result);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Rol_Byte(byte result)
+    public void Update_Rol<TValue>(TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Byte(result);
+        this.Update_Value(result);
         this.carry.SetLazy(FlagOperation.Rol, result);
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Rol_Word(ushort result)
+    public void Update_Ror1<TValue>(TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_Word(result);
-        this.carry.SetLazy(FlagOperation.Rol, result);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Ror_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Ror_Word
+            : FlagOperation.Ror_DWord;
+        this.carry.SetLazy(op, result);
+        this.overflow.SetLazy(op, result);
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Update_Rol_DWord(uint result)
+    public void Update_Ror<TValue>(TValue result) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        this.Update_Value_DWord(result);
-        this.carry.SetLazy(FlagOperation.Rol, result);
+        this.Update_Value(result);
+        var op = Unsafe.SizeOf<TValue>() == 1 ? FlagOperation.Ror_Byte
+            : Unsafe.SizeOf<TValue>() == 2 ? FlagOperation.Ror_Word
+            : FlagOperation.Ror_DWord;
+        this.carry.SetLazy(op, result);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

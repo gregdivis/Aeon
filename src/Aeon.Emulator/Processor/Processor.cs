@@ -108,35 +108,35 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Pointer to the EAX/AX/AL register.
     /// </summary>
-    internal readonly unsafe void* PAX;
+    private readonly unsafe void* PAX;
     /// <summary>
     /// Pointer to the EBX/BX/BL register.
     /// </summary>
-    internal readonly unsafe void* PBX;
+    private readonly unsafe void* PBX;
     /// <summary>
     /// Pointer to the ECX/CX/CL register.
     /// </summary>
-    internal readonly unsafe void* PCX;
+    private readonly unsafe void* PCX;
     /// <summary>
     /// Pointer to the EDX/DX/DL register.
     /// </summary>
-    internal readonly unsafe void* PDX;
+    private readonly unsafe void* PDX;
     /// <summary>
     /// Pointer to the AH register.
     /// </summary>
-    internal readonly unsafe byte* PAH;
+    private readonly unsafe byte* PAH;
     /// <summary>
     /// Pointer to the BH register.
     /// </summary>
-    internal readonly unsafe byte* PBH;
+    private readonly unsafe byte* PBH;
     /// <summary>
     /// Pointer to the CH register.
     /// </summary>
-    internal readonly unsafe byte* PCH;
+    private readonly unsafe byte* PCH;
     /// <summary>
     /// Pointer to the DH register.
     /// </summary>
-    internal readonly unsafe byte* PDH;
+    private readonly unsafe byte* PDH;
 
     /// <summary>
     /// Gets or sets the value of the EAX register.
@@ -273,23 +273,23 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Pointer to the EBP/BP register.
     /// </summary>
-    internal unsafe readonly void* PBP;
+    private unsafe readonly void* PBP;
     /// <summary>
     /// Pointer to the ESI/SI register.
     /// </summary>
-    internal unsafe readonly void* PSI;
+    private unsafe readonly void* PSI;
     /// <summary>
     /// Pointer to the EDI/DI register.
     /// </summary>
-    internal unsafe readonly void* PDI;
+    private unsafe readonly void* PDI;
     /// <summary>
     /// Pointer to the EIP/IP register.
     /// </summary>
-    internal unsafe readonly void* PIP;
+    private unsafe readonly void* PIP;
     /// <summary>
     /// Pointer to the ESP/SP register.
     /// </summary>
-    internal unsafe readonly void* PSP;
+    private unsafe readonly void* PSP;
 
     /// <summary>
     /// Gets or sets the value of the EBP register.
@@ -550,7 +550,6 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     public int OperandSize
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
             uint bit = ((uint)this.GlobalSize ^ this.SizeOverride) & 1u;
@@ -562,7 +561,6 @@ public sealed class Processor : IRegisterContainer
     /// </summary>
     public int AddressSize
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
             uint bit = ((uint)this.GlobalSize ^ this.SizeOverride) & 2u;
@@ -615,7 +613,22 @@ public sealed class Processor : IRegisterContainer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal unsafe void* GetRegisterWordPointer(int rmCode) => wordRegisterPointers[rmCode];
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal unsafe ushort* GetSegmentRegisterPointer(int code) => segmentRegisterPointers[code];
+    internal ref ushort GetSegmentRegisterPointer(int code)
+    {
+        unsafe
+        {
+            return ref Unsafe.AsRef<ushort>(this.segmentRegisterPointers[code]);
+        }
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref uint GetSegmentBasePointer(int code)
+    {
+        unsafe
+        {
+            return ref Unsafe.AsRef<uint>(&this.segmentBases[code]);
+        }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal unsafe uint* GetDebugRegisterPointer(int code) => &debugRegisterBase[code];
 
@@ -690,7 +703,7 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Array of pointers to segment registers.
     /// </summary>
-    internal unsafe readonly ushort** segmentRegisterPointers;
+    private unsafe readonly ushort** segmentRegisterPointers;
     /// <summary>
     /// Array of pointers to segment override bases.
     /// </summary>

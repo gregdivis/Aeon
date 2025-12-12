@@ -5,18 +5,12 @@ internal static class Shrd
     [Opcode("0FAC/r rmw,rw,ib|0FAD/r rmw,rw,cl", AddressSize = 16 | 32)]
     public static void Shrd16(Processor p, ref ushort dest, ushort src, byte count)
     {
-        int actualCount = count % 32;
+        int actualCount = count % 16;
 
         if (actualCount == 0)
             return;
 
-        if (actualCount > 16)
-        {
-            dest = (ushort)(src >> (32 - actualCount));
-            return;
-        }
-
-        int result;
+        uint result;
         if (actualCount == 1)
         {
             if ((dest & 1) != 0)
@@ -24,7 +18,7 @@ internal static class Shrd
             else
                 p.Flags.Carry = false;
 
-            result = (dest >> 1) | (src << 15);
+            result = ((uint)dest >> 1) | ((uint)src << 15);
 
             if (((result ^ dest) & 0x8000) == 0x8000)
                 p.Flags.Overflow = true;
@@ -33,7 +27,7 @@ internal static class Shrd
         }
         else
         {
-            result = (dest >> (actualCount - 1)) | (src << (16 - (actualCount - 1)));
+            result = ((uint)dest >> (actualCount - 1)) | ((uint)src << (16 - (actualCount - 1)));
             if ((dest & 1) != 0)
                 p.Flags.Carry = true;
             else

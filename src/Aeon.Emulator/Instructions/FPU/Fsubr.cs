@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fsubr
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D8/5 mf32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void SubtractST032(Processor p, float value)
     {
@@ -9,6 +12,7 @@ internal static class Fsubr
         st0 = value - st0;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DC/5 mf64|D8E8+ st|DCE0 st0", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void SubtractST064(Processor p, double value)
     {

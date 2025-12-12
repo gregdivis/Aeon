@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.DecimalAdjust;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.DecimalAdjust;
 
 internal static class DAS
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("2F", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void DecimalAdjustAfterSubtraction(Processor p)
     {

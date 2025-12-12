@@ -3,17 +3,23 @@
 /// <summary>
 /// Provides real-time-clock services (int 1Ah).
 /// </summary>
-internal sealed class RealTimeClockHandler : IInterruptHandler, IDisposable
+internal sealed class RealTimeClockHandler(VirtualMachine vm) : IInterruptHandler
 {
+    private const long TicksPerClockTick = TimeSpan.TicksPerMillisecond * 55;
     private const byte ReadClock = 0;
     private const byte SetClock = 1;
     private const byte GetRealTime = 2;
     private const byte GetDate = 4;
 
-    private VirtualMachine? vm;
-    private Timer? timer;
+    private readonly VirtualMachine vm = vm;
 
     IEnumerable<InterruptHandlerInfo> IInterruptHandler.HandledInterrupts => [0x1A];
+
+    /// <summary>
+    /// Updates the emulated BIOS clock with the number of 55 msec ticks since midnight.
+    /// </summary>
+    public void Update() => this.vm.PhysicalMemory.Bios.RealTimeClock = (uint)(DateTime.Now.TimeOfDay.Ticks / TicksPerClockTick);
+
     void IInterruptHandler.HandleInterrupt(int interrupt)
     {
         var now = DateTime.Now;
@@ -54,36 +60,9 @@ internal sealed class RealTimeClockHandler : IInterruptHandler, IDisposable
         this.SaveFlags(EFlags.Carry);
     }
 
-    Task IVirtualDevice.PauseAsync()
-    {
-        this.timer!.Change(Timeout.Infinite, Timeout.Infinite);
-        return Task.CompletedTask;
-    }
-    Task IVirtualDevice.ResumeAsync()
-    {
-        this.timer!.Change(0, 55);
-        return Task.CompletedTask;
-    }
-
-    void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
-    {
-        this.vm = vm;
-        this.timer = new Timer(UpdateClock, null, 0, 55);
-    }
-
-    void IDisposable.Dispose() => this.timer!.Dispose();
-
-    /// <summary>
-    /// Updates the emulated BIOS clock with the number of 55 msec ticks since midnight.
-    /// </summary>
-    /// <param name="state">Unused state object.</param>
-    private void UpdateClock(object? state)
-    {
-        this.vm!.PhysicalMemory.Bios.RealTimeClock = (uint)(DateTime.Now.TimeOfDay.TotalMilliseconds / 55.0);
-    }
     private void SaveFlags(EFlags modified)
     {
-        var oldFlags = (EFlags)this.vm!.PhysicalMemory.GetUInt16(this.vm.Processor.SS, (ushort)(vm.Processor.SP + 4));
+        var oldFlags = (EFlags)this.vm.PhysicalMemory.GetUInt16(this.vm.Processor.SS, (ushort)(vm.Processor.SP + 4));
         oldFlags &= ~modified;
         this.vm.PhysicalMemory.SetUInt16(this.vm.Processor.SS, (ushort)(this.vm.Processor.SP + 4), (ushort)(oldFlags | (this.vm.Processor.Flags.Value & modified)));
     }

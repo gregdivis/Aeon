@@ -1,27 +1,22 @@
-﻿namespace Aeon.Emulator.Instructions.Stack;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.Stack;
 
 internal static class Push
 {
-    [Opcode("6A ibx", AddressSize = 16 | 32)]
-    public static void PushByte(VirtualMachine vm, short value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("6A ibx", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void PushByteGeneric<TValue>(VirtualMachine vm, TValue value) where TValue : unmanaged, IBinaryInteger<TValue>, ISignedNumber<TValue>
     {
-        vm.PushToStack((ushort)value);
-    }
-    [Alternate(nameof(PushByte), AddressSize = 16 | 32)]
-    public static void PushByteToDWord(VirtualMachine vm, int value)
-    {
-        vm.PushToStack32((uint)value);
+        vm.PushToStackGeneric(value);
     }
 
-    [Opcode("FF/6 rmw|50+ rw|68 iw", AddressSize = 16 | 32)]
-    public static void PushWord(VirtualMachine vm, ushort value)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [Opcode("FF/6 rmw|50+ rw|68 iw", AddressSize = 16 | 32, OperandSize = 16 | 32)]
+    public static void PushWordGeneric<TValue>(VirtualMachine vm, TValue value) where TValue : unmanaged, IBinaryInteger<TValue>
     {
-        vm.PushToStack(value);
-    }
-    [Alternate(nameof(PushWord), AddressSize = 16 | 32)]
-    public static void PushDWord(VirtualMachine vm, uint value)
-    {
-        vm.PushToStack32(value);
+        vm.PushToStackGeneric(value);
     }
 
     [Opcode("9C", Name = "pushf", AddressSize = 16 | 32)]

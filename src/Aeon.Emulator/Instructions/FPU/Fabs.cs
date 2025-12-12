@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fabs
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("D9E1", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void Abs(Processor p)
     {

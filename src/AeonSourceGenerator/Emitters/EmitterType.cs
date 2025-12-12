@@ -26,6 +26,7 @@
         Double,
         Real10,
         SegmentIndex,
-        IntPtr
+        IntPtr,
+        TypeParameter
     }
 }

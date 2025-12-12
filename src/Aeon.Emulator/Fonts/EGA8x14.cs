@@ -1,6 +1,6 @@
 namespace Aeon.Emulator;
 
-internal static partial class Fonts
+public static partial class Fonts
 {
     public static ReadOnlySpan<byte> EGA8x14 =>
     [

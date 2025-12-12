@@ -97,6 +97,7 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
             }
         }
     }
+    public Vesa.VbeHandler Vbe => this.vbe;
 
     /// <summary>
     /// Gets the virtual machine instance which owns the VideoHandler.
@@ -448,8 +449,6 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
                 break;
         }
     }
-
-    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => vm.RegisterVirtualDevice(this.vbe);
 
     /// <summary>
     /// Reads a byte from video RAM.

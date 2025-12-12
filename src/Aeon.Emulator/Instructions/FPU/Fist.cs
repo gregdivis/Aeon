@@ -1,7 +1,10 @@
-﻿namespace Aeon.Emulator.Instructions.FPU;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Instructions.FPU;
 
 internal static class Fist
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DF/2 m16", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreInt16(Processor p, out short dest)
     {
@@ -14,6 +17,7 @@ internal static class Fist
             dest = (short)res;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DB/2 m32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreInt32(Processor p, out int dest)
     {
@@ -29,6 +33,7 @@ internal static class Fist
 
 internal static class Fistp
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DF/3 m16", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreInt16(Processor p, out short dest)
     {
@@ -36,6 +41,7 @@ internal static class Fistp
         p.FPU.Pop();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DB/3 m32", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreInt32(Processor p, out int dest)
     {
@@ -43,6 +49,7 @@ internal static class Fistp
         p.FPU.Pop();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("DF/7 m64", OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void StoreInt64(Processor p, out long dest)
     {

@@ -1,4 +1,5 @@
 ﻿using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 using Aeon.Emulator.RuntimeExceptions;
 
 namespace Aeon.Emulator.Instructions;
@@ -18,7 +19,7 @@ internal static class UnclassifiedInstructions
             }
         }
 
-        ThrowHelper.ThrowNotImplementedException();
+        ThrowHelper.ThrowHaltException();
     }
 
     [Opcode("9B", Name = "wait", OperandSize = 16 | 32, AddressSize = 16 | 32)]
@@ -98,6 +99,7 @@ internal static class UnclassifiedInstructions
     {
         throw new NotSupportedException();
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(ByteSwap), OperandSize = 32, AddressSize = 16 | 32)]
     public static void ByteSwap32(VirtualMachine vm, ref uint value)
     {
