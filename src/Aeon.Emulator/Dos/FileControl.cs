@@ -437,6 +437,62 @@ internal sealed class FileControl : IDisposable
         }
     }
     /// <summary>
+    /// Sets attributes for a file.
+    /// </summary>
+    public void SetFileAttributes()
+    {
+        var fileName = vm.PhysicalMemory.GetString(vm.Processor.DS, (ushort)vm.Processor.DX, ushort.MaxValue, 0);
+        var requestedAttributes = (VirtualFileAttributes)(vm.Processor.CX & 0x3F);
+
+        try
+        {
+            var path = vm.FileSystem.ResolvePath(new VirtualPath(fileName));
+            if (path.DriveLetter is null)
+            {
+                vm.Processor.AX = (short)ExtendedErrorCode.PathNotFound;
+                vm.Processor.Flags.Carry = true;
+                return;
+            }
+
+            var drive = vm.FileSystem.Drives[(DriveLetter)path.DriveLetter];
+            if (drive.Mapping is not MappedFolder mappedFolder)
+            {
+                vm.Processor.AX = (short)ExtendedErrorCode.AccessDenied;
+                vm.Processor.Flags.Carry = true;
+                return;
+            }
+
+            // Must be writable
+            if (drive.Mapping is not IWritableMappedDrive)
+            {
+                vm.Processor.AX = (short)ExtendedErrorCode.AccessDenied;
+                vm.Processor.Flags.Carry = true;
+                return;
+            }
+
+            var fullPath = Path.Combine(mappedFolder.HostPath, path.Path);
+            if (!File.Exists(fullPath) && !Directory.Exists(fullPath))
+            {
+                vm.Processor.AX = (short)ExtendedErrorCode.FileNotFound;
+                vm.Processor.Flags.Carry = true;
+                return;
+            }
+
+            // Directories can only toggle read-only/hidden/system/archive in DOS; preserve directory flag
+            var isDirectory = Directory.Exists(fullPath);
+            var newAttrs = ConvertToHostAttributes(requestedAttributes, isDirectory);
+
+            File.SetAttributes(fullPath, newAttrs);
+
+            vm.Processor.Flags.Carry = false;
+        }
+        catch
+        {
+            vm.Processor.AX = (short)ExtendedErrorCode.AccessDenied;
+            vm.Processor.Flags.Carry = true;
+        }
+    }
+    /// <summary>
     /// Gets the address of the disk transfer area of a process.
     /// </summary>
     /// <param name="process">Process whose DTA will be returned.</param>
@@ -808,6 +864,30 @@ internal sealed class FileControl : IDisposable
             buffer.Append((char)random.Next('A', 'Z' + 1));
 
         return buffer.ToString();
+    }
+
+    /// <summary>
+    /// Converts a virtual file attributes to a host file attributes.
+    /// </summary>
+    /// <param name="attributes">Virtual file attributes.</param>
+    /// <param name="isDirectory">Value indicating whether the file is a directory.</param>
+    /// <returns>Host file attributes.</returns>
+    private static FileAttributes ConvertToHostAttributes(VirtualFileAttributes attributes, bool isDirectory)
+    {
+        var host = FileAttributes.Normal;
+
+        if (attributes.HasFlag(VirtualFileAttributes.Archived))
+            host |= FileAttributes.Archive;
+        if (attributes.HasFlag(VirtualFileAttributes.Hidden))
+            host |= FileAttributes.Hidden;
+        if (attributes.HasFlag(VirtualFileAttributes.ReadOnly))
+            host |= FileAttributes.ReadOnly;
+        if (attributes.HasFlag(VirtualFileAttributes.System))
+            host |= FileAttributes.System;
+        if (isDirectory)
+            host |= FileAttributes.Directory;
+
+        return host;
     }
 
     /// <summary>
