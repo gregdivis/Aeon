@@ -29,6 +29,9 @@ public readonly struct ChunkId : IEquatable<ChunkId>
     public static readonly ChunkId Ram = new("RAM "u8);
     public static readonly ChunkId Queu = new("QUEU"u8);
     public static readonly ChunkId Ea32 = new("EA32"u8);
+    public static readonly ChunkId Cycl = new("CYCL"u8);
+    public static readonly ChunkId Excp = new("EXCP"u8);
+    public static readonly ChunkId Hash = new("HASH"u8);
 
     public static bool operator ==(ChunkId left, ChunkId right) => left.Equals(right);
     public static bool operator !=(ChunkId left, ChunkId right) => !(left == right);
