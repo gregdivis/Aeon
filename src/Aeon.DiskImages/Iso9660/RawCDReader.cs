@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel;
+using System.Runtime.Versioning;
 
 namespace Aeon.DiskImages.Iso9660;
 
 /// <summary>
 /// Stream backed by raw CD sectors.
 /// </summary>
+[SupportedOSPlatform("windows")]
 internal sealed class RawCDReader : Stream
 {
     private readonly IntPtr deviceHandle;

@@ -1,118 +1,114 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Aeon.Emulator;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Aeon.Test
+namespace Aeon.Test;
+
+[TestClass]
+public class Xlat
 {
-    [TestClass]
-    public class Xlat
+    private const ushort CS = 0x1000;
+    private const uint EIP = 0;
+
+    private VirtualMachine vm;
+    private CpuState initialState;
+    private byte[] testData;
+
+    /// <summary>
+    /// Initializes a new instance of the Xlat class.
+    /// </summary>
+    public Xlat()
     {
-        private const ushort CS = 0x1000;
-        private const uint EIP = 0;
+    }
 
-        private VirtualMachine vm;
-        private CpuState initialState;
-        private byte[] testData;
+    /// <summary>
+    /// Gets or sets the test context which provides
+    /// information about and functionality for the current test run.
+    ///</summary>
+    public TestContext TestContext { get; set; }
 
-        /// <summary>
-        /// Initializes a new instance of the Xlat class.
-        /// </summary>
-        public Xlat()
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        this.vm = new VirtualMachine();
+        this.initialState = new CpuState()
         {
+            DS = 0x5000
+        };
+
+        var random = new Random();
+        this.testData = new byte[ushort.MaxValue + 1];
+        random.NextBytes(this.testData);
+        for(int i = 0; i < testData.Length; i++)
+        {
+            if(this.testData[i] == 0)
+                this.testData[i] = 1;
         }
 
-        /// <summary>
-        /// Gets or sets the test context which provides
-        /// information about and functionality for the current test run.
-        ///</summary>
-        public TestContext TestContext { get; set; }
+        vm.WriteBytes(this.initialState.DS, 0, this.testData);
+        vm.SetState(this.initialState);
+        vm.WriteSegmentRegister(SegmentIndex.CS, CS);
+        vm.Processor.EIP = EIP;
+    }
+    [TestCleanup]
+    public void TestCleanup()
+    {
+        this.vm.Dispose();
+    }
 
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            this.vm = new VirtualMachine();
-            this.initialState = new CpuState()
-            {
-                DS = 0x5000
-            };
+    [TestMethod]
+    public void Xlat16_0()
+    {
+        vm.WriteCode(
+            "D7",       // xlat
+            "CD 20"     // int 20h
+            );
 
-            var random = new Random();
-            this.testData = new byte[ushort.MaxValue + 1];
-            random.NextBytes(this.testData);
-            for(int i = 0; i < testData.Length; i++)
-            {
-                if(this.testData[i] == 0)
-                    this.testData[i] = 1;
-            }
+        vm.Processor.AL = 0;
+        vm.Processor.BX = 0;
 
-            vm.WriteBytes(this.initialState.DS, 0, this.testData);
-            vm.SetState(this.initialState);
-            vm.WriteSegmentRegister(SegmentIndex.CS, CS);
-            vm.Processor.EIP = EIP;
-        }
-        [TestCleanup]
-        public void TestCleanup()
-        {
-            this.vm.Dispose();
-        }
+        vm.TestEmulator(10);
 
-        [TestMethod]
-        public void Xlat16_0()
-        {
-            vm.WriteCode(
-                "D7",       // xlat
-                "CD 20"     // int 20h
-                );
+        Assert.AreEqual(this.testData[0], vm.Processor.AL);
+    }
 
-            vm.Processor.AL = 0;
-            vm.Processor.BX = 0;
+    [TestMethod]
+    public void Xlat16_Rnd()
+    {
+        vm.WriteCode(
+            "D7",       // xlat
+            "CD 20"     // int 20h
+            );
 
-            vm.TestEmulator(10);
+        var rnd = new Random();
 
-            Assert.AreEqual(this.testData[0], vm.Processor.AL);
-        }
+        vm.Processor.AL = (byte)rnd.Next(256);
+        vm.Processor.BX = (short)(ushort)rnd.Next(65536);
 
-        [TestMethod]
-        public void Xlat16_Rnd()
-        {
-            vm.WriteCode(
-                "D7",       // xlat
-                "CD 20"     // int 20h
-                );
+        int index = (ushort)((ushort)vm.Processor.BX + vm.Processor.AL);
 
-            var rnd = new Random();
+        vm.TestEmulator(10);
 
-            vm.Processor.AL = (byte)rnd.Next(256);
-            vm.Processor.BX = (short)(ushort)rnd.Next(65536);
+        Assert.AreEqual(this.testData[index], vm.Processor.AL);
+    }
 
-            int index = (ushort)((ushort)vm.Processor.BX + vm.Processor.AL);
+    [TestMethod]
+    public void Xlat16_Max()
+    {
+        vm.WriteCode(
+            "D7",       // xlat
+            "CD 20"     // int 20h
+            );
 
-            vm.TestEmulator(10);
+        var rnd = new Random();
 
-            Assert.AreEqual(this.testData[index], vm.Processor.AL);
-        }
+        vm.Processor.AL = 255;
+        vm.Processor.BX = -1;
 
-        [TestMethod]
-        public void Xlat16_Max()
-        {
-            vm.WriteCode(
-                "D7",       // xlat
-                "CD 20"     // int 20h
-                );
+        int index = (ushort)((ushort)vm.Processor.BX + vm.Processor.AL);
 
-            var rnd = new Random();
+        vm.TestEmulator(10);
 
-            vm.Processor.AL = 255;
-            vm.Processor.BX = -1;
-
-            int index = (ushort)((ushort)vm.Processor.BX + vm.Processor.AL);
-
-            vm.TestEmulator(10);
-
-            Assert.AreEqual(this.testData[index], vm.Processor.AL);
-        }
+        Assert.AreEqual(this.testData[index], vm.Processor.AL);
     }
 }
