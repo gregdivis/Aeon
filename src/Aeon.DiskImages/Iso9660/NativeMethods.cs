@@ -1,7 +1,9 @@
 ﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace Aeon.DiskImages.Iso9660;
 
+[SupportedOSPlatform("windows")]
 internal static class NativeMethods
 {
     public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1L);

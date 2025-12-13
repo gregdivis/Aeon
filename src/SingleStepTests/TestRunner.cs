@@ -4,17 +4,11 @@ using MooParser;
 
 namespace SingleStepTests;
 
-internal sealed class TestRunner : IDisposable
+internal sealed class TestRunner(MooTest test) : IDisposable
 {
     private readonly VirtualMachine vm = new();
 
-    public TestRunner(MooTest test)
-    {
-        this.Test = test;
-        this.vm.EndInitialization();
-    }
-
-    public MooTest Test { get; }
+    public MooTest Test { get; } = test;
 
     public void Execute()
     {

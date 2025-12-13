@@ -1,4 +1,5 @@
-﻿using Aeon.DiskImages.Iso9660;
+﻿using System.Runtime.Versioning;
+using Aeon.DiskImages.Iso9660;
 using Aeon.Emulator;
 using Aeon.Emulator.Dos;
 using Aeon.Emulator.Dos.VirtualFileSystem;
@@ -8,6 +9,7 @@ namespace Aeon.DiskImages;
 /// <summary>
 /// Provides access to a physical CD-ROM drive in Aeon.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public sealed class HostCDDrive : IMappedDrive
 {
     private readonly RawCDReader hostDrive;
