@@ -1,6 +1,9 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.X86;
 
 namespace Aeon.Emulator.Instructions.Arithmetic;
+
+#pragma warning disable SYSLIB5004 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
 internal static class Div
 {
@@ -10,7 +13,14 @@ internal static class Div
     {
         if (divisor != 0)
         {
-            var (quotient, remainder) = Math.DivRem((ushort)p.AX, divisor);
+            uint quotient;
+            uint remainder;
+
+            if (X86Base.IsSupported)
+                (quotient, remainder) = X86Base.DivRem((ushort)p.AX, 0, (uint)divisor);
+            else
+                (quotient, remainder) = Math.DivRem((ushort)p.AX, divisor);
+
             p.AL = (byte)quotient;
             p.AH = (byte)remainder;
         }
@@ -26,17 +36,18 @@ internal static class Div
     {
         if (divisor != 0)
         {
-            uint fullValue;
             ref var ax = ref p.AX;
             ref var dx = ref p.DX;
-            unsafe
-            {
-                var parts = (ushort*)&fullValue;
-                parts[0] = (ushort)ax;
-                parts[1] = (ushort)dx;
-            }
+            uint quotient;
+            uint remainder;
 
-            var (quotient, remainder) = Math.DivRem(fullValue, divisor);
+            uint fullValue = ((uint)(ushort)dx << 16) | (ushort)ax;
+
+            if (X86Base.IsSupported)
+                (quotient, remainder) = X86Base.DivRem(fullValue, 0, (uint)divisor);
+            else
+                (quotient, remainder) = Math.DivRem(fullValue, divisor);
+
             ax = (short)(ushort)quotient;
             dx = (short)(ushort)remainder;
         }
@@ -51,18 +62,23 @@ internal static class Div
     {
         if (divisor != 0)
         {
-            ulong fullValue;
             ref var eax = ref p.EAX;
             ref var edx = ref p.EDX;
-            unsafe
+            uint quotient;
+            uint remainder;
+
+            if (X86Base.IsSupported)
             {
-                var parts = (uint*)&fullValue;
-                parts[0] = (uint)eax;
-                parts[1] = (uint)edx;
+                (quotient, remainder) = X86Base.DivRem((uint)eax, (uint)edx, (uint)divisor);
+            }
+            else
+            {
+                var (q, r) = Math.DivRem(((ulong)(uint)edx << 32) | (uint)eax, divisor);
+                quotient = (uint)q;
+                remainder = (uint)r;
             }
 
-            var (quotient, remainder) = Math.DivRem(fullValue, divisor);
-            eax = (int)(uint)quotient;
+            eax = (int)quotient;
             edx = (int)remainder;
         }
         else
