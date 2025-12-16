@@ -47,13 +47,7 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IDisposable
     /// </summary>
     private int PeriodInSamples => (int)(this.outputSampleRate / this.Frequency);
 
-    byte IInputPort.ReadByte(int port)
-    {
-        if (port == 0x61)
-            return (byte)this.controlRegister;
-
-        throw new NotSupportedException();
-    }
+    byte IInputPort.ReadByte(int port) => (byte)this.controlRegister;
     ushort IInputPort.ReadWord(int port) => throw new NotImplementedException();
     void IOutputPort.WriteByte(int port, byte value)
     {
@@ -64,13 +58,9 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IDisposable
             if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (this.controlRegister & SpeakerControl.SpeakerOn) == 0)
                 this.SpeakerDisabled();
         }
-        else if (port == 0x42)
-        {
-            this.frequencyRegister.WriteByte(value);
-        }
         else
         {
-            throw new NotSupportedException();
+            this.frequencyRegister.WriteByte(value);
         }
     }
     void IOutputPort.WriteWord(int port, ushort value) => throw new NotImplementedException();
