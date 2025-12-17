@@ -12,6 +12,7 @@ namespace Aeon.Emulator.Launcher
     {
         private IntPtr section;
         private bool disposed;
+        private readonly int size;
 
         /// <summary>
         /// Initializes a new instance of the FastBitmap class.
@@ -21,6 +22,7 @@ namespace Aeon.Emulator.Launcher
         public FastBitmap(int width, int height)
         {
             this.CreateInteropBitmap(width, height);
+            this.size = width * height;
         }
         ~FastBitmap()
         {
@@ -35,6 +37,16 @@ namespace Aeon.Emulator.Launcher
         /// Gets the pointer to the bitmap pixel data.
         /// </summary>
         public IntPtr PixelBuffer { get; private set; }
+        public Span<uint> PixelBufferSpan
+        {
+            get
+            {
+                unsafe
+                {
+                    return new Span<uint>(this.PixelBuffer.ToPointer(), this.size);
+                }
+            }
+        }
 
         /// <summary>
         /// Releases unmanaged resources used by the bitmap.
