@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator;
 
-internal sealed class SparseArray<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
+internal readonly struct SparseArray<TKey, TValue> : IReadOnlyDictionary<TKey, TValue>
     where TKey : struct, IBinaryInteger<TKey>
     where TValue : class
 {

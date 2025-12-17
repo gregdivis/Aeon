@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Aeon.Emulator.Sound;
 
-namespace Aeon.Emulator.Launcher.Configuration;
+namespace Aeon.Emulator.Configuration;
 
 public sealed class AeonConfiguration
 {

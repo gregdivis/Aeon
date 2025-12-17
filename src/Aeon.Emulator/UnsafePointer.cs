@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator;
 
-public readonly ref struct UnsafePointer<T> where T : unmanaged
+internal readonly ref struct UnsafePointer<T> where T : unmanaged
 {
     private readonly ref T pointer;
 

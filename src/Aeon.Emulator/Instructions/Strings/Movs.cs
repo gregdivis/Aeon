@@ -55,30 +55,23 @@ internal static class Movsb
         uint srcBase;
         var p = vm.Processor;
 
-        unsafe
+        srcBase = p.GetOverrideBase(SegmentIndex.DS);
+
+        ref uint esi = ref p.ESI;
+        ref uint edi = ref p.EDI;
+
+        byte src = vm.PhysicalMemory.GetByte(srcBase + esi);
+        vm.PhysicalMemory.SetByte(p.ESBase + edi, src);
+
+        if (p.Flags.Direction)
         {
-            uint* basePtr = p.baseOverrides[(int)SegmentIndex.DS];
-            if (basePtr == null)
-                srcBase = p.segmentBases[(int)SegmentIndex.DS];
-            else
-                srcBase = *basePtr;
-
-            ref uint esi =  ref p.ESI;
-            ref uint edi = ref p.EDI;
-
-            byte src = vm.PhysicalMemory.GetByte(srcBase + esi);
-            vm.PhysicalMemory.SetByte(p.ESBase + edi, src);
-
-            if (p.Flags.Direction)
-            {
-                esi--;
-                edi--;
-            }
-            else
-            {
-                esi++;
-                edi++;
-            }
+            esi--;
+            edi--;
+        }
+        else
+        {
+            esi++;
+            edi++;
         }
     }
     private static void MoveBytes32(VirtualMachine vm)

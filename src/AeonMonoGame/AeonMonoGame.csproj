@@ -20,6 +20,7 @@
 		<PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4.1" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\Aeon.Emulator.Configuration\Aeon.Emulator.Configuration.csproj" />
 		<ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
 		<ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
 	</ItemGroup>

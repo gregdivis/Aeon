@@ -90,7 +90,7 @@ namespace Aeon.SourceGenerator.Emitters
                 if (this.MemoryOnly)
                     writer.Write($"arg{this.ParameterIndex}Temp");
                 else
-                    writer.Write($"*(arg{this.ParameterIndex}.IsPointer ? arg{this.ParameterIndex}.RegisterPointer : &arg{this.ParameterIndex}Temp)");
+                    writer.Write($"(arg{this.ParameterIndex}.IsPointer ? ref arg{this.ParameterIndex}.RegisterValue : ref arg{this.ParameterIndex}Temp)");
             }
         }
 

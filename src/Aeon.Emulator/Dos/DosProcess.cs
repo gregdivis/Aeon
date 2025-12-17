@@ -76,7 +76,7 @@ public sealed class DosProcess
     /// <summary>
     /// Gets or sets a buffer containing the processor state before the process is started.
     /// </summary>
-    internal byte[]? InitialProcessorState { get; set; }
+    internal InternalProcessorState? InitialProcessorState { get; set; }
     /// <summary>
     /// Gets or sets the command interpreter if this is a COMMAND.COM process.
     /// </summary>

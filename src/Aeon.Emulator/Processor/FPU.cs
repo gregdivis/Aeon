@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator;
 
@@ -9,39 +7,19 @@ namespace Aeon.Emulator;
 /// </summary>
 public sealed class FPU
 {
-    /// <summary>
-    /// Stores the ST register contents.
-    /// </summary>
-    private readonly unsafe double* reg;
-    /// <summary>
-    /// Stores values indicating whether registers are in use.
-    /// </summary>
-    private readonly unsafe byte* isUsed;
-    /// <summary>
-    /// The FPU top pointer.
-    /// </summary>
-    private uint top;
-    private readonly UnsafeBuffer<double> regBuffer = new(8);
-    private readonly UnsafeBuffer<byte> isUsedBuffer = new(8);
+    private int top;
+    private RegisterContainer<double> reg;
+    private RegisterContainer<byte> isUsed;
 
     /// <summary>
     /// Initializes a new instance of the FPU class.
     /// </summary>
-    public FPU()
-    {
-        unsafe
-        {
-            this.reg = this.regBuffer.ToPointer();
-            this.isUsed = this.isUsedBuffer.ToPointer();
-        }
-
-        this.Reset();
-    }
+    internal FPU() => this.Reset();
 
     /// <summary>
     /// Gets the index of the FPU top register.
     /// </summary>
-    public int Top => (int)this.top;
+    public int Top => this.top;
     /// <summary>
     /// Gets an enumeration of the contents of the ST registers.
     /// </summary>
@@ -49,29 +27,13 @@ public sealed class FPU
     {
         get
         {
-            for (uint i = 0; i < 8u; i++)
+            for (int i = 0; i < 8u; i++)
             {
-                uint index = (top + i) & 0x7u;
-                if (getIsUsed(index))
-                    yield return getReg(index);
+                int index = (top + i) & 0x7;
+                if (this.isUsed[index] != 0)
+                    yield return this.reg[index];
                 else
                     yield return null;
-            }
-
-            bool getIsUsed(uint j)
-            {
-                unsafe
-                {
-                    return this.isUsed[j] != 0;
-                }
-            }
-
-            double getReg(uint j)
-            {
-                unsafe
-                {
-                    return this.reg[j];
-                }
             }
         }
     }
@@ -86,13 +48,13 @@ public sealed class FPU
     {
         get
         {
-            uint value = (uint)this.StatusFlags | (top << 11);
+            uint value = (uint)this.StatusFlags | ((uint)top << 11);
             return (ushort)value;
         }
         set
         {
             this.StatusFlags = (FPUStatus)(value & 0xC7FF);
-            this.top = (uint)((value >> 11) & 7);
+            this.top = (value >>> 11) & 7;
         }
     }
     /// <summary>
@@ -197,10 +159,7 @@ public sealed class FPU
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get
         {
-            unsafe
-            {
-                return ref this.reg[this.top & 0x7];
-            }
+            return ref this.reg[this.top & 0x7];
         }
     }
 
@@ -209,15 +168,8 @@ public sealed class FPU
     /// </summary>
     public void Reset()
     {
-        unsafe
-        {
-            var regVector = MemoryMarshal.Cast<double, Vector<double>>(new Span<double>(this.reg, 8));
-            for (int i = 0; i < regVector.Length; i++)
-                regVector[i] = default;
-
-            *(ulong*)this.isUsed = 0;
-        }
-
+        this.reg = default;
+        this.isUsed = default;
         this.StatusFlags = FPUStatus.Clear;
         this.ControlWord = 0x3BF;
     }
@@ -228,7 +180,7 @@ public sealed class FPU
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Push(double value)
     {
-        top = (top - 1u) & 0x7u;
+        top = (top - 1) & 0x7;
 
         unsafe
         {
@@ -249,17 +201,14 @@ public sealed class FPU
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Pop()
     {
-        unsafe
+        if (this.isUsed[top] != 0)
         {
-            if (this.isUsed[top] != 0)
-            {
-                isUsed[top] = 0;
-                top = (top + 1u) & 0x7u;
-            }
-            else
-            {
-                // Invalid operation
-            }
+            isUsed[top] = 0;
+            top = (top + 1) & 0x7;
+        }
+        else
+        {
+            // Invalid operation
         }
     }
     /// <summary>
@@ -268,54 +217,27 @@ public sealed class FPU
     /// <param name="st">Register ST index.</param>
     /// <returns>Value of the specified register.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public double GetRegisterValue(int st)
-    {
-        uint i = (this.top + (uint)st) & 0x7u;
-        unsafe
-        {
-            return this.reg[i];
-        }
-    }
+    public double GetRegisterValue(int st) => this.reg[(this.top + st) & 0x7];
     /// <summary>
     /// Returns a pointer to an ST register.
     /// </summary>
     /// <param name="st">Register ST index.</param>
     /// <returns>Value of the specified register.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ref double GetRegisterRef(uint st)
-    {
-        unsafe
-        {
-            return ref this.reg[(this.top + st) & 0x7u];
-        }
-    }
+    public ref double GetRegisterRef(int st) => ref this.reg[(this.top + st) & 0x7];
     /// <summary>
     /// Writes a value to an ST register.
     /// </summary>
     /// <param name="st">Register ST index.</param>
     /// <param name="value">Value to write to the register.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void SetRegisterValue(int st, double value)
-    {
-        uint i = (this.top + (uint)st) & 0x7u;
-        unsafe
-        {
-            this.reg[i] = value;
-        }
-    }
+    public void SetRegisterValue(int st, double value) => this.reg[(this.top + st) & 0x7] = value;
     /// <summary>
     /// Marks a register as unused.
     /// </summary>
     /// <param name="st">Register ST index.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void FreeRegister(int st)
-    {
-        uint i = (this.top + (uint)st) & 0x7u;
-        unsafe
-        {
-            this.isUsed[i] = 0;
-        }
-    }
+    public void FreeRegister(int st) => this.isUsed[(this.top + st) & 0x7] = 0;
     /// <summary>
     /// Returns a rounded value based on the rounding mode set in the FPU control register.
     /// </summary>
@@ -324,15 +246,13 @@ public sealed class FPU
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double Round(double value)
     {
-        var mode = this.RoundingMode;
-        if (mode == RoundingControl.Truncate)
-            return Math.Truncate(value);
-        else if (mode == RoundingControl.Nearest)
-            return Math.Round(value);
-        else if (mode == RoundingControl.Down)
-            return Math.Floor(value);
-        else
-            return Math.Ceiling(value);
+        return this.RoundingMode switch
+        {
+            RoundingControl.Truncate => Math.Truncate(value),
+            RoundingControl.Nearest => Math.Round(value),
+            RoundingControl.Down => Math.Floor(value),
+            _ => Math.Ceiling(value)
+        };
     }
 
     /// <summary>
@@ -341,14 +261,7 @@ public sealed class FPU
     /// <param name="st">Register ST index.</param>
     /// <returns>Value indicating whether the register is used.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsRegisterUsed(int st)
-    {
-        uint i = (this.top + (uint)st) & 0x7u;
-        unsafe
-        {
-            return this.isUsed[i] != 0;
-        }
-    }
+    public bool IsRegisterUsed(int st) => this.isUsed[(this.top + st) & 0x7] != 0;
 
     /// <summary>
     /// Specifies floating-point exceptions.
@@ -430,5 +343,11 @@ public sealed class FPU
         /// 80-bit REAL10 floating-point values.
         /// </summary>
         Real10
+    }
+
+    [InlineArray(8)]
+    private struct RegisterContainer<T> where T : unmanaged
+    {
+        public T Top;
     }
 }

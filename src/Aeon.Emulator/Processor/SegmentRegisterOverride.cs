@@ -3,12 +3,16 @@
 /// <summary>
 /// Represents the possible segment override modes.
 /// </summary>
-public enum SegmentRegister : byte
+public enum SegmentRegisterOverride : byte
 {
     /// <summary>
     /// No segment override is set.
     /// </summary>
-    Default,
+    None,
+    /// <summary>
+    /// The current segment is ES.
+    /// </summary>
+    ES,
     /// <summary>
     /// The current segment is CS.
     /// </summary>
@@ -21,10 +25,6 @@ public enum SegmentRegister : byte
     /// The current segment is DS.
     /// </summary>
     DS,
-    /// <summary>
-    /// The current segment is ES.
-    /// </summary>
-    ES,
     /// <summary>
     /// The current segment is FS.
     /// </summary>

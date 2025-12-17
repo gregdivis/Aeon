@@ -7,9 +7,7 @@ internal sealed class TextMode : VideoMode
 {
     private const uint BaseAddress = 0x18000;
 
-    private readonly UnsafeBuffer<nint> planesBuffer = new(4);
-    private readonly unsafe byte* videoRam;
-    private readonly unsafe byte** planes;
+    private readonly PlanesBuffer planes;
     private readonly Graphics graphics;
     private readonly Sequencer sequencer;
 
@@ -18,14 +16,7 @@ internal sealed class TextMode : VideoMode
     {
         unsafe
         {
-            this.videoRam = (byte*)video.VideoRam.ToPointer();
-            byte* vram = this.videoRam;
-            this.planes = (byte**)this.planesBuffer.ToPointer();
-
-            this.planes[0] = vram + PlaneSize * 0;
-            this.planes[1] = vram + PlaneSize * 1;
-            this.planes[2] = vram + PlaneSize * 2;
-            this.planes[3] = vram + PlaneSize * 3;
+            this.planes = new PlanesBuffer((byte*)video.VideoRam.ToPointer());
         }
 
         this.graphics = video.Graphics;
@@ -61,7 +52,7 @@ internal sealed class TextMode : VideoMode
             }
             else
             {
-                var map = this.graphics.ReadMapSelect & 0x3;
+                uint map = this.graphics.ReadMapSelect & 0x3u;
                 if (map == 0 || map == 1)
                     return this.planes[map][address];
                 else if (map == 3)
@@ -282,13 +273,12 @@ internal sealed class TextMode : VideoMode
                 }
             }
         }
+    }
 
-        //Point srcOffset = new Point(x1, y1);
-        //Point destOffset = new Point(x1, y1 - lines);
-        //int width = Math.Abs(x2 - x1 + 1);
-        //int height = Math.Abs(y2 - y1 + 1);
+    private unsafe readonly struct PlanesBuffer(byte* vram)
+    {
+        private readonly byte* vram = vram;
 
-        //MoveBlock(srcOffset, destOffset, width, height, background);
-        //CursorPosition = new Point(x1, y2);
+        public byte* this[uint plane] => this.vram + (PlaneSize * plane);
     }
 }

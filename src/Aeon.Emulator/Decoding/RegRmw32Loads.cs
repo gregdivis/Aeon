@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Decoding;
 
@@ -10,7 +11,6 @@ namespace Aeon.Emulator.Decoding;
 /// </remarks>
 internal static class RegRmw32Loads
 {
-    private static UnsafeBuffer<nuint> pinnedBuffer;
     private static unsafe delegate*<Processor, uint>* loadAddressMethods;
     private static unsafe delegate*<Processor, uint>* loadOffsetMethods;
     private static bool initialized;
@@ -26,10 +26,9 @@ internal static class RegRmw32Loads
         if (initialized)
             return;
 
-        pinnedBuffer = new UnsafeBuffer<nuint>(48);
         unsafe
         {
-            loadAddressMethods = (delegate*<Processor, uint>*)pinnedBuffer.ToPointer();
+            loadAddressMethods = (delegate*<Processor, uint>*)NativeMemory.Alloc(48, (nuint)sizeof(nuint));
             loadAddressMethods[(0 * 8) + 0] = &LoadMod0_0;
             loadAddressMethods[(0 * 8) + 1] = &LoadMod0_1;
             loadAddressMethods[(0 * 8) + 2] = &LoadMod0_2;
@@ -57,7 +56,7 @@ internal static class RegRmw32Loads
             loadAddressMethods[(2 * 8) + 6] = &LoadMod2_6;
             loadAddressMethods[(2 * 8) + 7] = &LoadMod2_7;
 
-            loadOffsetMethods = (delegate*<Processor, uint>*)&pinnedBuffer.ToPointer()[24];
+            loadOffsetMethods = &loadAddressMethods[24];
             loadOffsetMethods[(0 * 8) + 0] = &LoadMod0_0_Offset;
             loadOffsetMethods[(0 * 8) + 1] = &LoadMod0_1_Offset;
             loadOffsetMethods[(0 * 8) + 2] = &LoadMod0_2_Offset;

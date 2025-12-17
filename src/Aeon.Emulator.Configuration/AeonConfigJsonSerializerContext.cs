@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Aeon.Emulator.Launcher.Configuration;
+namespace Aeon.Emulator.Configuration;
 
 [JsonSerializable(typeof(AeonConfiguration))]
 [JsonSerializable(typeof(GlobalConfiguration))]

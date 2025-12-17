@@ -84,7 +84,7 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
         try
         {
             // Save the processor state before the image is loaded.
-            byte[] processorState = vm.Processor.GetCurrentState();
+            var processorState = vm.Processor.GetCurrentState();
 
             // Nice name, huh?
             bool reAss = false;

@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>Aeon.Emulator.Configuration</RootNamespace>
+		<IsAotCompatible>true</IsAotCompatible>
+	</PropertyGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
+	  <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
+	</ItemGroup>
+</Project>

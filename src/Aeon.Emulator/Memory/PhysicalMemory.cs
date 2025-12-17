@@ -971,18 +971,19 @@ public sealed class PhysicalMemory
         SetByte(HandlerSegment, nextHandlerOffset, 0xCF);
         nextHandlerOffset++;
     }
-    /// <summary>
-    /// Reads 16 bytes from emulated memory into a buffer.
-    /// </summary>
-    /// <param name="address">Address where bytes will be read from.</param>
-    /// <param name="buffer">Buffer into which bytes will be written.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal unsafe void FetchInstruction(uint address, byte* buffer)
+    internal void FetchInstruction(uint address, out CachedInstruction buffer)
     {
         if (this.PagingEnabled)
-            PagedFetchInstruction(address, buffer);
+        {
+            PagedFetchInstruction(address, out buffer);
+        }
         else
-            Unsafe.CopyBlock(buffer, this.RawView + (address & this.addressMask), 16);
+        {
+            unsafe
+            {
+                buffer = Unsafe.ReadUnaligned<CachedInstruction>(this.RawView + (address & this.addressMask));
+            }
+        }
     }
 
     /// <summary>
@@ -1037,18 +1038,22 @@ public sealed class PhysicalMemory
         }
     }
 
-    private unsafe void PagedFetchInstruction(uint address, byte* buffer)
+    private void PagedFetchInstruction(uint address, out CachedInstruction buffer)
     {
-        uint fullPagedAddress = GetPagedPhysicalAddress(address, PageFaultCause.InstructionFetch);
-        if ((fullPagedAddress & 0xFFFu) < 4096u - 16u)
+        unsafe
         {
-            Unsafe.CopyBlock(buffer, this.RawView + fullPagedAddress, 16);
-        }
-        else
-        {
-            var ptr = (ulong*)buffer;
-            ptr[0] = this.PagedRead<ulong>(address, PageFaultCause.InstructionFetch, checkVram: false);
-            ptr[1] = this.PagedRead<ulong>(address + 8u, PageFaultCause.InstructionFetch, checkVram: false);
+            uint fullPagedAddress = GetPagedPhysicalAddress(address, PageFaultCause.InstructionFetch);
+            if ((fullPagedAddress & 0xFFFu) < 4096u - 16u)
+            {
+                buffer = Unsafe.ReadUnaligned<CachedInstruction>(this.RawView + fullPagedAddress);
+            }
+            else
+            {
+                Unsafe.SkipInit(out buffer);
+                ref ulong ptr = ref Unsafe.As<CachedInstruction, ulong>(ref buffer);
+                ptr = this.PagedRead<ulong>(address, PageFaultCause.InstructionFetch, checkVram: false);
+                Unsafe.Add(ref ptr, 1) = this.PagedRead<ulong>(address + 8u, PageFaultCause.InstructionFetch, checkVram: false);
+            }
         }
     }
 

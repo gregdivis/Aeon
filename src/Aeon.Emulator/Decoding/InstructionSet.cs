@@ -30,8 +30,8 @@ public static partial class InstructionSet
                 uint startEIP = eip;
                 processor.StartEIP = startEIP;
 
-                byte* ip = processor.CachedInstruction;
-                memory.FetchInstruction(processor.CSBase + startEIP, ip);
+                ref CachedInstruction ip = ref processor.CachedInstruction;
+                memory.FetchInstruction(processor.CSBase + startEIP, out ip);
 
                 uint sizeModeIndex = processor.SizeModeIndex;
 
@@ -40,7 +40,6 @@ public static partial class InstructionSet
                 if (inst != null)
                 {
                     eip = startEIP + 1;
-                    processor.CachedIP = ip + 1;
                     inst(vm);
                     continue;
                 }
@@ -52,7 +51,6 @@ public static partial class InstructionSet
                     if (inst != null)
                     {
                         eip = startEIP + 2;
-                        processor.CachedIP = ip + 2;
                         inst(vm);
                         continue;
                     }
@@ -64,12 +62,11 @@ public static partial class InstructionSet
                     inst = instSet[Intrinsics.ExtractBits(ip[1], 3, 3, 0x38)];
                     if (inst == null)
                     {
-                        ThrowGetOpcodeException(ip);
+                        ThrowGetOpcodeException(ref ip);
                         return;
                     }
 
                     eip = startEIP + 1;
-                    processor.CachedIP = ip + 1;
                     inst(vm);
                     continue;
                 }
@@ -84,14 +81,13 @@ public static partial class InstructionSet
                         if (inst != null)
                         {
                             eip = startEIP + 2;
-                            processor.CachedIP = ip + 2;
                             inst(vm);
                             continue;
                         }
                     }
                 }
 
-                ThrowGetOpcodeException(ip);
+                ThrowGetOpcodeException(ref ip);
                 return;
             }
         }
@@ -136,7 +132,7 @@ public static partial class InstructionSet
     }
 
     [DoesNotReturn]
-    internal static unsafe void ThrowGetOpcodeException(byte* ip) => throw new NotImplementedException($"Opcode {ip[0]:X2} {ip[1]:X2} ({ip[2]:X2}) not implemented.");
+    internal static void ThrowGetOpcodeException(ref CachedInstruction ip) => throw new NotImplementedException($"Opcode {ip[0]:X2} {ip[1]:X2} ({ip[2]:X2}) not implemented.");
 
     private static unsafe partial void GetOneBytePointers(delegate*<VirtualMachine, void>** ptrs);
     private static unsafe partial void GetOneByteRmPointers(delegate*<VirtualMachine, void>*** ptrs, Func<int, nint> alloc);
