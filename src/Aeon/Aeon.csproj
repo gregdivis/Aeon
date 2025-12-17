@@ -14,9 +14,9 @@
     <ApplicationIcon>Aeon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Aeon.Emulator.Configuration\Aeon.Emulator.Configuration.csproj" />
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
     <ProjectReference Include="..\Aeon.DiskImages\Aeon.DiskImages.csproj" />
-    <ProjectReference Include="..\Aeon.Emulator.Input\Aeon.Emulator.Input.csproj" />
     <ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
     <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
   </ItemGroup>

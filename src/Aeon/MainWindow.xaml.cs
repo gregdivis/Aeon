@@ -3,10 +3,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Aeon.DiskImages;
+using Aeon.Emulator.Configuration;
 using Aeon.Emulator.Dos.VirtualFileSystem;
-using Aeon.Emulator.Launcher.Configuration;
 using Microsoft.Win32;
 
 namespace Aeon.Emulator.Launcher
@@ -47,9 +46,23 @@ namespace Aeon.Emulator.Launcher
 
         private void ApplyConfiguration(AeonConfiguration config)
         {
-            this.emulatorDisplay.ResetEmulator(config.PhysicalMemorySize ?? 16);
-
             var globalConfig = GlobalConfiguration.Load();
+
+            this.emulatorDisplay.EmulatorHost = new EmulatorHost(
+                new VirtualMachineInitializationOptions
+                {
+                    AdditionalDevices =
+                    [
+                        _ => new Sound.PCSpeaker.InternalSpeaker(),
+                        vm => new Sound.Blaster.SoundBlaster(vm),
+                        _ => new Sound.FM.FmSoundCard(),
+                        _ => new Sound.GeneralMidi(new Sound.GeneralMidiOptions(config.MidiEngine ?? globalConfig.MidiEngine ?? Sound.MidiEngine.MidiMapper, globalConfig.SoundfontPath, globalConfig.Mt32RomsPath))
+                    ]
+                }
+            )
+            {
+                EventSynchronizer = new WpfSynchronizer(this.Dispatcher)
+            };
 
             foreach (var (letter, info) in config.Drives)
             {
@@ -84,26 +97,8 @@ namespace Aeon.Emulator.Launcher
 
             this.emulatorDisplay.EmulatorHost.VirtualMachine.FileSystem.WorkingDirectory = new VirtualPath(config.StartupPath);
 
-            var vm = this.emulatorDisplay.EmulatorHost.VirtualMachine;
-
-            vm.RegisterVirtualDevice(new Sound.PCSpeaker.InternalSpeaker());
-            vm.RegisterVirtualDevice(new Sound.Blaster.SoundBlaster(vm));
-            vm.RegisterVirtualDevice(new Sound.FM.FmSoundCard());
-            vm.RegisterVirtualDevice(
-                new Sound.GeneralMidi(
-                    new Sound.GeneralMidiOptions(
-                        config.MidiEngine ?? globalConfig.MidiEngine ?? Sound.MidiEngine.MidiMapper,
-                        globalConfig.SoundFontPath,
-                        globalConfig.Mt32RomsPath
-                    )
-                )
-            );
-            vm.RegisterVirtualDevice(new Input.JoystickDevice());
-
             emulatorDisplay.EmulationSpeed = config.EmulationSpeed ?? 100_000_000;
-            emulatorDisplay.MouseInputMode = config.IsMouseAbsolute ? MouseInputMode.Absolute : MouseInputMode.Relative;
-            toolBar.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
-            mainMenu.Visibility = config.HideUserInterface ? Visibility.Collapsed : Visibility.Visible;
+            emulatorDisplay.MouseInputMode = config.IsMouseAbsolute.GetValueOrDefault() ? MouseInputMode.Absolute : MouseInputMode.Relative;
             if (!string.IsNullOrEmpty(config.Title))
                 this.Title = config.Title;
 
@@ -192,7 +187,7 @@ namespace Aeon.Emulator.Launcher
         private void EmulatorDisplay_EmulatorStateChanged(object sender, RoutedEventArgs e)
         {
             CommandManager.InvalidateRequerySuggested();
-            if (this.emulatorDisplay.EmulatorState == EmulatorState.ProgramExited && this.currentConfig != null && this.currentConfig.HideUserInterface)
+            if (this.emulatorDisplay.EmulatorState == EmulatorState.ProgramExited && this.currentConfig != null)
                 this.Close();
         }
         private void SlowerButton_Click(object sender, RoutedEventArgs e)
@@ -248,9 +243,6 @@ namespace Aeon.Emulator.Launcher
         {
             var end = new TaskDialogItem("End Program", "Terminates the current emulation session.");
             var selection = ShowTaskDialog("Emulation Error", "An error occurred which caused the emulator to halt: " + e.Message + " What would you like to do?", end);
-
-            if (selection == end || selection == null)
-                emulatorDisplay.ResetEmulator();
         }
         private void EmulatorDisplay_CurrentProcessChanged(object sender, RoutedEventArgs e)
         {
@@ -303,15 +295,6 @@ namespace Aeon.Emulator.Launcher
             {
                 this.paletteWindow.Closed -= this.PaletteWindow_Closed;
                 this.paletteWindow = null;
-            }
-        }
-        private void DumpVideoRam_Click(object sender, RoutedEventArgs e)
-        {
-            using var bmp = this.emulatorDisplay?.CurrentPresenter?.Dump();
-            if (bmp != null)
-            {
-                var bmpSource = BitmapSource.Create(bmp.Width, bmp.Height, 96, 96, PixelFormats.Bgr32, null, bmp.PixelBuffer, bmp.Width * bmp.Height * 4, bmp.Width * 4);
-                Clipboard.SetImage(bmpSource);
             }
         }
     }

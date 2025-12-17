@@ -21,11 +21,6 @@
         <local:MouseModeConverter x:Key="mouseModeConverter" />
         <local:SpeedConverter x:Key="speedConverter" />
         <BooleanToVisibilityConverter x:Key="booleanConverter" />
-        <ObjectDataProvider x:Key="scalerValues" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="rendering:ScalingAlgorithm" />
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
     </Window.Resources>
     <DockPanel>
         <StackPanel Name="menuContainer" DockPanel.Dock="Top">
@@ -52,7 +47,6 @@
                 </MenuItem>
                 <MenuItem Header="_Debug">
                     <MenuItem Name="colorPaletteMenuItem" Header="Color Palette" Click="ShowPalette_Click" />
-                    <MenuItem Header="Dump Video RAM" Click="DumpVideoRam_Click" />
                 </MenuItem>
             </Menu>
             <ToolBarTray Name="toolBar" IsLocked="True" Visibility="{Binding IsChecked, ElementName=viewToolBarMenuItem, Converter={StaticResource booleanConverter}}">
@@ -163,10 +157,6 @@
                         </Button.Style>
                         <Label FontFamily="Courier New" FontWeight="Bold" Content="+" Padding="0" />
                     </Button>
-                    <Separator />
-                    <Label Content="Scaler:" />
-                    <ComboBox ItemsSource="{Binding Source={StaticResource scalerValues}}" SelectedValue="{Binding ScalingAlgorithm}"
-                          Background="LightGray" />
                 </ToolBar>
             </ToolBarTray>
         </StackPanel>

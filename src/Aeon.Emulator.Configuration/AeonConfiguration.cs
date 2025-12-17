@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Aeon.Emulator.Sound;
 
 namespace Aeon.Emulator.Configuration;
@@ -18,6 +19,14 @@ public sealed class AeonConfiguration
     public MidiEngine? MidiEngine { get; set; }
 
     public Dictionary<string, AeonDriveConfiguration>? Drives { get; set; }
+
+    public static AeonConfiguration Load(string fileName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(fileName);
+
+        using var stream = File.OpenRead(fileName);
+        return JsonSerializer.Deserialize(stream, AeonConfigJsonSerializerContext.Default.AeonConfiguration) ?? new AeonConfiguration();
+    }
 
     public static AeonConfiguration GetQuickLaunchConfiguration(string hostPath, string launchTarget)
     {
