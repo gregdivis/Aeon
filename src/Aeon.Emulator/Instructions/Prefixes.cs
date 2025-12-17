@@ -14,42 +14,42 @@ internal static class Prefixes
     [Opcode("2E", Name = "cs:", IsPrefix = true, OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void CSOverride(Processor p)
     {
-        p.SegmentOverride = SegmentRegister.CS;
+        p.SegmentOverride = SegmentRegisterOverride.CS;
         p.IncrementPrefixCount();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("36", Name = "ss:", IsPrefix = true, OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void SSOverride(Processor p)
     {
-        p.SegmentOverride = SegmentRegister.SS;
+        p.SegmentOverride = SegmentRegisterOverride.SS;
         p.IncrementPrefixCount();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("3E", Name = "ds:", IsPrefix = true, OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void DSOverride(Processor p)
     {
-        p.SegmentOverride = SegmentRegister.DS;
+        p.SegmentOverride = SegmentRegisterOverride.DS;
         p.IncrementPrefixCount();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("26", Name = "es:", IsPrefix = true, OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void ESOverride(Processor p)
     {
-        p.SegmentOverride = SegmentRegister.ES;
+        p.SegmentOverride = SegmentRegisterOverride.ES;
         p.IncrementPrefixCount();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("64", Name = "fs:", IsPrefix = true, OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void FSOverride(Processor p)
     {
-        p.SegmentOverride = SegmentRegister.FS;
+        p.SegmentOverride = SegmentRegisterOverride.FS;
         p.IncrementPrefixCount();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Opcode("65", Name = "gs:", IsPrefix = true, OperandSize = 16 | 32, AddressSize = 16 | 32)]
     public static void GSOverride(Processor p)
     {
-        p.SegmentOverride = SegmentRegister.GS;
+        p.SegmentOverride = SegmentRegisterOverride.GS;
         p.IncrementPrefixCount();
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

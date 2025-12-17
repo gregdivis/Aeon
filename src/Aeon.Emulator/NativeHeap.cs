@@ -1,12 +1,13 @@
-﻿namespace Aeon.Emulator;
+﻿using System.Runtime.InteropServices;
+
+namespace Aeon.Emulator;
 
 /// <summary>
 /// Provides a simple allocation-only native memory heap.
 /// </summary>
 internal sealed class NativeHeap
 {
-    private readonly UnsafeBuffer<byte> memory;
-    private readonly IntPtr pointer;
+    private readonly nint pointer;
     private int nextOffset;
 
     /// <summary>
@@ -18,10 +19,9 @@ internal sealed class NativeHeap
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
 
         this.Size = size;
-        this.memory = new UnsafeBuffer<byte>(size);
         unsafe
         {
-            this.pointer = new IntPtr(memory.ToPointer());
+            this.pointer = (nint)NativeMemory.AllocZeroed((nuint)size);
         }
     }
 
@@ -40,7 +40,7 @@ internal sealed class NativeHeap
     /// <param name="size">Number of bytes to allocate.</param>
     /// <param name="alignment">Required alignment of the allocation.</param>
     /// <returns>Pointer to the allocated bytes.</returns>
-    public IntPtr Allocate(int size, int alignment)
+    public nint Allocate(int size, int alignment)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(alignment);
@@ -53,6 +53,6 @@ internal sealed class NativeHeap
             throw new ArgumentException("Not enough memory.");
 
         this.nextOffset = offset + size;
-        return IntPtr.Add(this.pointer, offset);
+        return this.pointer + offset;
     }
 }

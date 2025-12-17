@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Launcher.Configuration;
+﻿namespace Aeon.Emulator.Configuration;
 
 public sealed class AeonDriveConfiguration
 {

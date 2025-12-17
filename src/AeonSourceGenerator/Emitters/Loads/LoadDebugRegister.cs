@@ -11,7 +11,7 @@ namespace Aeon.SourceGenerator.Emitters
 
         public override void Initialize(IndentedTextWriter writer)
         {
-            writer.WriteLine($"var arg{this.ParameterIndex} = p.GetDebugRegisterPointer(GetReg(p));");
+            writer.WriteLine($"ref uint arg{this.ParameterIndex} = ref p.GetDebugRegisterPointer(GetReg(p));");
         }
         public override void WriteParameter(TextWriter writer)
         {
@@ -20,7 +20,6 @@ namespace Aeon.SourceGenerator.Emitters
             else if (this.ByRef)
                 writer.Write("ref ");
 
-            writer.Write('*');
             base.WriteParameter(writer);
         }
     }

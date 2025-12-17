@@ -125,6 +125,7 @@ public sealed class VirtualMachine : IDisposable
 
         this.PhysicalMemory.ReserveBaseMemory();
 
+#warning this can't go here unless we put some of this initialization in the options class
         var comspec = this.FileSystem.CommandInterpreterPath;
         if (comspec != null)
             this.EnvironmentVariables["COMSPEC"] = comspec.ToString();
@@ -642,9 +643,9 @@ public sealed class VirtualMachine : IDisposable
         unsafe
         {
             if (!this.BigStackPointer)
-                address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP;
+                address = this.Processor.SSBase + this.Processor.SP;
             else
-                address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP;
+                address = this.Processor.SSBase + this.Processor.ESP;
         }
 
         return this.PhysicalMemory.GetUInt16(address);
@@ -655,9 +656,9 @@ public sealed class VirtualMachine : IDisposable
         unsafe
         {
             if (!this.BigStackPointer)
-                address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP;
+                address = this.Processor.SSBase + this.Processor.SP;
             else
-                address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP;
+                address = this.Processor.SSBase + this.Processor.ESP;
         }
 
         return this.PhysicalMemory.GetUInt32(address);
@@ -668,37 +669,37 @@ public sealed class VirtualMachine : IDisposable
         unsafe
         {
             if (!this.BigStackPointer)
-                address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.SP;
+                address = this.Processor.SSBase + this.Processor.SP;
             else
-                address = this.Processor.segmentBases[(int)SegmentIndex.SS] + this.Processor.ESP;
+                address = this.Processor.SSBase + this.Processor.ESP;
         }
 
         return this.PhysicalMemory.GetUInt64(address);
     }
     internal byte ReadPortByte(ushort port)
     {
-        if (this.inputPorts!.TryGetValue(port, out var inputPort))
+        if (this.inputPorts.TryGetValue(port, out var inputPort))
             return inputPort.ReadByte(port);
         else
             return this.defaultPortHandler.ReadByte(port);
     }
     internal ushort ReadPortWord(ushort port)
     {
-        if (this.inputPorts!.TryGetValue(port, out var inputPort))
+        if (this.inputPorts.TryGetValue(port, out var inputPort))
             return inputPort.ReadWord(port);
         else
             return 0xFFFF;
     }
     internal void WritePortByte(ushort port, byte value)
     {
-        if (!this.outputPorts!.TryGetValue(port, out var outputPort))
+        if (!this.outputPorts.TryGetValue(port, out var outputPort))
             defaultPortHandler.WriteByte(port, value);
         else
             outputPort.WriteByte(port, value);
     }
     internal void WritePortWord(ushort port, ushort value)
     {
-        if (!this.outputPorts!.TryGetValue(port, out var outputPort))
+        if (!this.outputPorts.TryGetValue(port, out var outputPort))
             defaultPortHandler.WriteWord(port, value);
         else
             outputPort.WriteWord(port, value);

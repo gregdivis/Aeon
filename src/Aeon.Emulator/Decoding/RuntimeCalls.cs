@@ -8,19 +8,21 @@ internal static class RuntimeCalls
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe uint GetMoffsAddress16(Processor p)
     {
-        var segmentOverride = p.SegmentOverride;
-        uint baseAddress = segmentOverride == SegmentRegister.Default ? p.DSBase : *p.baseOverrides[(int)segmentOverride];
-        uint offset =  *(ushort*)p.CachedIP;
-        p.CachedIP += 2;
+        uint baseAddress = p.GetOverrideBase(SegmentIndex.DS);
+
+        uint offset = Unsafe.ReadUnaligned<ushort>(in p.CachedIP);
+        p.EIP += 2;
+
         return baseAddress + offset;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe uint GetMoffsAddress32(Processor p)
     {
-        var segmentOverride = p.SegmentOverride;
-        uint baseAddress = segmentOverride == SegmentRegister.Default ? p.DSBase : *p.baseOverrides[(int)segmentOverride];
-        uint offset = *(uint*)p.CachedIP;
-        p.CachedIP += 4;
+        uint baseAddress = p.GetOverrideBase(SegmentIndex.DS);
+
+        uint offset = Unsafe.ReadUnaligned<uint>(in p.CachedIP);
+        p.EIP += 4;
+
         return baseAddress + offset;
     }
 
@@ -34,8 +36,8 @@ internal static class RuntimeCalls
             case 0:
                 if (rm == 6)
                 {
-                    displacement = *(ushort*)processor.CachedIP;
-                    processor.CachedIP += 2;
+                    displacement = Unsafe.ReadUnaligned<ushort>(in processor.CachedIP);
+                    processor.EIP += 2;
                 }
                 else
                 {
@@ -43,12 +45,12 @@ internal static class RuntimeCalls
                 }
                 break;
             case 1:
-                displacement = (ushort)*(sbyte*)processor.CachedIP;
-                processor.CachedIP++;
+                displacement = (ushort)Unsafe.ReadUnaligned<sbyte>(in processor.CachedIP);
+                processor.EIP++;
                 break;
             case 2:
-                displacement = (ushort)*(short*)processor.CachedIP;
-                processor.CachedIP += 2;
+                displacement = (ushort)Unsafe.ReadUnaligned<short>(in processor.CachedIP);
+                processor.EIP += 2;
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(mod));
@@ -71,21 +73,16 @@ internal static class RuntimeCalls
         if (!offsetOnly)
         {
             uint baseAddress;
-            uint* segmentOverride = processor.baseOverrides[(int)processor.SegmentOverride];
-            if (segmentOverride != null)
-            {
-                baseAddress = *segmentOverride;
-            }
-            else
-            {
-                baseAddress = rm switch
+
+            baseAddress = processor.GetOverrideBase(
+                rm switch
                 {
-                    6 when mod == 0 => processor.DSBase,
-                    0 or 1 or 4 or 5 or 7 => processor.DSBase,
-                    2 or 3 or 6 => processor.SSBase,
+                    6 when mod == 0 => SegmentIndex.DS,
+                    0 or 1 or 4 or 5 or 7 => SegmentIndex.DS,
+                    2 or 3 or 6 => SegmentIndex.SS,
                     _ => throw new ArgumentOutOfRangeException(nameof(rm))
-                };
-            }
+                }
+            );
 
             return baseAddress + offset;
         }
@@ -112,17 +109,7 @@ internal static class RuntimeCalls
         }
         else
         {
-            uint baseAddress;
-
-            unsafe
-            {
-                uint* segmentPtr = processor.baseOverrides[(int)processor.SegmentOverride];
-                if (segmentPtr != null)
-                    baseAddress = *segmentPtr;
-                else
-                    baseAddress = processor.segmentBases[(int)segment];
-            }
-
+            uint baseAddress = processor.GetOverrideBase(segment);
             return baseAddress + offset;
         }
     }
@@ -137,18 +124,18 @@ internal static class RuntimeCalls
 
         if (rm == 5)
         {
-            address = *(uint*)processor.CachedIP;
-            processor.CachedIP += 4;
+            address = Unsafe.ReadUnaligned<uint>(in processor.CachedIP);
+            processor.EIP += 4;
         }
         else if (rm == 4)
         {
-            byte sib = *processor.CachedIP;
-            processor.CachedIP++;
+            byte sib = processor.CachedIP;
+            processor.EIP++;
             address = GetSibAddress32ModZero(processor, sib, ref segment);
         }
         else
         {
-            address = *(uint*)processor.GetRegisterWordPointer(rm);
+            address = processor.GetWordRegister<uint>(rm);
         }
 
         return address;
@@ -161,11 +148,11 @@ internal static class RuntimeCalls
 
         if (rm == 4)
         {
-            byte sib = *processor.CachedIP;
-            processor.CachedIP++;
+            byte sib = processor.CachedIP;
+            processor.EIP++;
 
-            int displacement = *(sbyte*)processor.CachedIP;
-            processor.CachedIP++;
+            int displacement = Unsafe.ReadUnaligned<sbyte>(in processor.CachedIP);
+            processor.EIP++;
 
             address = GetSibAddress32(processor, displacement, sib, ref segment);
         }
@@ -174,10 +161,10 @@ internal static class RuntimeCalls
             if (rm == 5)
                 segment = SegmentIndex.SS;
 
-            int displacement = *(sbyte*)processor.CachedIP;
-            processor.CachedIP++;
+            int displacement = Unsafe.ReadUnaligned<sbyte>(in processor.CachedIP);
+            processor.EIP++;
 
-            address = (uint)(*(int*)processor.GetRegisterWordPointer(rm) + displacement);
+            address = (uint)(processor.GetWordRegister<int>(rm) + displacement);
         }
 
         return address;
@@ -190,11 +177,11 @@ internal static class RuntimeCalls
 
         if (rm == 4)
         {
-            byte sib = *processor.CachedIP;
-            processor.CachedIP++;
+            byte sib = processor.CachedIP;
+            processor.EIP++;
 
-            int displacement = *(int*)processor.CachedIP;
-            processor.CachedIP += 4;
+            int displacement = Unsafe.ReadUnaligned<int>(in processor.CachedIP);
+            processor.EIP += 4;
 
             address = GetSibAddress32(processor, displacement, sib, ref segment);
         }
@@ -203,10 +190,10 @@ internal static class RuntimeCalls
             if (rm == 5)
                 segment = SegmentIndex.SS;
 
-            int displacement = *(int*)processor.CachedIP;
-            processor.CachedIP += 4;
+            int displacement = Unsafe.ReadUnaligned<int>(in processor.CachedIP);
+            processor.EIP += 4;
 
-            address = (uint)(*(int*)processor.GetRegisterWordPointer(rm) + displacement);
+            address = (uint)(processor.GetWordRegister<int>(rm) + displacement);
         }
 
         return address;
@@ -216,13 +203,13 @@ internal static class RuntimeCalls
     {
         int scale = (int)Intrinsics.ExtractBits(sib, 6, 2, 0b1100_0000);
         int index = (int)Intrinsics.ExtractBits(sib, 3, 3, 0b0011_1000);
-        int baseIndex = (int)(sib & 0x7);
+        int baseIndex = sib & 0x7;
 
         int indexValue = 0;
         if (index != 4)
-            indexValue = (*(int*)processor.GetRegisterWordPointer(index)) << scale;
+            indexValue = (processor.GetWordRegister<int>(index)) << scale;
 
-        int baseValue = *(int*)processor.GetRegisterWordPointer(baseIndex);
+        int baseValue = processor.GetWordRegister<int>(baseIndex);
 
         if (baseIndex is 4 or 5)
             segment = SegmentIndex.SS;
@@ -241,17 +228,17 @@ internal static class RuntimeCalls
 
         int indexValue = 0;
         if (index != 4)
-            indexValue = (*(int*)processor.GetRegisterWordPointer(index)) << scale;
+            indexValue = (processor.GetWordRegister<int>(index)) << scale;
 
         int baseValue = 0;
         if (baseIndex != 5)
         {
-            baseValue = *(int*)processor.GetRegisterWordPointer(baseIndex);
+            baseValue = processor.GetWordRegister<int>(baseIndex);
         }
         else
         {
-            displacement = *(int*)processor.CachedIP;
-            processor.CachedIP += 4;
+            displacement = Unsafe.ReadUnaligned<int>(in processor.CachedIP);
+            processor.EIP += 4;
         }
 
         if (baseIndex == 4)

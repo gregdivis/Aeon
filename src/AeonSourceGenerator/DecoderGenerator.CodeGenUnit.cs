@@ -195,20 +195,6 @@ namespace Aeon.SourceGenerator
 
                     writer.WriteLine("var p = vm.Processor;");
                     var emitters = CreateOperandEmitters(instruction, isByRef, isParam2ByRef, emulateMethod, writer, addressSize32, operandSize32 ? 4 : 2);
-                    if (!instruction.TryGetOperandSize(operandSize32, addressSize32, out int eipIncrement))
-                    {
-                        writer.WriteLine("p.EIP = (uint)(p.CachedIP - p.CachedInstruction + p.StartEIP);");
-                    }
-                    else if (eipIncrement == 1)
-                    {
-                        writer.WriteLine("p.EIP++;");
-                    }
-                    else if (eipIncrement > 0)
-                    {
-                        writer.Write("p.EIP += ");
-                        writer.Write(eipIncrement);
-                        writer.WriteLine(';');
-                    }
 
                     var methodCallInfo = new EmulateMethodCall($"{emulateMethod.ContainingNamespace}.{emulateMethod.ContainingType.Name}.{emulateMethod.Name}", firstArg, emitters);
                     Emitter.WriteCall(writer, methodCallInfo);

@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Aeon.Emulator.DebugSupport;
 
 namespace Aeon.Emulator;
@@ -9,142 +8,22 @@ namespace Aeon.Emulator;
 /// </summary>
 public sealed class Processor : IRegisterContainer
 {
+    private GeneralPurposeRegisters gpr;
+    private SegmentRegisterBlock<ushort> segmentRegisters;
+    private SegmentRegisterBlock<uint> segmentBases;
+    private DebugRegisterBlock debugRegisters;
     private PrefixOverrides overrides;
-
-    private readonly UnsafeBuffer<uint> gprBuffer = new(RegisterCount);
-    private readonly UnsafeBuffer<byte> instructionBuffer = new(16);
-    private readonly UnsafeBuffer<nint> wordRegisterPointersBuffer = new(8);
-    private readonly UnsafeBuffer<nint> byteRegisterPointersBuffer = new(8);
-    private readonly UnsafeBuffer<nint> segmentRegisterPointersBuffer = new(8);
-    private readonly UnsafeBuffer<nint> segmentBasesBuffer = new(8);
-    private readonly UnsafeBuffer<nint> baseOverrideBuffer = new(8);
+    private CachedInstruction instructionBuffer;
 
     internal Processor()
     {
-        unsafe
-        {
-            gprBlock = (byte*)gprBuffer.ToPointer();
-            wordRegisterPointers = (void**)wordRegisterPointersBuffer.ToPointer();
-            byteRegisterPointers = (byte**)byteRegisterPointersBuffer.ToPointer();
-            segmentRegisterPointers = (ushort**)segmentRegisterPointersBuffer.ToPointer();
-            segmentBases = (uint*)segmentBasesBuffer.ToPointer();
-
-            InitializeRegisterOffsets();
-            PAX = wordRegisterPointers[0];
-            PCX = wordRegisterPointers[1];
-            PDX = wordRegisterPointers[2];
-            PBX = wordRegisterPointers[3];
-
-            PAH = byteRegisterPointers[4];
-            PCH = byteRegisterPointers[5];
-            PDH = byteRegisterPointers[6];
-            PBH = byteRegisterPointers[7];
-
-            PIP = gprBlock + 32;
-
-            PSP = wordRegisterPointers[4];
-            PBP = wordRegisterPointers[5];
-            PSI = wordRegisterPointers[6];
-            PDI = wordRegisterPointers[7];
-
-            PES = segmentRegisterPointers[0];
-            PCS = segmentRegisterPointers[1];
-            PSS = segmentRegisterPointers[2];
-            PDS = segmentRegisterPointers[3];
-            PFS = segmentRegisterPointers[4];
-            PGS = segmentRegisterPointers[5];
-
-            baseOverrides = (uint**)baseOverrideBuffer.ToPointer();
-            InitializeSegmentOverridePointers();
-            debugRegisterBase = (uint*)(gprBlock + 60); // DR0
-            this.CachedInstruction = instructionBuffer.ToPointer();
-        }
-    }
-
-    private unsafe void InitializeRegisterOffsets()
-    {
-        wordRegisterPointers[0] = gprBlock; // AX
-        byteRegisterPointers[0] = gprBlock; // AL
-        byteRegisterPointers[4] = gprBlock + 1; // AH
-
-        wordRegisterPointers[1] = gprBlock + 4; // CX
-        byteRegisterPointers[1] = gprBlock + 4; // CL
-        byteRegisterPointers[5] = gprBlock + 5; // CH
-
-        wordRegisterPointers[2] = gprBlock + 8; // DX
-        byteRegisterPointers[2] = gprBlock + 8; // DL
-        byteRegisterPointers[6] = gprBlock + 9; // DH
-
-        wordRegisterPointers[3] = gprBlock + 12; // BX
-        byteRegisterPointers[3] = gprBlock + 12; // BL
-        byteRegisterPointers[7] = gprBlock + 13; // BH
-
-        wordRegisterPointers[4] = gprBlock + 16; // SP
-        wordRegisterPointers[5] = gprBlock + 20; // BP
-        wordRegisterPointers[6] = gprBlock + 24; // SI
-        wordRegisterPointers[7] = gprBlock + 28; // DI
-
-        // IP = 32
-
-        segmentRegisterPointers[0] = (ushort*)(gprBlock + 36); // ES
-        segmentRegisterPointers[1] = (ushort*)(gprBlock + 40); // CS
-        segmentRegisterPointers[2] = (ushort*)(gprBlock + 44); // SS
-        segmentRegisterPointers[3] = (ushort*)(gprBlock + 48); // DS
-        segmentRegisterPointers[4] = (ushort*)(gprBlock + 52); // FS
-        segmentRegisterPointers[5] = (ushort*)(gprBlock + 56); // GS
-    }
-    private unsafe void InitializeSegmentOverridePointers()
-    {
-        baseOverrides[(int)SegmentRegister.Default] = null;
-        baseOverrides[(int)SegmentRegister.ES] = &segmentBases[0];
-        baseOverrides[(int)SegmentRegister.CS] = &segmentBases[1];
-        baseOverrides[(int)SegmentRegister.SS] = &segmentBases[2];
-        baseOverrides[(int)SegmentRegister.DS] = &segmentBases[3];
-        baseOverrides[(int)SegmentRegister.FS] = &segmentBases[4];
-        baseOverrides[(int)SegmentRegister.GS] = &segmentBases[5];
     }
 
     #region General Purpose
     /// <summary>
-    /// Pointer to the EAX/AX/AL register.
-    /// </summary>
-    private readonly unsafe void* PAX;
-    /// <summary>
-    /// Pointer to the EBX/BX/BL register.
-    /// </summary>
-    private readonly unsafe void* PBX;
-    /// <summary>
-    /// Pointer to the ECX/CX/CL register.
-    /// </summary>
-    private readonly unsafe void* PCX;
-    /// <summary>
-    /// Pointer to the EDX/DX/DL register.
-    /// </summary>
-    private readonly unsafe void* PDX;
-    /// <summary>
-    /// Pointer to the AH register.
-    /// </summary>
-    private readonly unsafe byte* PAH;
-    /// <summary>
-    /// Pointer to the BH register.
-    /// </summary>
-    private readonly unsafe byte* PBH;
-    /// <summary>
-    /// Pointer to the CH register.
-    /// </summary>
-    private readonly unsafe byte* PCH;
-    /// <summary>
-    /// Pointer to the DH register.
-    /// </summary>
-    private readonly unsafe byte* PDH;
-
-    /// <summary>
     /// Gets or sets the value of the EAX register.
     /// </summary>
-    public ref int EAX
-    {
-        get { unsafe { return ref *(int*)PAX; } }
-    }
+    public ref int EAX => ref this.gpr.EAX;
     /// <summary>
     /// Gets the value of the EAX register.
     /// </summary>
@@ -152,10 +31,7 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Gets or sets the value of the EBX register.
     /// </summary>
-    public ref int EBX
-    {
-        get { unsafe { return ref *(int*)PBX; } }
-    }
+    public ref int EBX => ref this.gpr.EBX;
     /// <summary>
     /// Gets the value of the EAX register.
     /// </summary>
@@ -163,10 +39,7 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Gets or sets the value of the ECX register.
     /// </summary>
-    public ref int ECX
-    {
-        get { unsafe { return ref *(int*)PCX; } }
-    }
+    public ref int ECX => ref this.gpr.ECX;
     /// <summary>
     /// Gets the value of the EAX register.
     /// </summary>
@@ -174,10 +47,7 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Gets or sets the value of the EDX register.
     /// </summary>
-    public ref int EDX
-    {
-        get { unsafe { return ref *(int*)PDX; } }
-    }
+    public ref int EDX => ref this.gpr.EDX;
     /// <summary>
     /// Gets the value of the EAX register.
     /// </summary>
@@ -185,325 +55,154 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// Gets or sets the value of the AX register.
     /// </summary>
-    public ref short AX
-    {
-        get { unsafe { return ref *(short*)PAX; } }
-    }
+    public ref short AX => ref this.gpr.AX;
     /// <summary>
     /// Gets or sets the value of the BX register.
     /// </summary>
-    public ref short BX
-    {
-        get { unsafe { return ref *(short*)PBX; } }
-    }
+    public ref short BX => ref this.gpr.BX;
     /// <summary>
     /// Gets or sets the value of the CX register.
     /// </summary>
-    public ref short CX
-    {
-        get { unsafe { return ref *(short*)PCX; } }
-    }
+    public ref short CX => ref this.gpr.CX;
     /// <summary>
     /// Gets or sets the value of the DX register.
     /// </summary>
-    public ref short DX
-    {
-        get { unsafe { return ref *(short*)PDX; } }
-    }
+    public ref short DX => ref this.gpr.DX;
 
     /// <summary>
     /// Gets or sets the value of the AL register.
     /// </summary>
-    public ref byte AL
-    {
-        get { unsafe { return ref *(byte*)PAX; } }
-    }
+    public ref byte AL => ref this.gpr.AL;
     /// <summary>
     /// Gets or sets the value of the AH register.
     /// </summary>
-    public ref byte AH
-    {
-        get { unsafe { return ref *PAH; } }
-    }
+    public ref byte AH => ref this.gpr.AH;
     /// <summary>
     /// Gets or sets the value of the BL register.
     /// </summary>
-    public ref byte BL
-    {
-        get { unsafe { return ref *(byte*)PBX; } }
-    }
+    public ref byte BL => ref this.gpr.BL;
     /// <summary>
     /// Gets or sets the value of the BH register.
     /// </summary>
-    public ref byte BH
-    {
-        get { unsafe { return ref *PBH; } }
-    }
+    public ref byte BH => ref this.gpr.BH;
     /// <summary>
     /// Gets or sets the value of the CL register.
     /// </summary>
-    public ref byte CL
-    {
-        get { unsafe { return ref *(byte*)PCX; } }
-    }
+    public ref byte CL => ref this.gpr.CL;
     /// <summary>
     /// Gets or sets the value of the CH register.
     /// </summary>
-    public ref byte CH
-    {
-        get { unsafe { return ref *PCH; } }
-    }
+    public ref byte CH => ref this.gpr.CH;
     /// <summary>
     /// Gets or sets the value of the DL register.
     /// </summary>
-    public ref byte DL
-    {
-        get { unsafe { return ref *(byte*)PDX; } }
-    }
+    public ref byte DL => ref this.gpr.DL;
     /// <summary>
     /// Gets or sets the value of the DH register.
     /// </summary>
-    public ref byte DH
-    {
-        get { unsafe { return ref *PDH; } }
-    }
+    public ref byte DH => ref this.gpr.DH;
     #endregion
 
     #region Pointers
     /// <summary>
-    /// Pointer to the EBP/BP register.
-    /// </summary>
-    private unsafe readonly void* PBP;
-    /// <summary>
-    /// Pointer to the ESI/SI register.
-    /// </summary>
-    private unsafe readonly void* PSI;
-    /// <summary>
-    /// Pointer to the EDI/DI register.
-    /// </summary>
-    private unsafe readonly void* PDI;
-    /// <summary>
-    /// Pointer to the EIP/IP register.
-    /// </summary>
-    private unsafe readonly void* PIP;
-    /// <summary>
-    /// Pointer to the ESP/SP register.
-    /// </summary>
-    private unsafe readonly void* PSP;
-
-    /// <summary>
     /// Gets or sets the value of the EBP register.
     /// </summary>
-    public ref uint EBP
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(uint*)PBP; } }
-    }
+    public ref uint EBP => ref this.gpr.EBP;
     uint IRegisterContainer.EBP => this.EBP;
     /// <summary>
     /// Gets or sets the value of the ESI register.
     /// </summary>
-    public ref uint ESI
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(uint*)PSI; } }
-    }
+    public ref uint ESI => ref this.gpr.ESI;
     uint IRegisterContainer.ESI => this.ESI;
     /// <summary>
     /// Gets or sets the value of the EDI register.
     /// </summary>
-    public ref uint EDI
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(uint*)PDI; } }
-    }
+    public ref uint EDI => ref this.gpr.EDI;
     uint IRegisterContainer.EDI => this.EDI;
     /// <summary>
     /// Gets or sets the value of the EIP register.
     /// </summary>
-    public ref uint EIP
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(uint*)PIP; } }
-    }
+    public ref uint EIP => ref this.gpr.EIP;
     /// <summary>
     /// Gets or sets the value of the ESP register.
     /// </summary>
-    public ref uint ESP
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(uint*)PSP; } }
-    }
+    public ref uint ESP => ref this.gpr.ESP;
     uint IRegisterContainer.ESP => this.ESP;
 
     /// <summary>
     /// Gets or sets the value of the BP register.
     /// </summary>
-    public ref ushort BP
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(ushort*)PBP; } }
-    }
+    public ref ushort BP => ref this.gpr.BP;
     /// <summary>
     /// Gets or sets the value of the SI register.
     /// </summary>
-    public ref ushort SI
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(ushort*)PSI; } }
-    }
+    public ref ushort SI => ref this.gpr.SI;
     /// <summary>
     /// Gets or sets the value of the DI register.
     /// </summary>
-    public ref ushort DI
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(ushort*)PDI; } }
-    }
+    public ref ushort DI => ref this.gpr.DI;
     /// <summary>
     /// Gets or sets the value of the IP register.
     /// </summary>
-    public ref ushort IP
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(ushort*)PIP; } }
-    }
+    public ref ushort IP => ref this.gpr.IP;
     /// <summary>
     /// Gets or sets the value of the SP register.
     /// </summary>
-    public ref ushort SP
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return ref *(ushort*)PSP; } }
-    }
+    public ref ushort SP => ref this.gpr.SP;
     #endregion
 
     #region Segment Registers
     /// <summary>
-    /// Pointer to the ES register.
-    /// </summary>
-    internal unsafe readonly ushort* PES;
-    /// <summary>
-    /// Pointer to the CS register.
-    /// </summary>
-    internal unsafe readonly ushort* PCS;
-    /// <summary>
-    /// Pointer to the SS register.
-    /// </summary>
-    internal unsafe readonly ushort* PSS;
-    /// <summary>
-    /// Pointer to the DS register.
-    /// </summary>
-    internal unsafe readonly ushort* PDS;
-    /// <summary>
-    /// Pointer to the FS register.
-    /// </summary>
-    internal unsafe readonly ushort* PFS;
-    /// <summary>
-    /// Pointer to the GS register.
-    /// </summary>
-    internal unsafe readonly ushort* PGS;
-
-    /// <summary>
     /// Gets or sets the value of the ES register.
     /// </summary>
-    public ushort ES
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return *PES; } }
-    }
+    public ushort ES => this.segmentRegisters.ES;
     /// <summary>
     /// Gets or sets the value of the CS register.
     /// </summary>
-    public ushort CS
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return *PCS; } }
-    }
+    public ushort CS => this.segmentRegisters.CS;
     /// <summary>
     /// Gets or sets the value of the SS register.
     /// </summary>
-    public ushort SS
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return *PSS; } }
-    }
+    public ushort SS => this.segmentRegisters.SS;
     /// <summary>
     /// Gets or sets the value of the DS register.
     /// </summary>
-    public ushort DS
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return *PDS; } }
-    }
+    public ushort DS => this.segmentRegisters.DS;
     /// <summary>
     /// Gets or sets the value of the FS register.
     /// </summary>
-    public ushort FS
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return *PFS; } }
-    }
+    public ushort FS => this.segmentRegisters.FS;
     /// <summary>
     /// Gets or sets the value of the GS register.
     /// </summary>
-    public ushort GS
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return *PGS; } }
-    }
+    public ushort GS => this.segmentRegisters.GS;
 
     /// <summary>
     /// Gets the current base address associated with the ES register.
     /// </summary>
-    public uint ESBase
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return segmentBases[0]; } }
-    }
+    public uint ESBase => this.segmentBases.ES;
     /// <summary>
     /// Gets the current base address associated with the CS register.
     /// </summary>
-    public uint CSBase
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return segmentBases[1]; } }
-    }
+    public uint CSBase => this.segmentBases.CS;
     /// <summary>
     /// Gets the current base address associated with the SS register.
     /// </summary>
-    public uint SSBase
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return segmentBases[2]; } }
-    }
+    public uint SSBase => this.segmentBases.SS;
     /// <summary>
     /// Gets the current base address associated with the DS register.
     /// </summary>
-    public uint DSBase
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return segmentBases[3]; } }
-    }
+    public uint DSBase => this.segmentBases.DS;
     /// <summary>
     /// Gets the current base address associated with the FS register.
     /// </summary>
-    public uint FSBase
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return segmentBases[4]; } }
-    }
+    public uint FSBase => this.segmentBases.FS;
     /// <summary>
     /// Gets the current base address associated with the GS register.
     /// </summary>
-    public uint GSBase
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get { unsafe { return segmentBases[5]; } }
-    }
+    public uint GSBase => this.segmentBases.GS;
     #endregion
 
-    #region Other
     public readonly FlagState Flags = new();
     /// <summary>
     /// Gets the value of the EFLAGS register.
@@ -512,7 +211,7 @@ public sealed class Processor : IRegisterContainer
     /// <summary>
     /// The current segment override prefix.
     /// </summary>
-    public SegmentRegister SegmentOverride
+    public SegmentRegisterOverride SegmentOverride
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.overrides.Segment;
@@ -567,7 +266,6 @@ public sealed class Processor : IRegisterContainer
             return bit == 0 ? 16 : 32;
         }
     }
-    #endregion
 
     /// <summary>
     /// The floating-point unit.
@@ -594,43 +292,28 @@ public sealed class Processor : IRegisterContainer
     }
     #endregion
 
-    #region Internal Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal uint GetOverrideBase(SegmentIndex defaultSegment)
     {
-        unsafe
-        {
-            uint* address = baseOverrides[(int)this.SegmentOverride];
-            if (address != null)
-                return *address;
-            else
-                return segmentBases[(int)defaultSegment];
-        }
+        var segmentOverride = this.SegmentOverride;
+        if (segmentOverride == SegmentRegisterOverride.None)
+            return GetSegmentBasePointer((int)defaultSegment);
+        else
+            return GetSegmentBasePointer((int)segmentOverride - 1);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal unsafe byte* GetRegisterBytePointer(int rmCode) => byteRegisterPointers[rmCode];
+    internal ref byte GetByteRegister(int rmCode) => ref Unsafe.AddByteOffset(ref this.AL, ((rmCode & 0b011) * 4) + (rmCode >>> 2));
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal unsafe void* GetRegisterWordPointer(int rmCode) => wordRegisterPointers[rmCode];
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ref ushort GetSegmentRegisterPointer(int code)
-    {
-        unsafe
-        {
-            return ref Unsafe.AsRef<ushort>(this.segmentRegisterPointers[code]);
-        }
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ref uint GetSegmentBasePointer(int code)
-    {
-        unsafe
-        {
-            return ref Unsafe.AsRef<uint>(&this.segmentBases[code]);
-        }
-    }
+    internal ref T GetWordRegister<T>(int rmCode) where T : unmanaged => ref Unsafe.As<int, T>(ref Unsafe.Add(ref this.gpr.EAX, rmCode));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal unsafe uint* GetDebugRegisterPointer(int code) => &debugRegisterBase[code];
+    internal ref ushort GetSegmentRegisterPointer(int code) => ref Unsafe.Add(ref this.segmentRegisters.ES, code);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref uint GetSegmentBasePointer(int code) => ref Unsafe.Add(ref this.segmentBases.ES, code);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref uint GetDebugRegisterPointer(int code) => ref Unsafe.Add(ref this.debugRegisters.DR0, code);
 
     /// <summary>
     /// Clears prefix information after an instruction.
@@ -641,37 +324,15 @@ public sealed class Processor : IRegisterContainer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void InstructionEpilog() => this.overrides = default;
 
-    internal byte[] GetCurrentState()
+    internal InternalProcessorState GetCurrentState() => new(in this.gpr, in this.segmentRegisters, in this.segmentBases, this.Flags.Value);
+    internal void SetCurrentState(InternalProcessorState state)
     {
-        unsafe
-        {
-            byte[] buffer = new byte[sizeof(uint) * (RegisterCount + 9)];
-            Marshal.Copy(new IntPtr(gprBlock), buffer, 0, sizeof(uint) * RegisterCount);
-            Marshal.Copy(new IntPtr(segmentBases), buffer, sizeof(uint) * RegisterCount, 8 * sizeof(uint));
-
-            int flagsIndex = sizeof(uint) * (RegisterCount + 8);
-            buffer[flagsIndex] = (byte)((uint)this.Flags.Value & 0xFF);
-            buffer[flagsIndex + 1] = (byte)(((uint)this.Flags.Value >> 8) & 0xFF);
-            buffer[flagsIndex + 2] = (byte)(((uint)this.Flags.Value >> 16) & 0xFF);
-            buffer[flagsIndex + 3] = (byte)(((uint)this.Flags.Value >> 24) & 0xFF);
-
-            return buffer;
-        }
+        this.gpr = state.GeneralPurposeRegisters;
+        this.segmentRegisters = state.SegmentRegisters;
+        this.segmentBases = state.SegmentBases;
+        this.Flags.Value = state.Flags;
     }
-    internal void SetCurrentState(byte[] state)
-    {
-        unsafe
-        {
-            Marshal.Copy(state, 0, new IntPtr(gprBlock), sizeof(uint) * RegisterCount);
-            Marshal.Copy(state, sizeof(uint) * RegisterCount, new IntPtr(segmentBases), sizeof(uint) * 8);
 
-            int flagsIndex = sizeof(uint) * (RegisterCount + 8);
-            this.Flags.Value = (EFlags)(state[flagsIndex] | (state[flagsIndex + 1] << 8) | (state[flagsIndex + 2] << 16) | (state[flagsIndex + 3] << 24));
-        }
-    }
-    #endregion
-
-    #region Internal Fields
     /// <summary>
     /// Contains operand size (bit 0) and address size (bit 1) overrides set
     /// by instruction prefixes.
@@ -700,26 +361,16 @@ public sealed class Processor : IRegisterContainer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetSizeOverrideFlag(byte flag) => this.overrides.SetSizeFlag(flag);
 
-    /// <summary>
-    /// Array of pointers to segment registers.
-    /// </summary>
-    private unsafe readonly ushort** segmentRegisterPointers;
-    /// <summary>
-    /// Array of pointers to segment override bases.
-    /// </summary>
-    internal unsafe readonly uint** baseOverrides;
-    /// <summary>
-    /// Array of segment base values.
-    /// </summary>
-    internal unsafe readonly uint* segmentBases;
+    internal ref byte InstructionBuffer => ref this.instructionBuffer.a;
+
     /// <summary>
     /// 16-byte cache of the current instruction.
     /// </summary>
-    internal unsafe readonly byte* CachedInstruction;
+    internal ref CachedInstruction CachedInstruction => ref this.instructionBuffer;
     /// <summary>
     /// Pointer to the next byte in the cached instruction buffer.
     /// </summary>
-    internal unsafe byte* CachedIP;
+    internal ref readonly byte CachedIP => ref Unsafe.AddByteOffset(ref Unsafe.As<CachedInstruction, byte>(ref this.instructionBuffer), this.EIP - this.StartEIP);
     /// <summary>
     /// Instruction pointer for the first byte of the current instruction.
     /// </summary>
@@ -734,28 +385,10 @@ public sealed class Processor : IRegisterContainer
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => this.overrides.InterruptMask = value;
     }
-    #endregion
-
-    /// <summary>
-    /// Pointer to first general-purpose register.  Each register is 4 bytes apart.
-    /// </summary>
-    private unsafe readonly byte* gprBlock;
-    private unsafe readonly void** wordRegisterPointers;
-    private unsafe readonly byte** byteRegisterPointers;
-    private unsafe readonly uint* debugRegisterBase;
-
-    /// <summary>
-    /// The number of registers contained in the GPR block.
-    /// </summary>
-    private const int RegisterCount = 24;
-    /// <summary>
-    /// The number of bytes used to cache the current instruction.
-    /// </summary>
-    private const int InstructionCacheSize = 16;
 
     private struct PrefixOverrides
     {
-        public SegmentRegister Segment;
+        public SegmentRegisterOverride Segment;
         public byte Size;
         public byte Count;
         private byte repeatAndInterruptMask;

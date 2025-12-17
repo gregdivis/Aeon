@@ -8,20 +8,23 @@ internal static partial class InstructionDecoders
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe T ReadImmediate<T>(Processor p) where T : unmanaged
     {
-        var value = *(T*)p.CachedIP;
-        p.CachedIP += sizeof(T);
+        var value = Unsafe.ReadUnaligned<T>(in p.CachedIP);
+        p.EIP += (uint)sizeof(T);
         return value;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe byte GetReg(Processor p) => (byte)Intrinsics.ExtractBits(*p.CachedIP, 3, 3, 0x38);
+    public static unsafe byte GetReg(Processor p)
+    {
+        return (byte)Intrinsics.ExtractBits(p.CachedIP, 3, 3, 0x38);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static unsafe void GetModRm(Processor p, out byte mod, out byte rm)
     {
-        rm = (byte)(*p.CachedIP & 0x07u);
-        mod = (byte)Intrinsics.ExtractBits(*p.CachedIP, 6, 2, 0xC0);
-        p.CachedIP++;
+        rm = (byte)(p.CachedIP & 0x07u);
+        mod = (byte)Intrinsics.ExtractBits(p.CachedIP, 6, 2, 0xC0);
+        p.EIP++;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -34,7 +37,10 @@ internal static partial class InstructionDecoders
         }
         else if (!memoryOnly)
         {
-            return new RmwValue<T>(sizeof(T) == 1 ? p.GetRegisterBytePointer(rm) : p.GetRegisterWordPointer(rm));
+            if (Unsafe.SizeOf<T>() == 1)
+                return new RmwValue<T>(ref Unsafe.As<byte, T>(ref p.GetByteRegister(rm)));
+            else
+                return new RmwValue<T>(ref p.GetWordRegister<T>(rm));
         }
         else
         {
@@ -53,7 +59,10 @@ internal static partial class InstructionDecoders
         }
         else if (!memoryOnly)
         {
-            return new RmwValue<T>(sizeof(T) == 1 ? p.GetRegisterBytePointer(rm) : p.GetRegisterWordPointer(rm));
+            if (Unsafe.SizeOf<T>() == 1)
+                return new RmwValue<T>(ref Unsafe.As<byte, T>(ref p.GetByteRegister(rm)));
+            else
+                return new RmwValue<T>(ref p.GetWordRegister<T>(rm));
         }
         else
         {
@@ -68,31 +77,22 @@ internal static partial class InstructionDecoders
     public readonly ref struct RmwValue<T>
         where T : unmanaged
     {
-        private readonly nuint ptr;
+        private readonly ref T ptr;
+        private readonly uint address;
 
-        public unsafe RmwValue(void* regPtr)
+        public RmwValue(ref T regPtr)
         {
-            this.ptr = (nuint)regPtr;
-            this.IsPointer = true;
+            this.ptr = ref regPtr;
+            this.address = 0;
         }
         public RmwValue(uint address)
         {
-            this.ptr = address;
-            this.IsPointer = false;
+            this.ptr = ref Unsafe.NullRef<T>();
+            this.address = address;
         }
 
-        public bool IsPointer { get; }
-        public ref T RegisterValue
-        {
-            get
-            {
-                unsafe
-                {
-                    return ref Unsafe.AsRef<T>((void*)this.ptr);
-                }
-            }
-        }
-        public unsafe T* RegisterPointer => (T*)this.ptr;
-        public uint Address => (uint)this.ptr;
+        public bool IsPointer => !Unsafe.IsNullRef(ref this.ptr);
+        public ref T RegisterValue => ref this.ptr;
+        public uint Address => this.address;
     }
 }

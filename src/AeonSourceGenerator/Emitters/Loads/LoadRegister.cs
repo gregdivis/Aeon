@@ -26,9 +26,18 @@ namespace Aeon.SourceGenerator.Emitters
             else if (this.ByRef)
                 writer.Write("ref ");
 
-            writer.Write($"*({this.GetRuntimeTypeName()}*)p.GetRegister");
-            writer.Write(this.RegisterSize == 1 ? "Byte" : "Word");
-            writer.Write($"Pointer(arg{this.ParameterIndex}Reg)");
+            if (this.RegisterSize == 1)
+            {
+                writer.Write($"p.GetByteRegister(arg{this.ParameterIndex}Reg)");
+            }
+            else
+            {
+                writer.Write($"p.GetWordRegister<{this.GetRuntimeTypeName()}>(arg{this.ParameterIndex}Reg)");
+            }
+
+            //    writer.Write($"*({this.GetRuntimeTypeName()}*)p.GetRegister");
+            //writer.Write(this.RegisterSize == 1 ? "Byte" : "Word");
+            //writer.Write($"Pointer(arg{this.ParameterIndex}Reg)");
         }
     }
 }
