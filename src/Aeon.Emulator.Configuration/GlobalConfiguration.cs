@@ -9,18 +9,34 @@ public sealed class GlobalConfiguration
     public bool Mt32Enabled { get; set; }
     public string? SoundfontPath { get; set; }
     public MidiEngine? MidiEngine { get; set; }
+    public bool ShowIps { get; set; }
 
     public static GlobalConfiguration Load()
     {
-        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Aeon Emulator", "AeonConfig.json");
-        if (File.Exists(path))
+        using var stream = TryOpen(Path.Combine(Environment.CurrentDirectory, ".AeonConfig"))
+            ?? TryOpen(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".AeonConfig"))
+            ?? TryOpenWindows(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Aeon Emulator", "AeonConfig.json"));
+
+        GlobalConfiguration? config = null;
+        if (stream is not null)
+            config = JsonSerializer.Deserialize(stream, AeonConfigJsonSerializerContext.Default.GlobalConfiguration);
+
+        return config ?? new GlobalConfiguration();
+    }
+
+    private static FileStream? TryOpenWindows(string? path) => OperatingSystem.IsWindows() ? TryOpen(path) : null;
+    private static FileStream? TryOpen(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            return null;
+
+        try
         {
-            using var stream = File.OpenRead(path);
-            return JsonSerializer.Deserialize(stream, AeonConfigJsonSerializerContext.Default.GlobalConfiguration) ?? new GlobalConfiguration();
+            return File.OpenRead(path);
         }
-        else
+        catch
         {
-            return new GlobalConfiguration();
+            return null;
         }
     }
 }

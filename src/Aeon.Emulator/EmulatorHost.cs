@@ -155,6 +155,10 @@ public sealed class EmulatorHost : IDisposable, IAsyncDisposable
 
         if (this.State == EmulatorState.Ready)
         {
+            var comspec = this.VirtualMachine.FileSystem.CommandInterpreterPath;
+            if (comspec != null)
+                this.VirtualMachine.EnvironmentVariables["COMSPEC"] = comspec.ToString();
+
             this.processorTask = Task.Run(() => this.ProcessorThreadMainAsync(false));
         }
         else if (this.State == EmulatorState.Paused)

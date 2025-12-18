@@ -1,9 +1,11 @@
-﻿namespace Aeon.Emulator.Dos.VirtualFileSystem;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Aeon.Emulator.Dos.VirtualFileSystem;
 
 /// <summary>
 /// Uniquely identifies a drive in DOS.
 /// </summary>
-public readonly struct DriveLetter : IEquatable<DriveLetter>, IComparable<DriveLetter>
+public readonly struct DriveLetter : IEquatable<DriveLetter>, IComparable<DriveLetter>, ISpanParsable<DriveLetter>
 {
     private readonly byte driveIndex;
 
@@ -156,4 +158,36 @@ public readonly struct DriveLetter : IEquatable<DriveLetter>, IComparable<DriveL
         Span<char> buffer = [(char)('A' + this.driveIndex), ':'];
         return new string(buffer);
     }
+
+    public static DriveLetter Parse(ReadOnlySpan<char> s)
+    {
+        if (s.Length != 1 || !char.IsAsciiLetter(s[0]))
+            throw new FormatException("Drive letter must be a single ASCII letter.");
+
+        return new DriveLetter(s[0]);
+    }
+    public static bool TryParse(ReadOnlySpan<char> s, [MaybeNullWhen(false)] out DriveLetter result)
+    {
+        if (s.Length == 1 && char.IsAsciiLetter(s[0]))
+        {
+            result = new DriveLetter(s[0]);
+            return true;
+        }
+        else
+        {
+            result = default;
+            return false;
+        }
+    }
+    public static DriveLetter Parse(string s)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(s);
+        return Parse(s.AsSpan());
+    }
+    public static bool TryParse([NotNullWhen(true)] string? s, [MaybeNullWhen(false)] out DriveLetter result) => TryParse(s.AsSpan(), out result);
+
+    static DriveLetter ISpanParsable<DriveLetter>.Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => Parse(s);
+    static bool ISpanParsable<DriveLetter>.TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, [MaybeNullWhen(false)] out DriveLetter result) => TryParse(s, out result);
+    static DriveLetter IParsable<DriveLetter>.Parse(string s, IFormatProvider? provider) => Parse(s);
+    static bool IParsable<DriveLetter>.TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out DriveLetter result) => TryParse(s, out result);
 }
