@@ -1,10 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Aeon.Emulator.Dos.VirtualFileSystem;
-using Aeon.Emulator.Sound;
-using Aeon.Emulator.Sound.Blaster;
-using Aeon.Emulator.Sound.FM;
-using Aeon.Emulator.Sound.PCSpeaker;
 using Aeon.Emulator.Video.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -15,7 +10,7 @@ namespace Aeon.Emulator.Launcher;
 public sealed class AeonGame : Game
 {
     private SpriteBatch? _spriteBatch;
-    private EmulatorHost? emulator;
+    private EmulatorHost emulator;
     private Texture2D? framebufferTexture;
     private Texture2D? messageFont;
     private VideoRenderTarget? renderTarget;
@@ -29,38 +24,33 @@ public sealed class AeonGame : Game
     private bool mouseAbsoluteMode;
     private bool mouseCaptured;
     private bool hasFocus;
+    private readonly bool showIps;
+    private string? currentProcess;
+    private bool currentProcessChanged;
 
-    public AeonGame()
+    public AeonGame(EmulatorHost emulator, bool showIps)
     {
+        this.emulator = emulator;
         _ = new GraphicsDeviceManager(this);
         this.Content.RootDirectory = "Content";
         this.IsMouseVisible = false;
+        this.showIps = showIps;
     }
 
     protected override void Initialize()
     {
         this.Window.Title = "Aeon";
-        this.emulator = new EmulatorHost(
-            new VirtualMachineInitializationOptions
-            {
-                PhysicalMemorySize = 32,
-                AdditionalDevices =
-                [
-                    _ => new InternalSpeaker(),
-                    vm => new SoundBlaster(vm),
-                    _ => new FmSoundCard(),
-                    _ => new GeneralMidi(new GeneralMidiOptions(MidiEngine.MidiMapper))
-                ]
-            }
-        );
         this.videoModeChanges = 1;
         this.UpdateVideoMode();
         this.emulator.VideoModeChanged += (s, e) => Interlocked.Increment(ref this.videoModeChanges);
-        this.emulator.VirtualMachine.FileSystem.Drives[DriveLetter.C].Mapping = new WritableMappedFolder(@"C:\DOS");
-        this.emulator.VirtualMachine.FileSystem.Drives[DriveLetter.C].HasCommandInterpreter = true;
-        this.emulator.VirtualMachine.FileSystem.Drives[DriveLetter.C].DriveType = DriveType.Fixed;
-        this.emulator.EmulationSpeed = int.MaxValue;
-        this.emulator.LoadProgram("COMMAND.COM");
+        this.emulator.CurrentProcessChanged += (s, e) =>
+        {
+            this.currentProcess = this.emulator.VirtualMachine.CurrentProcess?.ImageName;
+            this.currentProcessChanged = true;
+        };
+
+        this.currentProcess = this.emulator.VirtualMachine.CurrentProcess?.ImageName;
+        this.currentProcessChanged = true;
 
         this.emulator.Run();
 
@@ -126,81 +116,87 @@ public sealed class AeonGame : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (this.emulator is not null)
+        if (this.emulator.State == EmulatorState.ProgramExited)
         {
-            if (this.emulator.State == EmulatorState.ProgramExited)
+            this.Exit();
+            return;
+        }
+
+        if (this.currentProcessChanged)
+        {
+            var name = this.currentProcess;
+            if (string.IsNullOrEmpty(name))
+                this.Window.Title = "Aeon";
+            else
+                this.Window.Title = $"{name} - Aeon";
+        }
+
+        var mouseState = Microsoft.Xna.Framework.Input.Mouse.GetState(this.Window);
+        if (this.previousMouseState != mouseState && (this.hasFocus || this.mouseAbsoluteMode))
+        {
+            RaiseMouseEvents(this.emulator, this.previousMouseState, mouseState);
+            this.previousMouseState = mouseState;
+        }
+
+        if (this.hasFocus)
+        {
+            var state = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+            int count = state.GetPressedKeyCount();
+            if (count > 0)
             {
-                this.Exit();
-                return;
-            }
-
-            var mouseState = Microsoft.Xna.Framework.Input.Mouse.GetState(this.Window);
-            if (this.previousMouseState != mouseState && (this.hasFocus || this.mouseAbsoluteMode))
-            {
-                RaiseMouseEvents(this.emulator, this.previousMouseState, mouseState);
-                this.previousMouseState = mouseState;
-            }
-
-            if (this.hasFocus)
-            {
-                var state = Microsoft.Xna.Framework.Input.Keyboard.GetState();
-                int count = state.GetPressedKeyCount();
-                if (count > 0)
+                state.GetPressedKeys(this.pressedKeysBuffer);
+                for (int i = 0; i < count; i++)
                 {
-                    state.GetPressedKeys(this.pressedKeysBuffer);
-                    for (int i = 0; i < count; i++)
-                    {
-                        var key = this.pressedKeysBuffer[i];
-                        if (this.pressedKeys.Add(key) && key.TryConvert(out var aeonKey))
-                            this.emulator.PressKey(aeonKey);
-                    }
-                }
-
-                List<Microsoft.Xna.Framework.Input.Keys>? released = null;
-
-                foreach (var pressed in this.pressedKeys)
-                {
-                    bool found = false;
-
-                    for (int i = 0; i < count; i++)
-                    {
-                        if (this.pressedKeysBuffer[i] == pressed)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (!found)
-                    {
-                        released ??= [];
-                        released.Add(pressed);
-                    }
-                }
-
-                if (released is not null)
-                {
-                    foreach (var key in released)
-                    {
-                        this.pressedKeys.Remove(key);
-                        if (key.TryConvert(out var aeonKey))
-                            this.emulator.ReleaseKey(aeonKey);
-                    }
+                    var key = this.pressedKeysBuffer[i];
+                    if (this.pressedKeys.Add(key) && key.TryConvert(out var aeonKey))
+                        this.emulator.PressKey(aeonKey);
                 }
             }
 
-            if (!this.ipsCounter.IsRunning)
+            List<Microsoft.Xna.Framework.Input.Keys>? released = null;
+
+            foreach (var pressed in this.pressedKeys)
             {
-                this.ipsCounter.Start();
-                this.instructionCounterStartValue = this.emulator.TotalInstructions;
+                bool found = false;
+
+                for (int i = 0; i < count; i++)
+                {
+                    if (this.pressedKeysBuffer[i] == pressed)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    released ??= [];
+                    released.Add(pressed);
+                }
             }
-            else if (this.ipsCounter.Elapsed >= TimeSpan.FromSeconds(1))
+
+            if (released is not null)
             {
-                this.ipsCounter.Stop();
-                this.instructionsPerSecond = (long)((this.emulator.TotalInstructions - this.instructionCounterStartValue) / this.ipsCounter.Elapsed.TotalSeconds);
-                this.ipsCounter.Restart();
-                this.instructionCounterStartValue = this.emulator.TotalInstructions;
+                foreach (var key in released)
+                {
+                    this.pressedKeys.Remove(key);
+                    if (key.TryConvert(out var aeonKey))
+                        this.emulator.ReleaseKey(aeonKey);
+                }
             }
+        }
+
+        if (!this.ipsCounter.IsRunning)
+        {
+            this.ipsCounter.Start();
+            this.instructionCounterStartValue = this.emulator.TotalInstructions;
+        }
+        else if (this.ipsCounter.Elapsed >= TimeSpan.FromSeconds(1))
+        {
+            this.ipsCounter.Stop();
+            this.instructionsPerSecond = (long)((this.emulator.TotalInstructions - this.instructionCounterStartValue) / this.ipsCounter.Elapsed.TotalSeconds);
+            this.ipsCounter.Restart();
+            this.instructionCounterStartValue = this.emulator.TotalInstructions;
         }
 
         base.Update(gameTime);
@@ -228,7 +224,7 @@ public sealed class AeonGame : Game
                                                                  GraphicsDevice.Viewport.Height),
                              color: Color.White);
 
-            if (this.instructionsPerSecond > 0)
+            if (this.showIps && this.instructionsPerSecond > 0)
                 _spriteBatch.DrawString(this.messageFont!, $"IPS: {this.instructionsPerSecond:#,#}", new Vector2(GraphicsDevice.Viewport.Width - 180, GraphicsDevice.Viewport.Height - 20), Color.White);
 
             _spriteBatch.End();
@@ -241,7 +237,7 @@ public sealed class AeonGame : Game
     [MemberNotNull(nameof(framebufferTexture))]
     private void UpdateVideoMode()
     {
-        var newRenderTarget = (this.emulator?.VirtualMachine.GetRenderer<PixelFormatRGBA>()?.CreateRenderTarget())
+        var newRenderTarget = (this.emulator.VirtualMachine.GetRenderer<PixelFormatRGBA>()?.CreateRenderTarget())
             ?? throw new NotSupportedException("Video mode not supported.");
 
         if (this.framebufferTexture is null || newRenderTarget.Width != this.framebufferTexture.Width || newRenderTarget.Height != this.framebufferTexture.Height)

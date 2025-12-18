@@ -125,11 +125,6 @@ public sealed class VirtualMachine : IDisposable
 
         this.PhysicalMemory.ReserveBaseMemory();
 
-#warning this can't go here unless we put some of this initialization in the options class
-        var comspec = this.FileSystem.CommandInterpreterPath;
-        if (comspec != null)
-            this.EnvironmentVariables["COMSPEC"] = comspec.ToString();
-
         void RegisterDevice(IVirtualDevice virtualDevice)
         {
             if (virtualDevice is IInterruptHandler interruptHandler)

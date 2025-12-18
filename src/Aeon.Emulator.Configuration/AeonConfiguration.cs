@@ -36,6 +36,7 @@ public sealed class AeonConfiguration
         {
             StartupPath = @"C:\",
             Launch = launchTarget,
+            EmulationSpeed = 50_000_000,
             Drives = new Dictionary<string, AeonDriveConfiguration>
             {
                 ["C"] = new AeonDriveConfiguration

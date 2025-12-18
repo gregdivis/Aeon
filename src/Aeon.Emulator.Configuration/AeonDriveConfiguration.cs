@@ -2,7 +2,7 @@
 
 public sealed class AeonDriveConfiguration
 {
-    public DriveType Type { get; set; }
+    public required DriveType Type { get; set; }
     public string? HostPath { get; set; }
     public bool ReadOnly { get; set; }
     public string? ImagePath { get; set; }
