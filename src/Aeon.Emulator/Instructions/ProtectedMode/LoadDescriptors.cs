@@ -42,13 +42,13 @@ internal static class LoadDescriptors
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadLocalDescriptorTable(PhysicalMemory m, ushort selector)
     {
-        m.LDTSelector = selector;
+        m.UpdateLocalDescriptor(selector);
     }
     [Alternate(nameof(LoadLocalDescriptorTable))]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void LoadLocalDescriptorTable32(PhysicalMemory m, uint selector)
     {
-        m.LDTSelector = (ushort)selector;
+        m.UpdateLocalDescriptor((ushort)selector);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

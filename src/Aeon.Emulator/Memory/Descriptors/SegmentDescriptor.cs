@@ -53,8 +53,8 @@ public readonly struct SegmentDescriptor
     /// </summary>
     /// <param name="descriptor">Segment descriptor to cast.</param>
     /// <returns>Resulting descriptor.</returns>
-    public static implicit operator Descriptor(SegmentDescriptor descriptor) => Unsafe.As<SegmentDescriptor, Descriptor>(ref descriptor);
-    public static explicit operator ulong(SegmentDescriptor descriptor) => Unsafe.As<SegmentDescriptor, ulong>(ref descriptor);
+    public static implicit operator Descriptor(SegmentDescriptor descriptor) => Unsafe.BitCast<SegmentDescriptor, Descriptor>(descriptor);
+    public static explicit operator ulong(SegmentDescriptor descriptor) => Unsafe.BitCast<SegmentDescriptor, ulong>(descriptor);
 
     /// <summary>
     /// Gets or sets the physical base address of the segment.

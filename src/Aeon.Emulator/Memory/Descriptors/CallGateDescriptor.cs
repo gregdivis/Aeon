@@ -6,7 +6,7 @@ namespace Aeon.Emulator.Memory;
 /// <summary>
 /// Represents a call gate descriptor.
 /// </summary>
-[StructLayout(LayoutKind.Sequential, Size = 8)]
+[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 8)]
 public readonly struct CallGateDescriptor
 {
     private readonly ushort offset1;
@@ -20,7 +20,7 @@ public readonly struct CallGateDescriptor
     /// </summary>
     /// <param name="descriptor">Call gate descriptor to cast.</param>
     /// <returns>Resulting descriptor.</returns>
-    public static implicit operator Descriptor(CallGateDescriptor descriptor) => Unsafe.As<CallGateDescriptor, Descriptor>(ref descriptor);
+    public static implicit operator Descriptor(CallGateDescriptor descriptor) => Unsafe.BitCast<CallGateDescriptor, Descriptor>(descriptor);
 
     /// <summary>
     /// Gets the segment offset.

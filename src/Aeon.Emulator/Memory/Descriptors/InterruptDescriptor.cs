@@ -18,7 +18,7 @@ public readonly struct InterruptDescriptor
     /// </summary>
     /// <param name="descriptor">Interrupt descriptor to cast.</param>
     /// <returns>Resulting descriptor.</returns>
-    public static implicit operator Descriptor(InterruptDescriptor descriptor) => Unsafe.As<InterruptDescriptor, Descriptor>(ref descriptor);
+    public static implicit operator Descriptor(InterruptDescriptor descriptor) => Unsafe.BitCast<InterruptDescriptor, Descriptor>(descriptor);
 
     /// <summary>
     /// Gets the segment offset.

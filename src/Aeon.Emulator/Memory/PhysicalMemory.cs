@@ -32,12 +32,14 @@ public sealed class PhysicalMemory
     /// <summary>
     /// Pointer to emulated physical memory.
     /// </summary>
-    internal unsafe byte* RawView;
+    private unsafe byte* RawView;
 
     /// <summary>
     /// The linear address of the page table directory.
     /// </summary>
     private uint directoryAddress;
+
+    private uint ldtBase;
 
     /// <summary>
     /// Address of the BIOS int15h C0 data table.
@@ -106,7 +108,7 @@ public sealed class PhysicalMemory
         this.MemorySize = memorySize;
         unsafe
         {
-            this.RawView = (byte*)NativeMemory.AllocZeroed((nuint)memorySize, 1);
+            this.RawView = (byte*)NativeMemory.AllocZeroed((nuint)(memorySize / 4096), 4096);
             this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize, 4);
         }
 
@@ -168,10 +170,12 @@ public sealed class PhysicalMemory
     /// Gets or sets the size of the GDT.
     /// </summary>
     internal uint GDTLimit { get; set; }
+    internal uint LDTLimit { get; private set; }
+
     /// <summary>
     /// Gets or sets the GDT selector of the current LDT.
     /// </summary>
-    internal ushort LDTSelector { get; set; }
+    internal ushort LDTSelector { get; private set; }
     /// <summary>
     /// Gets or sets the current linear offset of the interrupt descriptor table.
     /// </summary>
@@ -225,24 +229,29 @@ public sealed class PhysicalMemory
     /// </summary>
     /// <param name="segment">Segment whose descriptor is returned.</param>
     /// <returns>Descriptor of the specified segment.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Descriptor GetDescriptor(uint segment)
     {
         uint selectorIndex = segment >> 3;
         uint baseAddress;
+        uint offset = selectorIndex * 8u;
 
         // Check for local descriptor.
         if ((segment & 4) != 0)
         {
-            var ldtDescriptor = (SegmentDescriptor)GetDescriptor(this.LDTSelector & 0xFFF8u);
-            baseAddress = ldtDescriptor.Base;
+            if (this.LDTSelector == 0 || segment == 0)
+                ThrowHelper.ThrowGeneralProtectionFaultException(0);
+
+            baseAddress = this.ldtBase;
         }
         else
         {
             baseAddress = this.GDTAddress;
         }
 
-        return Unsafe.BitCast<ulong, Descriptor>(GetUInt64(baseAddress + (selectorIndex * 8u)));
+        return Unsafe.BitCast<ulong, Descriptor>(GetUInt64(baseAddress + offset));
     }
+
     /// <summary>
     /// Gets the address of an interrupt handler.
     /// </summary>
@@ -985,6 +994,20 @@ public sealed class PhysicalMemory
             }
         }
     }
+    internal void UpdateLocalDescriptor(ushort selector)
+    {
+        this.LDTSelector = selector;
+        if (selector != 0)
+        {
+            var desc = GetDescriptor(this.LDTSelector);
+            if (desc.DescriptorType != DescriptorType.Ldt)
+                ThrowHelper.ThrowGeneralProtectionFaultException(selector);
+
+            var ldtDescriptor = (SegmentDescriptor)desc;
+            this.ldtBase = ldtDescriptor.Base;
+            this.LDTLimit = ldtDescriptor.ByteLimit;
+        }
+    }
 
     /// <summary>
     /// Returns a pointer to a block of memory, making sure it is paged in.
@@ -1338,6 +1361,5 @@ public sealed class PhysicalMemory
             WriteInstruction(ref ptr, 0x58);
     }
     [DoesNotReturn]
-    [MethodImpl(MethodImplOptions.NoInlining)]
     private static void ThrowOutOfRange(uint address) => throw new InvalidOperationException($"Attempted to access invalid physical address 0x{address:X8}.");
 }

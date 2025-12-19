@@ -6,7 +6,7 @@ namespace Aeon.Emulator.Memory;
 /// <summary>
 /// Represents an unknown type of descriptor.
 /// </summary>
-[StructLayout(LayoutKind.Sequential, Size = 8)]
+[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 8)]
 public readonly struct Descriptor
 {
     private readonly DescriptorData data;
@@ -29,6 +29,8 @@ public readonly struct Descriptor
 
                 if (type == 0x0C)
                     return DescriptorType.CallGate;
+                else if (type == 0x02)
+                    return DescriptorType.Ldt;
                 else if (type == 0x05)
                     return DescriptorType.TaskGate;
                 else if (type == 0x06 || type == 0x0E)
@@ -54,25 +56,25 @@ public readonly struct Descriptor
     /// </summary>
     /// <param name="descriptor">Descriptor to cast.</param>
     /// <returns>Resulting segment descriptor.</returns>
-    public static explicit operator SegmentDescriptor(Descriptor descriptor) => Unsafe.As<Descriptor, SegmentDescriptor>(ref descriptor);
+    public static explicit operator SegmentDescriptor(Descriptor descriptor) => Unsafe.BitCast<Descriptor, SegmentDescriptor>(descriptor);
     /// <summary>
     /// Casts a descriptor to an interupt descriptor.
     /// </summary>
     /// <param name="descriptor">Descriptor to cast.</param>
     /// <returns>Resulting interrupt descriptor.</returns>
-    public static explicit operator InterruptDescriptor(Descriptor descriptor) => Unsafe.As<Descriptor, InterruptDescriptor>(ref descriptor);
+    public static explicit operator InterruptDescriptor(Descriptor descriptor) => Unsafe.BitCast<Descriptor, InterruptDescriptor>(descriptor);
     /// <summary>
     /// Casts a descriptor to a call gate descriptor.
     /// </summary>
     /// <param name="descriptor">Descriptor to cast.</param>
     /// <returns>Resulting call gate descriptor.</returns>
-    public static explicit operator CallGateDescriptor(Descriptor descriptor) => Unsafe.As<Descriptor, CallGateDescriptor>(ref descriptor);
+    public static explicit operator CallGateDescriptor(Descriptor descriptor) => Unsafe.BitCast<Descriptor, CallGateDescriptor>(descriptor);
     /// <summary>
     /// Casts a descriptor to a task segment descriptor.
     /// </summary>
     /// <param name="descriptor">Descriptor to cast.</param>
     /// <returns>Resulting task segment descriptor.</returns>
-    public static explicit operator TaskSegmentDescriptor(Descriptor descriptor) => Unsafe.As<Descriptor, TaskSegmentDescriptor>(ref descriptor);
+    public static explicit operator TaskSegmentDescriptor(Descriptor descriptor) => Unsafe.BitCast<Descriptor, TaskSegmentDescriptor>(descriptor);
 
     [StructLayout(LayoutKind.Explicit, Size = 8)]
     private readonly struct DescriptorData

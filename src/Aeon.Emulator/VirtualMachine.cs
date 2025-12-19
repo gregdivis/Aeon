@@ -800,7 +800,7 @@ public sealed class VirtualMachine : IDisposable
 
             p.CR3 = tss->CR3;
             this.PhysicalMemory.DirectoryAddress = tss->CR3;
-            this.PhysicalMemory.LDTSelector = tss->LDTR;
+            this.PhysicalMemory.UpdateLocalDescriptor(tss->LDTR);
 
             WriteSegmentRegister(SegmentIndex.CS, tss->CS);
             WriteSegmentRegister(SegmentIndex.SS, tss->SS);

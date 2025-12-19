@@ -31,7 +31,7 @@ public struct TaskSegmentDescriptor
     /// </summary>
     /// <param name="descriptor">Task segment descriptor to cast.</param>
     /// <returns>Resulting descriptor.</returns>
-    public static implicit operator Descriptor(TaskSegmentDescriptor descriptor) => Unsafe.As<TaskSegmentDescriptor, Descriptor>(ref descriptor);
+    public static implicit operator Descriptor(TaskSegmentDescriptor descriptor) => Unsafe.BitCast<TaskSegmentDescriptor, Descriptor>(descriptor);
 
     /// <summary>
     /// Gets a value indicating whether the task is busy.
