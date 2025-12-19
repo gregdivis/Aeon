@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 
 namespace Aeon.Emulator.Decoding;
 
@@ -15,7 +14,6 @@ public static partial class InstructionSet
     /// </summary>
     /// <param name="vm"><see cref="VirtualMachine"/> instance.</param>
     /// <param name="count">Number of instructions to emulate.</param>
-    [SkipLocalsInit]
     internal static void Emulate(VirtualMachine vm, uint count)
     {
         var processor = vm.Processor;
