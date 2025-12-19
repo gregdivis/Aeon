@@ -164,6 +164,6 @@ public class MappedFolder : IMappedDrive
     protected string GetFullPath(VirtualPath path)
     {
         ArgumentNullException.ThrowIfNull(path);
-        return Path.Combine(this.HostPath, path.Path);
+        return Path.Combine(this.HostPath, path.Path.Replace('\\', Path.DirectorySeparatorChar));
     }
 }
