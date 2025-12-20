@@ -46,33 +46,15 @@ public static class Intrinsics
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static byte HighByte(ushort value)
-    {
-        unsafe
-        {
-            return ((byte*)&value)[1];
-        }
-    }
+    public static byte HighByte(ushort value) => (byte)(value >>> 8);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte LowByte(ushort value) => (byte)value;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ushort HighWord(uint value)
-    {
-        unsafe
-        {
-            return ((ushort*)&value)[1];
-        }
-    }
+    public static ushort HighWord(uint value) => (ushort)(value >>> 16);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort LowWord(uint value) => (ushort)value;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint HighDWord(ulong value)
-    {
-        unsafe
-        {
-            return ((uint*)&value)[1];
-        }
-    }
+    public static uint HighDWord(ulong value) => (uint)(value >>> 32);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint LowDWord(ulong value) => (uint)value;
 }
