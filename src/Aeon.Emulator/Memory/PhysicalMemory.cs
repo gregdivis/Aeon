@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
@@ -276,20 +275,6 @@ public sealed class PhysicalMemory
             ulong value = GetUInt64(this.IDTAddress + (interrupt * 8u));
             var descriptor = (Descriptor*)&value;
             return *descriptor;
-        }
-    }
-    /// <summary>
-    /// Gets a pointer to a location in the emulated memory.
-    /// </summary>
-    /// <param name="address">Address of pointer.</param>
-    /// <returns>Pointer to the specified address.</returns>
-    public IntPtr GetPointer(int address)
-    {
-        address &= (int)addressMask;
-
-        unsafe
-        {
-            return new IntPtr(RawView + address);
         }
     }
 

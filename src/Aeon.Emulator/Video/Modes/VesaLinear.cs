@@ -14,5 +14,4 @@ internal sealed class VesaLinear(int width, int height, int bpp, VideoHandler vi
     internal override uint GetVramDWord(uint offset) => throw new NotImplementedException();
     internal override void SetVramDWord(uint offset, uint value) => throw new NotImplementedException();
     internal override void WriteCharacter(int x, int y, int index, byte foreground, byte background) => throw new NotImplementedException();
-    internal override IntPtr GetVideoRamPointer(VideoHandler video) => video.VirtualMachine.PhysicalMemory.GetPointer((int)BaseAddress);
 }

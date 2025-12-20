@@ -14,11 +14,7 @@ internal sealed class TextMode : VideoMode
     public TextMode(int width, int height, int fontHeight, VideoHandler video)
         : base(width, height, 4, false, fontHeight, VideoModeType.Text, video)
     {
-        unsafe
-        {
-            this.planes = new PlanesBuffer((byte*)video.VideoRam.ToPointer());
-        }
-
+        this.planes = new PlanesBuffer(video);
         this.graphics = video.Graphics;
         this.sequencer = video.Sequencer;
     }
@@ -48,13 +44,13 @@ internal sealed class TextMode : VideoMode
 
             if (this.IsOddEvenReadEnabled)
             {
-                return this.planes[address & 1][address >> 1];
+                return this.planes[address & 1][(int)(address >> 1)];
             }
             else
             {
                 uint map = this.graphics.ReadMapSelect & 0x3u;
                 if (map == 0 || map == 1)
-                    return this.planes[map][address];
+                    return this.planes[map][(int)address];
                 else if (map == 3)
                     return this.Font[address % 4096];
                 else
@@ -73,15 +69,15 @@ internal sealed class TextMode : VideoMode
 
             if (this.IsOddEvenWriteEnabled)
             {
-                this.planes[address & 1][address >> 1] = value;
+                this.planes[address & 1][(int)address >> 1] = value;
             }
             else
             {
                 uint mapMask = this.sequencer.MapMask.Packed;
                 if ((mapMask & 0x01) != 0)
-                    planes[0][address] = value;
+                    planes[0][(int)address] = value;
                 if ((mapMask & 0x02) != 0)
-                    planes[1][address] = value;
+                    planes[1][(int)address] = value;
 
                 if ((mapMask & 0x04) != 0)
                     this.Font[(address / 32) * this.FontHeight + (address % 32)] = value;
@@ -275,10 +271,10 @@ internal sealed class TextMode : VideoMode
         }
     }
 
-    private unsafe readonly struct PlanesBuffer(byte* vram)
+    private unsafe readonly struct PlanesBuffer(VideoHandler video)
     {
-        private readonly byte* vram = vram;
+        private readonly VideoHandler video = video;
 
-        public byte* this[uint plane] => this.vram + (PlaneSize * plane);
+        public Span<byte> this[uint plane] => video.VideoRamSpan.Slice((int)(PlaneSize * plane), PlaneSize);
     }
 }

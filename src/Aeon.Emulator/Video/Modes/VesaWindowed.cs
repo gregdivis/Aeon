@@ -1,4 +1,6 @@
-﻿namespace Aeon.Emulator.Video.Modes;
+﻿using System.Runtime.CompilerServices;
+
+namespace Aeon.Emulator.Video.Modes;
 
 /// <summary>
 /// A windowed VESA video mode.
@@ -8,7 +10,6 @@ internal abstract class VesaWindowed : VideoMode
     private const uint WindowSize = 65536;
     private const uint WindowGranularity = 65536;
 
-    private unsafe readonly byte* videoRam;
     private uint windowOffset;
     private int firstPixel;
     private int firstScanLine;
@@ -16,10 +17,6 @@ internal abstract class VesaWindowed : VideoMode
     protected VesaWindowed(int width, int height, int bpp, bool planar, int fontHeight, VideoModeType modeType, VideoHandler video)
         : base(width, height, bpp, planar, fontHeight, VideoModeType.Graphics, video)
     {
-        unsafe
-        {
-            this.videoRam = (byte*)video.VideoRam.ToPointer();
-        }
     }
 
     /// <summary>
@@ -52,45 +49,27 @@ internal abstract class VesaWindowed : VideoMode
 
     internal override byte GetVramByte(uint offset)
     {
-        unsafe
-        {
-            return this.videoRam[(offset + this.windowOffset) % VideoHandler.TotalVramBytes];
-        }
+        return this.VideoRamSpan[(int)(offset + this.windowOffset) % VideoHandler.TotalVramBytes];
     }
     internal override void SetVramByte(uint offset, byte value)
     {
-        unsafe
-        {
-            this.videoRam[(offset + this.windowOffset) % VideoHandler.TotalVramBytes] = value;
-        }
+        this.VideoRamSpan[(int)(offset + this.windowOffset) % VideoHandler.TotalVramBytes] = value;
     }
     internal override ushort GetVramWord(uint offset)
     {
-        unsafe
-        {
-            return *(ushort*)(this.videoRam + (offset + this.windowOffset) % VideoHandler.TotalVramBytes);
-        }
+        return Unsafe.As<byte, ushort>(ref this.VideoRamSpan[(int)(offset + this.windowOffset) % VideoHandler.TotalVramBytes]);
     }
     internal override void SetVramWord(uint offset, ushort value)
     {
-        unsafe
-        {
-            *(ushort*)(this.videoRam + (offset + this.windowOffset) % VideoHandler.TotalVramBytes) = value;
-        }
+        Unsafe.As<byte, ushort>(ref this.VideoRamSpan[(int)(offset + this.windowOffset) % VideoHandler.TotalVramBytes]) = value;
     }
     internal override uint GetVramDWord(uint offset)
     {
-        unsafe
-        {
-            return *(uint*)(this.videoRam + (offset + this.windowOffset) % VideoHandler.TotalVramBytes);
-        }
+        return Unsafe.As<byte, uint>(ref this.VideoRamSpan[(int)(offset + this.windowOffset) % VideoHandler.TotalVramBytes]);
     }
     internal override void SetVramDWord(uint offset, uint value)
     {
-        unsafe
-        {
-            *(uint*)(this.videoRam + (offset + this.windowOffset) % VideoHandler.TotalVramBytes) = value;
-        }
+        Unsafe.As<byte, uint>(ref this.VideoRamSpan[(int)(offset + this.windowOffset) % VideoHandler.TotalVramBytes]) = value;
     }
     internal override void WriteCharacter(int x, int y, int index, byte foreground, byte background)
     {

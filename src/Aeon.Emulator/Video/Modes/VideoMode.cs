@@ -30,7 +30,7 @@ public abstract class VideoMode
         this.dac = video.Dac;
         this.crtController = video.CrtController;
         this.attributeController = video.AttributeController;
-        this.VideoRam = GetVideoRamPointer(video);
+        this.VideoRam = video.VideoRam;
 
         InitializeFont(video.VirtualMachine.PhysicalMemory);
     }
@@ -107,17 +107,8 @@ public abstract class VideoMode
     /// <summary>
     /// Gets a pointer to the emulated video RAM.
     /// </summary>
-    public IntPtr VideoRam { get; }
-    public Span<byte> VideoRamSpan
-    {
-        get
-        {
-            unsafe
-            {
-                return new Span<byte>(this.VideoRam.ToPointer(), VideoHandler.TotalVramBytes);
-            }
-        }
-    }
+    public byte[] VideoRam { get; }
+    public Span<byte> VideoRamSpan => this.VideoRam;
     /// <summary>
     /// Gets the current EGA/VGA compatibility map.
     /// </summary>
@@ -205,12 +196,7 @@ public abstract class VideoMode
     {
         video.VirtualMachine.PhysicalMemory.Bios.CharacterPointHeight = (ushort)this.FontHeight;
 
-        unsafe
-        {
-            byte* ptr = (byte*)VideoRam.ToPointer();
-            for (int i = 0; i < VideoHandler.TotalVramBytes; i++)
-                ptr[i] = 0;
-        }
+        this.VideoRamSpan.Clear();
 
         int stride;
 
@@ -237,12 +223,6 @@ public abstract class VideoMode
         crtController.StartAddress = 0;
         video.Graphics.BitMask = 0xFF;
     }
-    /// <summary>
-    /// Returns a pointer to video RAM for the display mode.
-    /// </summary>
-    /// <param name="video">Current VideoHandler instance.</param>
-    /// <returns>Pointer to the mode's video RAM.</returns>
-    internal virtual IntPtr GetVideoRamPointer(VideoHandler video) => video.VideoRam;
 
     /// <summary>
     /// Copies the current font from emulated memory into a buffer.

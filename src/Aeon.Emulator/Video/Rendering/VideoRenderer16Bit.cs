@@ -7,13 +7,10 @@ internal sealed class VideoRenderer16Bit<TPixelFormat>(VideoMode mode) : VideoRe
     {
         int totalPixels = this.Mode.Width * this.Mode.Height;
 
-        unsafe
-        {
-            ushort* srcPtr = (ushort*)((byte*)this.Mode.VideoRam.ToPointer() + this.Mode.StartOffset);
-            var destPtr = new UnsafePointer<uint>(destination);
+        var srcPtr = new UnsafePointer<ushort>(this.Mode.VideoRamSpan[this.Mode.StartOffset..]);
+        var destPtr = new UnsafePointer<uint>(destination);
 
-            for (int i = 0; i < totalPixels; i++)
-                destPtr[i] = TPixelFormat.FromRGB16(srcPtr[i]);
-        }
+        for (int i = 0; i < totalPixels; i++)
+            destPtr[i] = TPixelFormat.FromRGB16(srcPtr[i]);
     }
 }

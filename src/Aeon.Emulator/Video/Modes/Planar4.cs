@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Video.Modes;
 
@@ -7,7 +8,6 @@ namespace Aeon.Emulator.Video.Modes;
 /// </summary>
 internal abstract class Planar4 : VideoMode
 {
-    private readonly unsafe uint* videoRam;
     private uint latches;
     private readonly Graphics graphics;
     private readonly Sequencer sequencer;
@@ -15,14 +15,11 @@ internal abstract class Planar4 : VideoMode
     public Planar4(int width, int height, int bpp, int fontHeight, VideoModeType modeType, VideoHandler video)
         : base(width, height, bpp, true, fontHeight, modeType, video)
     {
-        unsafe
-        {
-            this.videoRam = (uint*)video.VideoRam.ToPointer();
-        }
-
         this.graphics = video.Graphics;
         this.sequencer = video.Sequencer;
     }
+
+    private new Span<uint> VideoRamSpan => MemoryMarshal.Cast<byte, uint>(base.VideoRamSpan);
 
     internal override byte GetVramByte(uint offset)
     {
@@ -30,7 +27,7 @@ internal abstract class Planar4 : VideoMode
 
         unsafe
         {
-            this.latches = this.videoRam[offset];
+            this.latches = this.VideoRamSpan[(int)offset];
 
             if ((graphics.GraphicsMode & (1 << 3)) == 0)
             {
@@ -65,9 +62,9 @@ internal abstract class Planar4 : VideoMode
 
             unsafe
             {
-                uint current = Intrinsics.AndNot(this.videoRam[offset], mapMask); // read value and clear mask bits
+                uint current = Intrinsics.AndNot(this.VideoRamSpan[(int)offset], mapMask); // read value and clear mask bits
                 current |= this.latches & mapMask; // set latch bits
-                this.videoRam[offset] = current;
+                this.VideoRamSpan[(int)offset] = current;
             }
         }
         else if (writeMode == 2)
@@ -117,9 +114,9 @@ internal abstract class Planar4 : VideoMode
                 uint value = fg & fgMask;
 
                 if ((background & 0x08) == 0)
-                    this.videoRam[startPos + (row * stride)] = value;
+                    this.VideoRamSpan[startPos + (row * stride)] = value;
                 else
-                    this.videoRam[startPos + (row * stride)] ^= value;
+                    this.VideoRamSpan[startPos + (row * stride)] ^= value;
             }
         }
     }
@@ -141,7 +138,7 @@ internal abstract class Planar4 : VideoMode
                 // when mapMask is set, use computed value; otherwise keep vram value
                 uint mapMask = this.sequencer.MapMask.Expanded;
 
-                uint original = this.videoRam[offset];
+                uint original = this.VideoRamSpan[(int)offset];
 
                 uint setResetEnabled = this.graphics.EnableSetReset.Expanded;
                 uint setReset = this.graphics.SetReset.Expanded;
@@ -151,7 +148,7 @@ internal abstract class Planar4 : VideoMode
                 source &= mask;
                 source |= Intrinsics.AndNot(this.latches, mask);
 
-                this.videoRam[offset] = (source & mapMask) | Intrinsics.AndNot(original, mapMask);
+                this.VideoRamSpan[(int)offset] = (source & mapMask) | Intrinsics.AndNot(original, mapMask);
             }
             else
             {
@@ -177,7 +174,7 @@ internal abstract class Planar4 : VideoMode
 
             // when mapMask is set, use computed value; otherwise keep vram value
             uint mapMask = sequencer.MapMask.Expanded;
-            uint original = this.videoRam[offset];
+            uint original = this.VideoRamSpan[(int)offset];
 
             uint setResetEnabled = this.graphics.EnableSetReset.Expanded;
             uint setReset = this.graphics.SetReset.Expanded;
@@ -209,7 +206,7 @@ internal abstract class Planar4 : VideoMode
             source &= mask;
             source |= Intrinsics.AndNot(this.latches, mask);
 
-            this.videoRam[offset] = (source & mapMask) | Intrinsics.AndNot(original, mapMask);
+            this.VideoRamSpan[(int)offset] = (source & mapMask) | Intrinsics.AndNot(original, mapMask);
         }
 
     }
@@ -254,9 +251,9 @@ internal abstract class Planar4 : VideoMode
             uint mapMask = this.sequencer.MapMask.Expanded;
             unsafe
             {
-                uint current = Intrinsics.AndNot(this.videoRam[offset], mapMask); // read value and clear mask bits
+                uint current = Intrinsics.AndNot(this.VideoRamSpan[(int)offset], mapMask); // read value and clear mask bits
                 current |= values & mapMask; // set value bits
-                this.videoRam[offset] = current;
+                this.VideoRamSpan[(int)offset] = current;
             }
         }
     }
@@ -272,7 +269,7 @@ internal abstract class Planar4 : VideoMode
             uint result = source & this.graphics.SetReset.Expanded;
             result |= Intrinsics.AndNot(this.latches, source);
 
-            this.videoRam[offset] = result;
+            this.VideoRamSpan[(int)offset] = result;
         }
     }
     private static uint RotateBytes(uint value, int count)

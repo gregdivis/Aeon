@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.Memory;
 
@@ -11,7 +10,7 @@ namespace Aeon.Emulator.Video;
 /// <summary>
 /// Provides emulated video and int 10h functions.
 /// </summary>
-internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort, IDisposable
+internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort
 {
     /// <summary>
     /// Total number of bytes allocated for video RAM.
@@ -27,7 +26,6 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
     private static readonly long HorizontalPeriod = (long)((1000.0 / 60.0) / 480.0 * InterruptTimer.StopwatchTicksPerMillisecond);
     private static readonly long HorizontalBlankingTime = HorizontalPeriod / 2;
 
-    private bool disposed;
     private GraphicsRegister graphicsRegister;
     private SequencerRegister sequencerRegister;
     private AttributeControllerRegister attributeRegister;
@@ -40,10 +38,7 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
     public VideoHandler(VirtualMachine vm)
     {
         this.VirtualMachine = vm;
-        unsafe
-        {
-            this.VideoRam = new IntPtr(NativeMemory.AllocZeroed(TotalVramBytes));
-        }
+        this.VideoRam = new byte[TotalVramBytes];
 
         this.vbe = new Vesa.VbeHandler(this);
 
@@ -52,8 +47,6 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
         this.TextConsole = new TextConsole(this, vm.PhysicalMemory.Bios);
         this.SetDisplayMode(VideoMode10.ColorText80x25x4);
     }
-
-    ~VideoHandler() => this.InternalDispose();
 
     /// <summary>
     /// Gets the current display mode.
@@ -86,17 +79,8 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
     /// <summary>
     /// Gets a pointer to the emulated video RAM.
     /// </summary>
-    public IntPtr VideoRam { get; }
-    public Span<byte> VideoRamSpan
-    {
-        get
-        {
-            unsafe
-            {
-                return new Span<byte>(this.VideoRam.ToPointer(), TotalVramBytes);
-            }
-        }
-    }
+    public byte[] VideoRam { get; }
+    public Span<byte> VideoRamSpan => this.VideoRam;
     public Vesa.VbeHandler Vbe => this.vbe;
 
     /// <summary>
@@ -554,12 +538,6 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
         VirtualMachine.OnVideoModeChanged(new VideoModeChangedEventArgs(true));
     }
 
-    void IDisposable.Dispose()
-    {
-        this.InternalDispose();
-        GC.SuppressFinalize(this);
-    }
-
     /// <summary>
     /// Sets the current mode to unchained mode 13h.
     /// </summary>
@@ -747,20 +725,6 @@ internal sealed class VideoHandler : IInterruptHandler, IInputPort, IOutputPort,
 
         // Indicate success.
         VirtualMachine.Processor.AL = 0x1B;
-    }
-
-    private void InternalDispose()
-    {
-        if (!this.disposed)
-        {
-            unsafe
-            {
-                if (this.VideoRam != IntPtr.Zero)
-                    NativeMemory.Free(this.VideoRam.ToPointer());
-            }
-
-            this.disposed = true;
-        }
     }
 
     /// <summary>
