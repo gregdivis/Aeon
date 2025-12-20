@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Aeon.Emulator.Dos.VirtualFileSystem;
+﻿using Aeon.Emulator.Dos.VirtualFileSystem;
 
 namespace Aeon.Emulator.Dos.Programs;
 
@@ -29,8 +28,8 @@ internal sealed class ComFile(VirtualPath path, Stream stream) : ProgramImage(pa
         vm.Processor.CX = 0x00FF;
         vm.Processor.DX = (short)dataSegment;
 
-        var ptr = vm.PhysicalMemory.GetPointer(vm.Processor.CS, vm.Processor.IP);
-        Marshal.Copy(imageData!, 0, ptr, imageData!.Length);
+        var ptr = vm.PhysicalMemory.GetSpan(vm.Processor.CS, vm.Processor.IP, imageData!.Length);
+        imageData.AsSpan().CopyTo(ptr);
     }
     internal override void LoadOverlay(VirtualMachine vm, ushort overlaySegment, int relocationFactor) => throw new NotSupportedException();
     internal override void Read(Stream stream)

@@ -53,21 +53,13 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
     {
         get
         {
-            var ptr = vm.PhysicalMemory.GetPointer(SwappableDataArea.Segment, SwappableDataArea.Offset);
-            unsafe
-            {
-                var sda = (SwappableDataArea*)ptr.ToPointer();
-                return sda->CurrentPSP;
-            }
+            ref var sda = ref vm.PhysicalMemory.GetRef<SwappableDataArea>(SwappableDataArea.Segment, SwappableDataArea.Offset);
+            return sda.CurrentPSP;
         }
         set
         {
-            var ptr = vm.PhysicalMemory.GetPointer(SwappableDataArea.Segment, SwappableDataArea.Offset);
-            unsafe
-            {
-                var sda = (SwappableDataArea*)ptr.ToPointer();
-                sda->CurrentPSP = value;
-            }
+            ref var sda = ref vm.PhysicalMemory.GetRef<SwappableDataArea>(SwappableDataArea.Segment, SwappableDataArea.Offset);
+            sda.CurrentPSP = value;
         }
     }
 
@@ -100,13 +92,13 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
 
             var fullImagePath = image.FullPath.FullPath;
 
-            environmentSegment = blockList.Allocate((ushort)((environmentBlock.Length >> 4) + 1 + fullImagePath.Length + 1), DosProcess.NullProcess);
+            environmentSegment = blockList.Allocate((ushort)((environmentBlock.Length >>> 4) + 1 + fullImagePath.Length + 1), DosProcess.NullProcess);
             if (environmentSegment == 0)
                 throw new InvalidOperationException();
 
             // Copy the environment block to emulated memory.
-            var environmentPtr = vm.PhysicalMemory.GetPointer(environmentSegment, 0);
-            Marshal.Copy(environmentBlock, 0, environmentPtr, environmentBlock.Length);
+            var environmentPtr = vm.PhysicalMemory.GetSpan(environmentSegment, 0, environmentBlock.Length);
+            environmentBlock.AsSpan().CopyTo(environmentPtr);
             vm.PhysicalMemory.SetString(environmentSegment, (uint)environmentBlock.Length, fullImagePath);
             reAss = true;
 
@@ -127,8 +119,8 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
             // Generate the program segment prefix data for the process and copy it to emulated memory.
             ushort parentPsp = this.CurrentProcessId;
             byte[] psp = BuildPsp(newProcess, parentPsp);
-            var pspPtr = vm.PhysicalMemory.GetPointer(newProcess.PrefixSegment, 0);
-            Marshal.Copy(psp, 0, pspPtr, psp.Length);
+            var pspPtr = vm.PhysicalMemory.GetSpan(newProcess.PrefixSegment, 0, psp.Length);
+            psp.AsSpan().CopyTo(pspPtr);
 
             // Set the process as current and perform image-specific initialization.
             newProcess.InitialProcessorState = processorState;
@@ -269,8 +261,8 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
         this.allProcesses[pspSegment] = newProcess;
         var pspBytes = BuildPsp(newProcess, this.CurrentProcessId, vm.Processor.SI);
 
-        var pspPtr = vm.PhysicalMemory.GetPointer(pspSegment, 0);
-        Marshal.Copy(pspBytes, 0, pspPtr, pspBytes.Length);
+        var pspPtr = vm.PhysicalMemory.GetSpan(pspSegment, 0, pspBytes.Length);
+        pspBytes.AsSpan().CopyTo(pspPtr);
     }
     /// <summary>
     /// Ends a process and optionally frees its memory.
@@ -402,12 +394,8 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
     /// <returns>Parent process ID of the specified process ID.</returns>
     private ushort GetParentProcessId(ushort processId)
     {
-        var ptr = vm.PhysicalMemory.GetPointer(processId, 0);
-        unsafe
-        {
-            var psp = (ProgramSegmentPrefix*)ptr.ToPointer();
-            return psp->ParentProcessId;
-        }
+        ref var psp = ref vm.PhysicalMemory.GetRef<ProgramSegmentPrefix>(processId, 0);
+        return psp.ParentProcessId;
     }
     /// <summary>
     /// Returns an array containing the environment block at the specified segment.
@@ -418,13 +406,13 @@ internal sealed class MemoryAllocator(VirtualMachine vm) : IDisposable
     {
         unsafe
         {
-            byte* ptr = (byte*)vm.PhysicalMemory.GetPointer(blockSegment, 0).ToPointer();
+            var ptr = vm.PhysicalMemory.GetSpan(blockSegment, 0, 4096);
             for (int i = 1; i < 4096; i++)
             {
                 if (ptr[i] == 0 && ptr[i - 1] == 0)
                 {
                     var block = new byte[i + 1];
-                    Marshal.Copy(new IntPtr(ptr), block, 0, block.Length);
+                    ptr[..block.Length].CopyTo(block);
                     return block;
                 }
             }

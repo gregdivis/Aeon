@@ -221,7 +221,8 @@ public sealed class DmaChannel
             uint sourceOffset = (uint)this.Count + 1 - (uint)this.TransferBytesRemaining;
 
             int count = Math.Min(this.TransferChunkSize, this.TransferBytesRemaining);
-            var source = memory.GetSpan(memoryAddress + sourceOffset, count);
+#warning this is probaly supposed to be a flat memory model
+            var source = memory.GetPagedSpan(memoryAddress + sourceOffset, count);
 
             count = device.WriteBytes(source);
 

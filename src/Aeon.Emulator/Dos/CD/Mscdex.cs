@@ -326,70 +326,67 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
 
         vm.Processor.AX = 1; // ISO-9660
 
-        unsafe
+        string identifier;
+        ref var entry = ref vm.PhysicalMemory.GetRef<DirectoryEntry>(vm.Processor.SI, vm.Processor.DI);
+        if (fileInfo.Result is IIso9660DirectoryEntry isoEntry)
         {
-            string identifier;
-            var entry = (DirectoryEntry*)vm.PhysicalMemory.GetPointer(vm.Processor.SI, vm.Processor.DI).ToPointer();
-            if (fileInfo.Result is IIso9660DirectoryEntry isoEntry)
+            identifier = isoEntry.Identifier;
+            entry.XAR_len = isoEntry.ExtendedAttributeRecordLength;
+            entry.loc_extentI = isoEntry.LBALocation;
+            entry.data_lenI = isoEntry.DataLength;
+            if (isoEntry.RecordingDate != null)
             {
-                identifier = isoEntry.Identifier;
-                entry->XAR_len = isoEntry.ExtendedAttributeRecordLength;
-                entry->loc_extentI = isoEntry.LBALocation;
-                entry->data_lenI = isoEntry.DataLength;
-                if (isoEntry.RecordingDate != null)
-                {
-                    var recordingDate = (DateTimeOffset)isoEntry.RecordingDate;
-                    entry->record_time[0] = (byte)(recordingDate.Year - 1900);
-                    entry->record_time[1] = (byte)recordingDate.Month;
-                    entry->record_time[2] = (byte)recordingDate.Day;
-                    entry->record_time[3] = (byte)recordingDate.Hour;
-                    entry->record_time[4] = (byte)recordingDate.Minute;
-                    entry->record_time[5] = (byte)recordingDate.Second;
-                    entry->record_time[6] = (byte)(sbyte)(recordingDate.Offset.TotalMinutes / 15);
-                }
-                else
-                {
-                    for (int i = 0; i < 7; i++)
-                        entry->record_time[i] = 0;
-                }
-
-                entry->file_flags_iso = isoEntry.FileFlags;
-                entry->il_size = isoEntry.InterleavedUnitSize;
-                entry->il_skip = isoEntry.InterleavedGapSize;
-                entry->VSSNI = isoEntry.VolumeSequenceNumber;
+                var recordingDate = (DateTimeOffset)isoEntry.RecordingDate;
+                entry.record_time[0] = (byte)(recordingDate.Year - 1900);
+                entry.record_time[1] = (byte)recordingDate.Month;
+                entry.record_time[2] = (byte)recordingDate.Day;
+                entry.record_time[3] = (byte)recordingDate.Hour;
+                entry.record_time[4] = (byte)recordingDate.Minute;
+                entry.record_time[5] = (byte)recordingDate.Second;
+                entry.record_time[6] = (byte)(sbyte)(recordingDate.Offset.TotalMinutes / 15);
             }
             else
             {
-                identifier = fileInfo.Result.Name;
-                if ((fileInfo.Result.Attributes & VirtualFileAttributes.Directory) == 0)
-                    identifier += ";1";
-                entry->XAR_len = 0;
-                entry->loc_extentI = 0;
-                entry->data_lenI = fileInfo.Result.DosLength;
-                entry->record_time[0] = (byte)(fileInfo.Result.ModifyDate.Year - 1900);
-                entry->record_time[1] = (byte)fileInfo.Result.ModifyDate.Month;
-                entry->record_time[2] = (byte)fileInfo.Result.ModifyDate.Day;
-                entry->record_time[3] = (byte)fileInfo.Result.ModifyDate.Hour;
-                entry->record_time[4] = (byte)fileInfo.Result.ModifyDate.Minute;
-                entry->record_time[5] = (byte)fileInfo.Result.ModifyDate.Second;
-                entry->record_time[6] = (byte)(sbyte)(TimeZoneInfo.Local.GetUtcOffset(fileInfo.Result.ModifyDate).TotalMinutes / 15);
-                entry->file_flags_iso = 0;
-                if ((fileInfo.Result.Attributes & VirtualFileAttributes.Hidden) != 0)
-                    entry->file_flags_iso |= 1;
-                if ((fileInfo.Result.Attributes & VirtualFileAttributes.Directory) != 0)
-                    entry->file_flags_iso |= 2;
-                entry->il_size = 0;
-                entry->il_skip = 0;
-                entry->VSSNI = 0;
-                entry->VSSNM = 0;
+                for (int i = 0; i < 7; i++)
+                    entry.record_time[i] = 0;
             }
 
-            entry->loc_extentM = (uint)System.Net.IPAddress.HostToNetworkOrder((int)entry->loc_extentI);
-            entry->data_lenM = (uint)System.Net.IPAddress.HostToNetworkOrder((int)entry->data_lenI);
-            entry->VSSNM = (ushort)System.Net.IPAddress.HostToNetworkOrder((short)entry->VSSNI);
-            entry->len_fi = (byte)identifier.Length;
-            vm.PhysicalMemory.SetString(vm.Processor.SI, (uint)(vm.Processor.DI + sizeof(DirectoryEntry)), identifier, (identifier.Length % 2) == 0);
+            entry.file_flags_iso = isoEntry.FileFlags;
+            entry.il_size = isoEntry.InterleavedUnitSize;
+            entry.il_skip = isoEntry.InterleavedGapSize;
+            entry.VSSNI = isoEntry.VolumeSequenceNumber;
         }
+        else
+        {
+            identifier = fileInfo.Result.Name;
+            if ((fileInfo.Result.Attributes & VirtualFileAttributes.Directory) == 0)
+                identifier += ";1";
+            entry.XAR_len = 0;
+            entry.loc_extentI = 0;
+            entry.data_lenI = fileInfo.Result.DosLength;
+            entry.record_time[0] = (byte)(fileInfo.Result.ModifyDate.Year - 1900);
+            entry.record_time[1] = (byte)fileInfo.Result.ModifyDate.Month;
+            entry.record_time[2] = (byte)fileInfo.Result.ModifyDate.Day;
+            entry.record_time[3] = (byte)fileInfo.Result.ModifyDate.Hour;
+            entry.record_time[4] = (byte)fileInfo.Result.ModifyDate.Minute;
+            entry.record_time[5] = (byte)fileInfo.Result.ModifyDate.Second;
+            entry.record_time[6] = (byte)(sbyte)(TimeZoneInfo.Local.GetUtcOffset(fileInfo.Result.ModifyDate).TotalMinutes / 15);
+            entry.file_flags_iso = 0;
+            if ((fileInfo.Result.Attributes & VirtualFileAttributes.Hidden) != 0)
+                entry.file_flags_iso |= 1;
+            if ((fileInfo.Result.Attributes & VirtualFileAttributes.Directory) != 0)
+                entry.file_flags_iso |= 2;
+            entry.il_size = 0;
+            entry.il_skip = 0;
+            entry.VSSNI = 0;
+            entry.VSSNM = 0;
+        }
+
+        entry.loc_extentM = (uint)System.Net.IPAddress.HostToNetworkOrder((int)entry.loc_extentI);
+        entry.data_lenM = (uint)System.Net.IPAddress.HostToNetworkOrder((int)entry.data_lenI);
+        entry.VSSNM = (ushort)System.Net.IPAddress.HostToNetworkOrder((short)entry.VSSNI);
+        entry.len_fi = (byte)identifier.Length;
+        vm.PhysicalMemory.SetString(vm.Processor.SI, (uint)(vm.Processor.DI + Unsafe.SizeOf<DirectoryEntry>()), identifier, (identifier.Length % 2) == 0);
 
         vm.Processor.Flags.Carry = false;
     }
@@ -420,8 +417,8 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
         drive.ReadSectors(startingSector, sectorsToRead, buffer);
         Thread.Sleep(5);
 
-        var ptr = this.vm.PhysicalMemory.GetPointer(this.vm.Processor.ES, (ushort)this.vm.Processor.BX);
-        Marshal.Copy(buffer, 0, ptr, buffer.Length);
+        var target = this.vm.PhysicalMemory.GetSpan(this.vm.Processor.ES, (ushort)this.vm.Processor.BX, buffer.Length);
+        buffer.AsSpan().CopyTo(target);
     }
     private void SaveFlags(EFlags modified)
     {

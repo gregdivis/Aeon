@@ -328,8 +328,8 @@ internal sealed class ExpandedMemoryManager(VirtualMachine vm) : IInterruptHandl
         UnmapPage(physicalPageIndex);
 
         ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
-        IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
-        System.Runtime.InteropServices.Marshal.Copy(logicalPage, 0, physicalPtr, PageSize);
+        var physicalPtr = vm.PhysicalMemory.GetSpan(segment, 0, PageSize);
+        logicalPage.AsSpan().CopyTo(physicalPtr);
         mappedPages[physicalPageIndex] = logicalPage;
     }
     /// <summary>
@@ -342,8 +342,8 @@ internal sealed class ExpandedMemoryManager(VirtualMachine vm) : IInterruptHandl
         if (currentPage != null)
         {
             ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * physicalPageIndex);
-            IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
-            System.Runtime.InteropServices.Marshal.Copy(physicalPtr, currentPage, 0, PageSize);
+            var physicalPtr = vm.PhysicalMemory.GetSpan(segment, 0, PageSize);
+            physicalPtr.CopyTo(currentPage);
             mappedPages[physicalPageIndex] = null;
         }
     }
@@ -586,8 +586,8 @@ internal sealed class ExpandedMemoryManager(VirtualMachine vm) : IInterruptHandl
             if (mappedPages[i] != null)
             {
                 ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
-                IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
-                System.Runtime.InteropServices.Marshal.Copy(physicalPtr, mappedPages[i]!, 0, PageSize);
+                var physicalPtr = vm.PhysicalMemory.GetSpan(segment, 0, PageSize);
+                physicalPtr.CopyTo(mappedPages[i]);
             }
         }
     }
@@ -601,8 +601,8 @@ internal sealed class ExpandedMemoryManager(VirtualMachine vm) : IInterruptHandl
             if (mappedPages[i] != null)
             {
                 ushort segment = (ushort)(PageFrameSegment + SegmentsPerPage * i);
-                IntPtr physicalPtr = vm.PhysicalMemory.GetPointer(segment, 0);
-                System.Runtime.InteropServices.Marshal.Copy(mappedPages[i]!, 0, physicalPtr, PageSize);
+                var physicalPtr = vm.PhysicalMemory.GetSpan(segment, 0, PageSize);
+                mappedPages[i].AsSpan().CopyTo(physicalPtr);
             }
         }
     }

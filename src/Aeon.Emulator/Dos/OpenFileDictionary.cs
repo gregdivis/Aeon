@@ -1,38 +1,44 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Aeon.Emulator.Memory;
 
 namespace Aeon.Emulator.Dos;
 
 /// <summary>
 /// Maintains a collection of all open handles.
 /// </summary>
-internal sealed class OpenFileDictionary
+internal sealed class OpenFileDictionary(PhysicalMemory memory)
 {
     private int maxFiles;
     private int sftFileCount;
-    private unsafe SFTHeader* header;
-    private unsafe SFTEntry* entries;
+    //private unsafe SFTHeader* header;
+    //private unsafe SFTEntry* entries;
+    private readonly PhysicalMemory physicalMemory = memory;
     private readonly SortedList<short, DosStream> fileHandles = [];
 
     /// <summary>
     /// Gets the system file table address.
     /// </summary>
-    public IntPtr SystemFileTableAddress
-    {
-        get
-        {
-            unsafe { return new IntPtr(this.header); }
-        }
-        private set
-        {
-            unsafe
-            {
-                this.header = (SFTHeader*)value.ToPointer();
-                this.entries = (SFTEntry*)((byte*)value.ToPointer() + sizeof(SFTHeader));
-            }
-        }
-    }
+    public RealModeAddress SystemFileTableAddress { get; private set; }
+
+#warning clean
+    //{
+    //    get
+    //    {
+    //        unsafe { return new IntPtr(this.header); }
+    //    }
+    //    private set
+    //    {
+    //        unsafe
+    //        {
+    //            this.header = (SFTHeader*)value.ToPointer();
+    //            this.entries = (SFTEntry*)((byte*)value.ToPointer() + sizeof(SFTHeader));
+    //        }
+    //    }
+    //}
+
     /// <summary>
     /// Gets the next handle.
     /// </summary>
@@ -50,22 +56,22 @@ internal sealed class OpenFileDictionary
         }
     }
 
+    private ref SFTHeader Header => ref this.physicalMemory.GetRef<SFTHeader>(this.SystemFileTableAddress.Segment, this.SystemFileTableAddress.Offset);
+
+    private ref SFTEntry GetEntry(int index) => ref this.physicalMemory.GetRef<SFTEntry>(this.SystemFileTableAddress.Segment, this.SystemFileTableAddress.Offset + (uint)Unsafe.SizeOf<SFTHeader>() + (uint)(Unsafe.SizeOf<SFTEntry>() * index));
+
     /// <summary>
     /// Initializes the open file dictionary.
     /// </summary>
     /// <param name="sftAddress">Pointer to the SFT in memory.</param>
     /// <param name="maxFiles">Maximum number of open files supported at once.</param>
-    public void Initialize(IntPtr sftAddress, int maxFiles)
+    public void Initialize(RealModeAddress sftAddress, int maxFiles)
     {
         this.SystemFileTableAddress = sftAddress;
         this.maxFiles = maxFiles;
         this.sftFileCount = 0;
-
-        unsafe
-        {
-            this.header->NextFileTable = 0xFFFF;
-            this.header->NumberOfFiles = (ushort)maxFiles;
-        }
+        this.Header.NextFileTable = 0xFFFF;
+        this.Header.NumberOfFiles = (ushort)maxFiles;
     }
 
     public void AddSpecial(short handle, DosStream stream)
@@ -79,40 +85,37 @@ internal sealed class OpenFileDictionary
 
         if (fileInfo != null)
         {
-            unsafe
+            if (stream.SFTIndex == -1)
             {
-                if (stream.SFTIndex == -1)
-                {
-                    if (this.sftFileCount >= this.maxFiles)
-                        throw new InvalidOperationException("Maximum number of open files exceeded.");
+                if (this.sftFileCount >= this.maxFiles)
+                    throw new InvalidOperationException("Maximum number of open files exceeded.");
 
-                    stream.SFTIndex = this.sftFileCount;
-                    var entry = &this.entries[this.sftFileCount];
+                stream.SFTIndex = this.sftFileCount;
+                ref var entry = ref this.GetEntry(this.sftFileCount);
 
-                    this.sftFileCount++;
+                this.sftFileCount++;
 
-                    entry->RefCount = 1;
-                    entry->FileOpenMode = 0;
-                    entry->FileAttribute = fileInfo.DosAttributes;
-                    entry->DeviceInfo = 0;
-                    entry->StartingCluster = 0;
-                    entry->FileTime = fileInfo.DosModifyTime;
-                    entry->FileDate = fileInfo.DosModifyDate;
-                    entry->FileSize = fileInfo.DosLength;
-                    entry->CurrentOffset = 0;
-                    entry->RelativeClusterLastAccess = 0;
-                    entry->DirectoryEntrySector = 0;
-                    entry->DirectoryEntry = 0;
+                entry.RefCount = 1;
+                entry.FileOpenMode = 0;
+                entry.FileAttribute = fileInfo.DosAttributes;
+                entry.DeviceInfo = 0;
+                entry.StartingCluster = 0;
+                entry.FileTime = fileInfo.DosModifyTime;
+                entry.FileDate = fileInfo.DosModifyDate;
+                entry.FileSize = fileInfo.DosLength;
+                entry.CurrentOffset = 0;
+                entry.RelativeClusterLastAccess = 0;
+                entry.DirectoryEntrySector = 0;
+                entry.DirectoryEntry = 0;
 
-                    var fcbName = GetFCBName(fileInfo.Name);
-                    for (int i = 0; i < 11; i++)
-                        entry->FileName[i] = (byte)fcbName[i];
-                }
-                else
-                {
-                    var entry = &this.entries[stream.SFTIndex];
-                    entry->RefCount++;
-                }
+                var fcbName = GetFCBName(fileInfo.Name);
+                for (int i = 0; i < 11; i++)
+                    entry.FileName[i] = (byte)fcbName[i];
+            }
+            else
+            {
+                ref var entry = ref this.GetEntry(stream.SFTIndex);
+                entry.RefCount++;
             }
         }
 
@@ -130,15 +133,17 @@ internal sealed class OpenFileDictionary
         {
             unsafe
             {
-                var entry = &this.entries[stream.SFTIndex];
-                if (entry->RefCount > 1)
-                    entry->RefCount--;
+                ref var entry = ref this.GetEntry(stream.SFTIndex);
+                if (entry.RefCount > 1)
+                {
+                    entry.RefCount--;
+                }
                 else
                 {
                     this.sftFileCount--;
 
                     for (int i = stream.SFTIndex; i < this.sftFileCount; i++)
-                        this.entries[i] = this.entries[i + 1];
+                        this.GetEntry(i) = this.GetEntry(i + 1);
                 }
             }
         }
@@ -230,5 +235,11 @@ internal struct SFTEntry
     public ushort RelativeClusterLastAccess;
     public uint DirectoryEntrySector;
     public byte DirectoryEntry;
-    public unsafe fixed byte FileName[11];
+    public SFTFileName FileName;
+}
+
+[InlineArray(11)]
+internal struct SFTFileName
+{
+    public byte a;
 }

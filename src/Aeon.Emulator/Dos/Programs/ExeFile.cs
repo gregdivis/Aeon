@@ -86,8 +86,9 @@ internal sealed class ExeFile(VirtualPath path, Stream stream) : ProgramImage(pa
         vm.Processor.DX = (short)dataSegment;
         vm.Processor.Flags.Clear(~(EFlags.InterruptEnable | EFlags.Virtual8086Mode | EFlags.IOPrivilege1 | EFlags.IOPrivilege2 | EFlags.NestedTask));
 
-        var ptr = vm.PhysicalMemory.GetPointer(codeSegment, 0);
-        Marshal.Copy(imageData!, 0, ptr, Math.Min(this.ImageSize, imageData!.Length));
+        int len = Math.Min(this.ImageSize, imageData!.Length);
+        var ptr = vm.PhysicalMemory.GetSpan(codeSegment, 0, len);
+        imageData.AsSpan(0, len).CopyTo(ptr);
 
         foreach (var relocationEntry in this.RelocationEntries)
         {
@@ -97,8 +98,9 @@ internal sealed class ExeFile(VirtualPath path, Stream stream) : ProgramImage(pa
     }
     internal override void LoadOverlay(VirtualMachine vm, ushort overlaySegment, int relocationFactor)
     {
-        var ptr = vm.PhysicalMemory.GetPointer(overlaySegment, 0);
-        Marshal.Copy(imageData!, 0, ptr, Math.Min(this.ImageSize, imageData!.Length));
+        int len = Math.Min(this.ImageSize, imageData!.Length);
+        var ptr = vm.PhysicalMemory.GetSpan(overlaySegment, 0, len);
+        imageData.AsSpan(0, len).CopyTo(ptr);
 
         foreach (var relocationEntry in this.RelocationEntries)
         {

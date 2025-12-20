@@ -431,60 +431,54 @@ internal sealed class ExtendedMemoryManager(VirtualMachine vm) : IMultiplexInter
         bool a20State = this.vm.PhysicalMemory.EnableA20;
         this.vm.PhysicalMemory.EnableA20 = true;
 
-        XmsMoveData moveData;
-        unsafe
-        {
-            moveData = *(XmsMoveData*)this.vm.PhysicalMemory.GetPointer(this.vm.Processor.DS, this.vm.Processor.SI);
-        }
+        var moveData = this.vm.PhysicalMemory.GetRef<XmsMoveData>(this.vm.Processor.DS, this.vm.Processor.SI);
 
-        IntPtr srcPtr = IntPtr.Zero;
-        IntPtr destPtr = IntPtr.Zero;
+        ReadOnlySpan<byte> src;
 
         if (moveData.SourceHandle == 0)
         {
             var srcAddress = moveData.SourceAddress;
-            srcPtr = this.vm.PhysicalMemory.GetPointer(srcAddress.Segment, srcAddress.Offset);
+            src = this.vm.PhysicalMemory.GetSpan(srcAddress.Segment, srcAddress.Offset, (int)moveData.Length);
         }
         else
         {
             if (this.TryGetBlock(moveData.SourceHandle, out var srcBlock))
-                srcPtr = this.vm.PhysicalMemory.GetPointer((int)(XmsBaseAddress + (srcBlock).Offset + moveData.SourceOffset));
+            {
+                src = this.vm.PhysicalMemory.Span.Slice((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset), (int)moveData.Length);
+            }
+            else
+            {
+                vm.Processor.BL = 0xA3; // Invalid source handle.
+                vm.Processor.AX = 0; // Didn't work.
+                goto Done;
+            }
         }
+
+        Span<byte> dest;
 
         if (moveData.DestHandle == 0)
         {
             var destAddress = moveData.DestAddress;
-            destPtr = this.vm.PhysicalMemory.GetPointer(destAddress.Segment, destAddress.Offset);
+            dest = this.vm.PhysicalMemory.GetSpan(destAddress.Segment, destAddress.Offset, (int)moveData.Length);
         }
         else
         {
             if (this.TryGetBlock(moveData.DestHandle, out var destBlock))
-                destPtr = this.vm.PhysicalMemory.GetPointer((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset));
+            {
+                dest = this.vm.PhysicalMemory.Span.Slice((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset), (int)moveData.Length);
+            }
+            else
+            {
+                vm.Processor.BL = 0xA5; // Invalid destination handle.
+                vm.Processor.AX = 0; // Didn't work.
+                goto Done;
+            }
         }
 
-        if (srcPtr == IntPtr.Zero)
-        {
-            vm.Processor.BL = 0xA3; // Invalid source handle.
-            vm.Processor.AX = 0; // Didn't work.
-            return;
-        }
-        if (destPtr == IntPtr.Zero)
-        {
-            vm.Processor.BL = 0xA5; // Invalid destination handle.
-            vm.Processor.AX = 0; // Didn't work.
-            return;
-        }
-
-        unsafe
-        {
-            byte* src = (byte*)srcPtr.ToPointer();
-            byte* dest = (byte*)destPtr.ToPointer();
-
-            for (uint i = 0; i < moveData.Length; i++)
-                dest[i] = src[i];
-        }
-
+        src.CopyTo(dest);
         vm.Processor.AX = 1; // Success.
+
+    Done:
         this.vm.PhysicalMemory.EnableA20 = a20State;
     }
     /// <summary>

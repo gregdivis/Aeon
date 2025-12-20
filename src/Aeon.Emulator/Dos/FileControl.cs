@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Aeon.Emulator.Dos.VirtualFileSystem;
+using Aeon.Emulator.Memory;
 
 namespace Aeon.Emulator.Dos;
 
@@ -12,7 +13,7 @@ internal sealed class FileControl : IDisposable
     private const short StdPrnHandle = 4;
 
     private readonly VirtualMachine vm;
-    private readonly OpenFileDictionary fileHandles = new();
+    private readonly OpenFileDictionary fileHandles;
     private readonly Random random = new();
     private Queue<VirtualFileInfo>? findFiles;
     private short emmHandle;
@@ -20,6 +21,7 @@ internal sealed class FileControl : IDisposable
     public FileControl(VirtualMachine vm)
     {
         this.vm = vm;
+        this.fileHandles = new OpenFileDictionary(vm.PhysicalMemory);
         this.AddDefaultHandles();
     }
 
@@ -713,7 +715,7 @@ internal sealed class FileControl : IDisposable
     public void Initialize(MemoryAllocator memoryAllocator)
     {
         var segment = memoryAllocator.AllocateSystemMemory(50 * 0x3B / 16);
-        this.fileHandles.Initialize(vm.PhysicalMemory.GetPointer(segment, 0), 50);
+        this.fileHandles.Initialize(new RealModeAddress(segment, 0), 50);
 
         // Write the location of the SFT for the list of lists.
         vm.PhysicalMemory.SetUInt32(DosHandler.ListOfListsAddress.Segment, DosHandler.ListOfListsAddress.Offset + (uint)ListOfListsOffsets.FirstSystemFileTable, (uint)segment << 16);

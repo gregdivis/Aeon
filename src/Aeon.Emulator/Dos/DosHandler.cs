@@ -533,25 +533,17 @@ internal sealed class DosHandler : IInterruptHandler, IDisposable
     }
     private void InitializeSDA()
     {
-        var ptr = vm.PhysicalMemory.GetPointer(SwappableDataArea.Segment, SwappableDataArea.Offset);
-        unsafe
-        {
-            var sda = (SwappableDataArea*)ptr.ToPointer();
-            sda->ErrorDrive = 0xFF;
-        }
+        ref var sda = ref vm.PhysicalMemory.GetRef<SwappableDataArea>(SwappableDataArea.Segment, SwappableDataArea.Offset);
+        sda.ErrorDrive = 0xFF;
     }
     private void UpdateSDA()
     {
         var process = this.CurrentProcess;
         if (process != null)
         {
-            var ptr = vm.PhysicalMemory.GetPointer(SwappableDataArea.Segment, SwappableDataArea.Offset);
-            unsafe
-            {
-                var sda = (SwappableDataArea*)ptr.ToPointer();
-                sda->CurrentDTASegment = process.DiskTransferAreaSegment;
-                sda->CurrentDTAOffset = process.DiskTransferAreaOffset;
-            }
+            ref var sda = ref vm.PhysicalMemory.GetRef<SwappableDataArea>(SwappableDataArea.Segment, SwappableDataArea.Offset);
+            sda.CurrentDTASegment = process.DiskTransferAreaSegment;
+            sda.CurrentDTAOffset = process.DiskTransferAreaOffset;
         }
     }
     private void InitializeListOfLists()

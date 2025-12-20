@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
@@ -280,19 +281,6 @@ public sealed class PhysicalMemory
     /// <summary>
     /// Gets a pointer to a location in the emulated memory.
     /// </summary>
-    /// <param name="segment">Segment of pointer.</param>
-    /// <param name="offset">Offset of pointer.</param>
-    /// <returns>Pointer to the emulated location at segment:offset.</returns>
-    public IntPtr GetPointer(uint segment, uint offset)
-    {
-        unsafe
-        {
-            return new IntPtr(RawView + GetRealModePhysicalAddress(segment, offset));
-        }
-    }
-    /// <summary>
-    /// Gets a pointer to a location in the emulated memory.
-    /// </summary>
     /// <param name="address">Address of pointer.</param>
     /// <returns>Pointer to the specified address.</returns>
     public IntPtr GetPointer(int address)
@@ -304,25 +292,46 @@ public sealed class PhysicalMemory
             return new IntPtr(RawView + address);
         }
     }
-    public Span<byte> GetSpan(uint address, int length)
+
+    public ref T GetRef<T>(uint segment, uint offset) where T : struct
     {
-        address &= addressMask;
+        if (this.PagingEnabled)
+            throw new InvalidOperationException("This method can only be called from real mode.");
+
+        return ref Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(this.Span.Slice((int)this.GetRealModePhysicalAddress(segment, offset), Unsafe.SizeOf<T>())));
+    }
+
+    public Span<byte> GetPagedSpan(uint address, int length, bool writeAccess = false)
+    {
+        uint physicalAddress;
+
+        if (this.PagingEnabled)
+        {
+            if ((address & 0xFFFu) > 4096u - (uint)length)
+                throw new InvalidOperationException("Cannot return contiguous span of memory across a page boundary.");
+
+            physicalAddress = GetPagedPhysicalAddress(address, writeAccess ? PageFaultCause.Write : PageFaultCause.Read);
+        }
+        else
+        {
+            physicalAddress = address & addressMask;
+        }
+
+#warning fix to detect overlap correctly
+        if (physicalAddress >= VramAddress && physicalAddress < VramUpperBound)
+            throw new ArgumentException("Not supported for video RAM mapped addresses.");
 
         unsafe
         {
-            return new Span<byte>(RawView + address, length);
+            return new Span<byte>(RawView + physicalAddress, length);
         }
     }
     public Span<byte> GetSpan(uint segment, uint offset, int length)
     {
-        unsafe
-        {
-            uint fullAddress = GetRealModePhysicalAddress(segment, offset);
-            if (fullAddress >= VramAddress && fullAddress < VramUpperBound)
-                throw new ArgumentException("Not supported for video RAM mapped addresses.");
+        if (this.PagingEnabled)
+            throw new InvalidOperationException("This method can only be used in real mode.");
 
-            return new Span<byte>(RawView + fullAddress, length);
-        }
+        return this.GetPagedSpan(this.GetRealModePhysicalAddress(segment, offset), length);
     }
     public int ReadFromStream(uint segment, uint offset, Stream source, int length)
     {
@@ -608,8 +617,8 @@ public sealed class PhysicalMemory
     /// <returns>String read from the specified segment and offset.</returns>
     public string GetString(uint segment, uint offset, int length)
     {
-        var ptr = GetPointer(segment, offset);
-        return Marshal.PtrToStringAnsi(ptr, length);
+        var ptr = this.GetSpan(segment, offset, length);
+        return Encoding.Latin1.GetString(ptr);
     }
     /// <summary>
     /// Reads an ANSI string from emulated memory with a maximum length and end sentinel character.
@@ -672,51 +681,6 @@ public sealed class PhysicalMemory
     /// <param name="offset">Offset to write string.</param>
     /// <param name="value">String to write to the specified address.</param>
     public void SetString(uint segment, uint offset, string value) => SetString(segment, offset, value, true);
-    /// <summary>
-    /// Searches emulated memory for all occurrences of a string of bytes.
-    /// </summary>
-    /// <param name="match">String of bytes to search for.</param>
-    /// <returns>Raw index into memory where string was found.</returns>
-    public IEnumerable<int> Find(byte[] match)
-    {
-        ArgumentNullException.ThrowIfNull(match);
-        if (match.Length == 0)
-            throw new ArgumentException("Array must not be empty.");
-
-        int length = match.Length;
-        for (int i = 0; i < VramAddress - length; i++)
-        {
-            if (SafeArrayAccess(i) == match[0])
-            {
-                bool isMatch = true;
-                for (int j = 1; j < length; j++)
-                {
-                    if (SafeArrayAccess(i + j) != match[j])
-                    {
-                        isMatch = false;
-                        break;
-                    }
-                }
-
-                if (isMatch)
-                    yield return i;
-            }
-        }
-    }
-    /// <summary>
-    /// Searches emulated memory for all occurrences of an ASCII string.
-    /// </summary>
-    /// <param name="match">ASCII string to search for.</param>
-    /// <returns>Raw index into memory where string was found.</returns>
-    public IEnumerable<int> Find(string match)
-    {
-        ArgumentNullException.ThrowIfNull(match);
-        if (match == string.Empty)
-            throw new ArgumentException("String cannot be empty.");
-
-        var buffer = Encoding.ASCII.GetBytes(match);
-        return Find(buffer);
-    }
     /// <summary>
     /// Reads bytes from memory into a buffer.
     /// </summary>
@@ -856,29 +820,25 @@ public sealed class PhysicalMemory
     /// <returns>Address of the callback handler.</returns>
     internal RealModeAddress AddCallbackHandler(byte id, bool hookable)
     {
-        var ptr = GetPointer(HandlerSegment, nextHandlerOffset);
+        var writePtr = this.GetSpan(HandlerSegment, nextHandlerOffset, 10);
         int length = 4;
-        unsafe
+        if (hookable)
         {
-            byte* writePtr = (byte*)ptr.ToPointer();
-            if (hookable)
-            {
-                writePtr[0] = 0xE9; // JMP iw
-                writePtr[1] = 3; // jump past the 3 nops
-                writePtr[2] = 0;
-                writePtr[3] = 0x90;
-                writePtr[4] = 0x90;
-                writePtr[5] = 0x90;
+            writePtr[0] = 0xE9; // JMP iw
+            writePtr[1] = 3; // jump past the 3 nops
+            writePtr[2] = 0;
+            writePtr[3] = 0x90;
+            writePtr[4] = 0x90;
+            writePtr[5] = 0x90;
 
-                writePtr += 6;
-                length += 6;
-            }
-
-            writePtr[0] = 0x0F;
-            writePtr[1] = 0x56;
-            writePtr[2] = id;
-            writePtr[3] = 0xCB; // RETF
+            writePtr = writePtr[6..];
+            length += 6;
         }
+
+        writePtr[0] = 0x0F;
+        writePtr[1] = 0x56;
+        writePtr[2] = id;
+        writePtr[3] = 0xCB; // RETF
 
         var address = new RealModeAddress(HandlerSegment, nextHandlerOffset);
         nextHandlerOffset += (ushort)length;
@@ -893,8 +853,8 @@ public sealed class PhysicalMemory
     /// <param name="offset">Offset of the interrupt handler.</param>
     public void SetInterruptAddress(byte interrupt, ushort segment, ushort offset)
     {
-        SetUInt16(0, (ushort)(interrupt * 4), offset);
-        SetUInt16(0, (ushort)(interrupt * 4 + 2), segment);
+        this.SetUInt16(0, (ushort)(interrupt * 4), offset);
+        this.SetUInt16(0, (ushort)(interrupt * 4 + 2), segment);
     }
     /// <summary>
     /// Adds an interrupt handler to the virtual interrupt table.
@@ -905,48 +865,46 @@ public sealed class PhysicalMemory
     /// <param name="clearInterruptFlag">Value indicating whether the interrupt handler should clear the CPU Interrupt Enable flag.</param>
     internal void AddInterruptHandler(byte interrupt, Registers savedRegisters, bool isHookable, bool clearInterruptFlag)
     {
-        SetInterruptAddress(interrupt, (ushort)HandlerSegment, nextHandlerOffset);
-        var ptr = GetPointer(HandlerSegment, nextHandlerOffset);
+        this.SetInterruptAddress(interrupt, HandlerSegment, nextHandlerOffset);
+        var ptr = this.GetSpan(HandlerSegment, nextHandlerOffset, 30);
+        int length = 0;
         unsafe
         {
-            byte* startPtr = (byte*)ptr.ToPointer();
-            byte* offsetPtr = startPtr;
-
             if (isHookable)
             {
-                offsetPtr[0] = 0xE9; // JMP iw
-                offsetPtr[1] = 3; // jump past the 3 nops
-                offsetPtr[2] = 0;
-                offsetPtr[3] = 0x90;
-                offsetPtr[4] = 0x90;
-                offsetPtr[5] = 0x90;
-                offsetPtr += 6;
+                ptr[0] = 0xE9; // JMP iw
+                ptr[1] = 3; // jump past the 3 nops
+                ptr[2] = 0;
+                ptr[3] = 0x90;
+                ptr[4] = 0x90;
+                ptr[5] = 0x90;
+                ptr = ptr[6..];
+                length += 6;
             }
 
             // Write a CLI instruction if requested.
             if (clearInterruptFlag)
             {
-                *offsetPtr = 0xFA;
-                offsetPtr++;
+                ptr[0] = 0xFA;
+                ptr = ptr[1..];
+                length++;
             }
 
-            WritePushInstructions(ref offsetPtr, savedRegisters);
+            length += WritePushInstructions(ref ptr, savedRegisters);
 
             // Write instructions 0F55 interrupt, iret to memory.
-            *offsetPtr = 0x0F;
-            offsetPtr++;
-            *offsetPtr = 0x55;
-            offsetPtr++;
-            *offsetPtr = interrupt;
-            offsetPtr++;
+            ptr[0] = 0x0F;
+            ptr[1] = 0x55;
+            ptr[2] = interrupt;
+            ptr = ptr[3..];
+            length += 3;
 
-            WritePopInstructions(ref offsetPtr, savedRegisters);
+            length += WritePopInstructions(ref ptr, savedRegisters);
 
-            *offsetPtr = 0xCF;
-            offsetPtr++;
+            ptr[0] = 0xCF;
+            length++;
 
-            ushort length = (ushort)(offsetPtr - startPtr);
-            nextHandlerOffset += length;
+            nextHandlerOffset += (ushort)length;
         }
     }
     /// <summary>
@@ -1006,28 +964,6 @@ public sealed class PhysicalMemory
             var ldtDescriptor = (SegmentDescriptor)desc;
             this.ldtBase = ldtDescriptor.Base;
             this.LDTLimit = ldtDescriptor.ByteLimit;
-        }
-    }
-
-    /// <summary>
-    /// Returns a pointer to a block of memory, making sure it is paged in.
-    /// </summary>
-    /// <param name="address">Logical address of block.</param>
-    /// <param name="size">Number of bytes in block of memory.</param>
-    /// <returns>Pointer to block of memory.</returns>
-    internal unsafe void* GetSafePointer(uint address, uint size)
-    {
-        if (this.PagingEnabled)
-        {
-            uint baseAddress = GetPagedPhysicalAddress(address, PageFaultCause.Read);
-            if ((address & 0xFFFu) + size > 4096)
-                GetPagedPhysicalAddress(address + 4096u, PageFaultCause.Read);
-
-            return RawView + baseAddress;
-        }
-        else
-        {
-            return RawView + address;
         }
     }
 
@@ -1111,10 +1047,14 @@ public sealed class PhysicalMemory
                     ushort s = this.Video!.GetVramWord(fullAddress - VramAddress);
                     return Unsafe.As<ushort, T>(ref s);
                 }
-                else
+                else if (sizeof(T) == 4)
                 {
                     uint i = this.Video!.GetVramDWord(fullAddress - VramAddress);
                     return Unsafe.As<uint, T>(ref i);
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot read value from video memory.");
                 }
             }
         }
@@ -1139,8 +1079,10 @@ public sealed class PhysicalMemory
                     this.Video!.SetVramByte(fullAddress - VramAddress, Unsafe.As<T, byte>(ref value));
                 else if (sizeof(T) == 2)
                     this.Video!.SetVramWord(fullAddress - VramAddress, Unsafe.As<T, ushort>(ref value));
-                else
+                else if (sizeof(T) == 4)
                     this.Video!.SetVramDWord(fullAddress - VramAddress, Unsafe.As<T, uint>(ref value));
+                else
+                    throw new ArgumentException("Cannot write value to video memory.");
             }
         }
     }
@@ -1297,68 +1239,73 @@ public sealed class PhysicalMemory
         SetByte(segment, offset + 6u, 0x40);
     }
 
-    private static unsafe void WriteInstruction(ref byte* ptr, byte instruction)
+    private static int WritePushInstructions(ref Span<byte> ptr, Registers registers)
     {
-        *ptr = instruction;
-        ptr++;
+        int length = 0;
+
+        if (registers.HasFlag(Registers.AX))
+            ptr[length++] = 0x50;
+
+        if (registers.HasFlag(Registers.BX))
+            ptr[length++] = 0x53;
+
+        if (registers.HasFlag(Registers.CX))
+            ptr[length++] = 0x51;
+
+        if (registers.HasFlag(Registers.DX))
+            ptr[length++] = 0x52;
+
+        if (registers.HasFlag(Registers.BP))
+            ptr[length++] = 0x55;
+
+        if (registers.HasFlag(Registers.SI))
+            ptr[length++] = 0x56;
+
+        if (registers.HasFlag(Registers.DI))
+            ptr[length++] = 0x57;
+
+        if (registers.HasFlag(Registers.DS))
+            ptr[length++] = 0x1E;
+
+        if (registers.HasFlag(Registers.ES))
+            ptr[length++] = 0x06;
+
+        ptr = ptr[length..];
+        return length;
     }
-    private static unsafe void WritePushInstructions(ref byte* ptr, Registers registers)
+    private static int WritePopInstructions(ref Span<byte> ptr, Registers registers)
     {
-        if ((registers & Registers.AX) != 0)
-            WriteInstruction(ref ptr, 0x50);
+        int length = 0;
 
-        if ((registers & Registers.BX) != 0)
-            WriteInstruction(ref ptr, 0x53);
+        if (registers.HasFlag(Registers.ES))
+            ptr[length++] = 0x07;
 
-        if ((registers & Registers.CX) != 0)
-            WriteInstruction(ref ptr, 0x51);
+        if (registers.HasFlag(Registers.DS))
+            ptr[length++] = 0x1F;
 
-        if ((registers & Registers.DX) != 0)
-            WriteInstruction(ref ptr, 0x52);
+        if (registers.HasFlag(Registers.DI))
+            ptr[length++] = 0x58 + 7;
 
-        if ((registers & Registers.BP) != 0)
-            WriteInstruction(ref ptr, 0x55);
+        if (registers.HasFlag(Registers.SI))
+            ptr[length++] = 0x58 + 6;
 
-        if ((registers & Registers.SI) != 0)
-            WriteInstruction(ref ptr, 0x56);
+        if (registers.HasFlag(Registers.BP))
+            ptr[length++] = 0x58 + 5;
 
-        if ((registers & Registers.DI) != 0)
-            WriteInstruction(ref ptr, 0x57);
+        if (registers.HasFlag(Registers.DX))
+            ptr[length++] = 0x58 + 2;
 
-        if ((registers & Registers.DS) != 0)
-            WriteInstruction(ref ptr, 0x1E);
+        if (registers.HasFlag(Registers.CX))
+            ptr[length++] = 0x58 + 1;
 
-        if ((registers & Registers.ES) != 0)
-            WriteInstruction(ref ptr, 0x06);
-    }
-    private static unsafe void WritePopInstructions(ref byte* ptr, Registers registers)
-    {
-        if ((registers & Registers.ES) != 0)
-            WriteInstruction(ref ptr, 0x07);
+        if (registers.HasFlag(Registers.BX))
+            ptr[length++] = 0x58 + 3;
 
-        if ((registers & Registers.DS) != 0)
-            WriteInstruction(ref ptr, 0x1F);
+        if (registers.HasFlag(Registers.AX))
+            ptr[length++] = 0x58;
 
-        if ((registers & Registers.DI) != 0)
-            WriteInstruction(ref ptr, 0x58 + 7);
-
-        if ((registers & Registers.SI) != 0)
-            WriteInstruction(ref ptr, 0x58 + 6);
-
-        if ((registers & Registers.BP) != 0)
-            WriteInstruction(ref ptr, 0x58 + 5);
-
-        if ((registers & Registers.DX) != 0)
-            WriteInstruction(ref ptr, 0x58 + 2);
-
-        if ((registers & Registers.CX) != 0)
-            WriteInstruction(ref ptr, 0x58 + 1);
-
-        if ((registers & Registers.BX) != 0)
-            WriteInstruction(ref ptr, 0x58 + 3);
-
-        if ((registers & Registers.AX) != 0)
-            WriteInstruction(ref ptr, 0x58);
+        ptr = ptr[length..];
+        return length;
     }
     [DoesNotReturn]
     private static void ThrowOutOfRange(uint address) => throw new InvalidOperationException($"Attempted to access invalid physical address 0x{address:X8}.");

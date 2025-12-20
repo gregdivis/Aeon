@@ -1,4 +1,6 @@
-﻿using Aeon.Emulator.Memory;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Aeon.Emulator.Memory;
 
 #nullable disable
 
@@ -112,49 +114,43 @@ internal sealed class VbeHandler(VideoHandler videoHandler) : ICallbackProvider
     /// </summary>
     private void GetControllerInfo()
     {
-        unsafe
+        uint oemStringOffset = vm.Processor.DI;
+        uint modeListOffset = vm.Processor.DI;
+
+        ref var infoBlock = ref vm.PhysicalMemory.GetRef<VbeInfoBlock>(vm.Processor.ES, vm.Processor.DI);
+        bool isVbe2 = infoBlock.VbeSignature == MakeSignature("VBE2");
+
+        if (isVbe2)
         {
-            uint oemStringOffset = vm.Processor.DI;
-            uint modeListOffset = vm.Processor.DI;
-
-            var infoBlock = (VbeInfoBlock*)vm.PhysicalMemory.GetPointer(vm.Processor.ES, vm.Processor.DI).ToPointer();
-            bool isVbe2 = infoBlock->VbeSignature == MakeSignature("VBE2");
-
-            if (isVbe2)
-            {
-                byte* ptr = (byte*)infoBlock;
-                for (int i = 0; i < 512; i++)
-                    ptr[i] = 0;
-
-                modeListOffset += (uint)sizeof(VbeInfoBlock);
-                oemStringOffset += 256;
-            }
-            else
-            {
-                oemStringOffset += (uint)sizeof(VbeInfoBlock);
-                modeListOffset += (uint)sizeof(VbeInfoBlock) + (uint)OemString.Length + 1u;
-            }
-
-            infoBlock->VbeSignature = MakeSignature("VESA");
-            infoBlock->VbeVersion = 0x0200;
-            infoBlock->Capabilities = VbeCaps;
-            infoBlock->TotalMemory = VideoHandler.TotalVramBytes / 65536;
-            infoBlock->OemStringPtr = WriteOemString(ref oemStringOffset, OemString);
-            infoBlock->VideoModePtr = (uint)(vm.Processor.ES << 16) | modeListOffset;
-
-            if (isVbe2)
-            {
-                infoBlock->OemSoftwareRev = 0x0200;
-                infoBlock->OemVendorNamePtr = WriteOemString(ref oemStringOffset, VendorName);
-                infoBlock->OemProductNamePtr = WriteOemString(ref oemStringOffset, ProductName);
-                infoBlock->OemProductRevPtr = WriteOemString(ref oemStringOffset, ProductRev);
-            }
-
-            var modePtr = (ushort*)vm.PhysicalMemory.GetPointer(vm.Processor.ES, modeListOffset).ToPointer();
-            modePtr[0] = 0x100; // 640x400x8
-            modePtr[1] = 0x101; // 640x480x8
-            modePtr[2] = 0xFFFF;
+            vm.PhysicalMemory.GetSpan(vm.Processor.ES, vm.Processor.DI, 512).Clear();
+            modeListOffset += (uint)Unsafe.SizeOf<VbeInfoBlock>();
+            oemStringOffset += 256;
         }
+        else
+        {
+            oemStringOffset += (uint)Unsafe.SizeOf<VbeInfoBlock>();
+            modeListOffset += (uint)Unsafe.SizeOf<VbeInfoBlock>() + (uint)OemString.Length + 1u;
+        }
+
+        infoBlock.VbeSignature = MakeSignature("VESA");
+        infoBlock.VbeVersion = 0x0200;
+        infoBlock.Capabilities = VbeCaps;
+        infoBlock.TotalMemory = VideoHandler.TotalVramBytes / 65536;
+        infoBlock.OemStringPtr = WriteOemString(ref oemStringOffset, OemString);
+        infoBlock.VideoModePtr = (uint)(vm.Processor.ES << 16) | modeListOffset;
+
+        if (isVbe2)
+        {
+            infoBlock.OemSoftwareRev = 0x0200;
+            infoBlock.OemVendorNamePtr = WriteOemString(ref oemStringOffset, VendorName);
+            infoBlock.OemProductNamePtr = WriteOemString(ref oemStringOffset, ProductName);
+            infoBlock.OemProductRevPtr = WriteOemString(ref oemStringOffset, ProductRev);
+        }
+
+        var modePtr = MemoryMarshal.Cast<byte, ushort>(vm.PhysicalMemory.GetSpan(vm.Processor.ES, modeListOffset, 6));
+        modePtr[0] = 0x100; // 640x400x8
+        modePtr[1] = 0x101; // 640x480x8
+        modePtr[2] = 0xFFFF;
 
         vm.Processor.AH = 0;
     }
@@ -169,35 +165,30 @@ internal sealed class VbeHandler(VideoHandler videoHandler) : ICallbackProvider
             return;
         }
 
-        unsafe
-        {
-            var modeInfo = (ModeInfoBlock*)vm.PhysicalMemory.GetPointer(vm.Processor.ES, vm.Processor.DI).ToPointer();
+        var buffer = vm.PhysicalMemory.GetSpan(vm.Processor.ES, vm.Processor.DI, 256);
+        buffer.Clear();
+        ref var modeInfo = ref Unsafe.As<byte, ModeInfoBlock>(ref MemoryMarshal.GetReference(buffer));
 
-            var buffer = (byte*)modeInfo;
-            for (int i = 0; i < 256; i++)
-                buffer[i] = 0;
+        modeInfo.ModeAttributes = ModeAttributes.Supported | ModeAttributes.Reserved1 | ModeAttributes.Color | ModeAttributes.Graphics | ModeAttributes.LinearFrameBuffer;
+        modeInfo.WinAAtrributes = WindowAttributes.Supported | WindowAttributes.Readable | WindowAttributes.Writeable;
+        modeInfo.WinASegment = 0xA000;
+        modeInfo.WinGranularity = 64;
+        modeInfo.WinSize = 64;
+        modeInfo.XResolution = 640;
+        modeInfo.YResolution = (ushort)((vm.Processor.CX == 0x100) ? 400 : 480);
+        modeInfo.XCharSize = 8;
+        modeInfo.YCharSize = 16;
+        modeInfo.NumberOfPlanes = 1;
+        modeInfo.BitsPerPixel = 8;
+        modeInfo.NumberOfBanks = 1;
+        modeInfo.MemoryModel = MemoryModel.Unchained256;
+        modeInfo.Reserved1 = 1;
+        modeInfo.WinFuncPtr = (uint)this.windowFuncPtr.Offset | ((uint)this.windowFuncPtr.Segment << 16);
+        modeInfo.BytesPerScanLine = 640;
 
-            modeInfo->ModeAttributes = ModeAttributes.Supported | ModeAttributes.Reserved1 | ModeAttributes.Color | ModeAttributes.Graphics | ModeAttributes.LinearFrameBuffer;
-            modeInfo->WinAAtrributes = WindowAttributes.Supported | WindowAttributes.Readable | WindowAttributes.Writeable;
-            modeInfo->WinASegment = 0xA000;
-            modeInfo->WinGranularity = 64;
-            modeInfo->WinSize = 64;
-            modeInfo->XResolution = 640;
-            modeInfo->YResolution = (ushort)((vm.Processor.CX == 0x100) ? 400 : 480);
-            modeInfo->XCharSize = 8;
-            modeInfo->YCharSize = 16;
-            modeInfo->NumberOfPlanes = 1;
-            modeInfo->BitsPerPixel = 8;
-            modeInfo->NumberOfBanks = 1;
-            modeInfo->MemoryModel = MemoryModel.Unchained256;
-            modeInfo->Reserved1 = 1;
-            modeInfo->WinFuncPtr = (uint)this.windowFuncPtr.Offset | ((uint)this.windowFuncPtr.Segment << 16);
-            modeInfo->BytesPerScanLine = 640;
-
-            modeInfo->PhysicalBasePointer = Modes.VesaLinear.BaseAddress;
-            modeInfo->OffscreenMemoryOffset = (uint)modeInfo->XResolution * (uint)modeInfo->YResolution;
-            modeInfo->OffscreenMemorySize = (ushort)((VideoHandler.TotalVramBytes - modeInfo->OffscreenMemoryOffset) / 1024u);
-        }
+        modeInfo.PhysicalBasePointer = Modes.VesaLinear.BaseAddress;
+        modeInfo.OffscreenMemoryOffset = (uint)modeInfo.XResolution * (uint)modeInfo.YResolution;
+        modeInfo.OffscreenMemorySize = (ushort)((VideoHandler.TotalVramBytes - modeInfo.OffscreenMemoryOffset) / 1024u);
 
         vm.Processor.AH = 0;
     }

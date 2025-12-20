@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Instructions.FPU;
 
@@ -13,20 +15,18 @@ internal static class SaveRestore
         var fpu = vm.Processor.FPU;
 
         //https://www.website.masmforum.com/tutorials/fptute/fpuchap3.htm#fsave
-        unsafe
-        {
-            var buffer = (byte*)vm.PhysicalMemory.GetSafePointer(offset, 94);
-            *(ushort*)&buffer[0] = fpu.ControlWord;
-            *(ushort*)&buffer[2] = fpu.StatusWord;
-            *(ushort*)&buffer[4] = fpu.TagWord;
-            *(ushort*)&buffer[6] = vm.Processor.IP;
-            *(ushort*)&buffer[8] = vm.Processor.CS;
-            *(ushort*)&buffer[10] = 0; // this is not correct
-            *(ushort*)&buffer[12] = vm.Processor.DS;
+        var span = vm.PhysicalMemory.GetPagedSpan(offset, 94);
+        BinaryPrimitives.WriteUInt16LittleEndian(span, fpu.ControlWord);
+        BinaryPrimitives.WriteUInt16LittleEndian(span[2..], fpu.StatusWord);
+        BinaryPrimitives.WriteUInt16LittleEndian(span[4..], fpu.TagWord);
+        BinaryPrimitives.WriteUInt16LittleEndian(span[6..], vm.Processor.IP);
+        BinaryPrimitives.WriteUInt16LittleEndian(span[8..], vm.Processor.CS);
+        BinaryPrimitives.WriteUInt16LittleEndian(span[10..], 0); // this is not correct
+        BinaryPrimitives.WriteUInt16LittleEndian(span[12..], vm.Processor.DS);
 
-            for (int i = 0; i < 8; i++)
-                *(Real10*)&buffer[(i * 10) + 14] = fpu.GetRegisterValue(i);
-        }
+        var regs = MemoryMarshal.Cast<byte, Real10>(span[14..]);
+        for (int i = 0; i < 8; i++)
+            regs[i] = fpu.GetRegisterValue(i);
 
         fpu.Reset();
     }
@@ -38,20 +38,18 @@ internal static class SaveRestore
         var fpu = vm.Processor.FPU;
 
         //https://www.website.masmforum.com/tutorials/fptute/fpuchap3.htm#fsave
-        unsafe
-        {
-            var buffer = (byte*)vm.PhysicalMemory.GetSafePointer(offset, 108);
-            *(ushort*)&buffer[0] = fpu.ControlWord;
-            *(ushort*)&buffer[4] = fpu.StatusWord;
-            *(ushort*)&buffer[8] = fpu.TagWord;
-            *(uint*)&buffer[12] = vm.Processor.EIP;
-            *(ushort*)&buffer[16] = vm.Processor.CS;
-            *(uint*)&buffer[20] = offset;
-            *(ushort*)&buffer[24] = vm.Processor.DS;
+        var span = vm.PhysicalMemory.GetPagedSpan(offset, 108);
+        BinaryPrimitives.WriteUInt32LittleEndian(span, fpu.ControlWord);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[4..], fpu.StatusWord);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[8..], fpu.TagWord);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[12..], vm.Processor.IP);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[16..], vm.Processor.CS);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[20..], offset);
+        BinaryPrimitives.WriteUInt32LittleEndian(span[24..], vm.Processor.DS);
 
-            for (int i = 0; i < 8; i++)
-                *(Real10*)&buffer[(i * 10) + 28] = fpu.GetRegisterValue(i);
-        }
+        var regs = MemoryMarshal.Cast<byte, Real10>(span[28..]);
+        for (int i = 0; i < 8; i++)
+            regs[i] = fpu.GetRegisterValue(i);
 
         fpu.Reset();
     }
@@ -62,16 +60,13 @@ internal static class SaveRestore
     {
         var fpu = vm.Processor.FPU;
 
-        unsafe
-        {
-            var buffer = (byte*)vm.PhysicalMemory.GetSafePointer(offset, 94);
-            fpu.ControlWord = *(ushort*)&buffer[0];
-            fpu.StatusWord = *(ushort*)&buffer[2];
-            fpu.TagWord = *(ushort*)&buffer[4];
-
-            for (int i = 0; i < 8; i++)
-                fpu.SetRegisterValue(i, (double)*(Real10*)&buffer[(i * 10) + 14]);
-        }
+        var span = vm.PhysicalMemory.GetPagedSpan(offset, 94);
+        fpu.ControlWord = BinaryPrimitives.ReadUInt16LittleEndian(span);
+        fpu.StatusWord = BinaryPrimitives.ReadUInt16LittleEndian(span[2..]);
+        fpu.TagWord = BinaryPrimitives.ReadUInt16LittleEndian(span[4..]);
+        var regs = MemoryMarshal.Cast<byte, Real10>(span[14..]);
+        for (int i = 0; i < 8; i++)
+            fpu.SetRegisterValue(i, (double)regs[i]);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [Alternate(nameof(Restore), OperandSize = 16 | 32, AddressSize = 32)]
@@ -79,15 +74,12 @@ internal static class SaveRestore
     {
         var fpu = vm.Processor.FPU;
 
-        unsafe
-        {
-            var buffer = (byte*)vm.PhysicalMemory.GetSafePointer(offset, 108);
-            fpu.ControlWord = *(ushort*)&buffer[0];
-            fpu.StatusWord = *(ushort*)&buffer[4];
-            fpu.TagWord = *(ushort*)&buffer[8];
-
-            for (int i = 0; i < 8; i++)
-                fpu.SetRegisterValue(i, (double)*(Real10*)&buffer[(i * 10) + 28]);
-        }
+        var span = vm.PhysicalMemory.GetPagedSpan(offset, 108);
+        fpu.ControlWord = BinaryPrimitives.ReadUInt16LittleEndian(span);
+        fpu.StatusWord = BinaryPrimitives.ReadUInt16LittleEndian(span[4..]);
+        fpu.TagWord = BinaryPrimitives.ReadUInt16LittleEndian(span[8..]);
+        var regs = MemoryMarshal.Cast<byte, Real10>(span[28..]);
+        for (int i = 0; i < 8; i++)
+            fpu.SetRegisterValue(i, (double)regs[i]);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Aeon.Emulator.Dos.CD;
 
@@ -35,7 +36,7 @@ internal struct DirectoryEntry
     /// <summary>
     /// Date and time.
     /// </summary>
-    public unsafe fixed byte record_time[7];
+    public RecordTime record_time;
     /// <summary>
     /// File attributes.
     /// </summary>
@@ -60,4 +61,11 @@ internal struct DirectoryEntry
     /// Length of name.
     /// </summary>
     public byte len_fi;
+}
+
+
+[InlineArray(7)]
+internal struct RecordTime
+{
+    public byte a;
 }

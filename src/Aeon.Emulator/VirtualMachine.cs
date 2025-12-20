@@ -766,86 +766,82 @@ public sealed class VirtualMachine : IDisposable
 
         var p = this.Processor;
 
-        unsafe
+        var newDesc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
+
+        ref var tss = ref Unsafe.As<byte, TaskStateSegment32>(ref MemoryMarshal.GetReference(this.PhysicalMemory.GetPagedSpan(newDesc.Base, Unsafe.SizeOf<TaskStateSegment32>())));
+
+        var oldSelector = this.PhysicalMemory.TaskSelector;
+        var oldDesc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(oldSelector);
+
+        ref var oldTSS = ref Unsafe.As<byte, TaskStateSegment32>(ref MemoryMarshal.GetReference(this.PhysicalMemory.GetPagedSpan(oldDesc.Base, Unsafe.SizeOf<TaskStateSegment32>())));
+
+        oldTSS.CS = p.CS;
+        oldTSS.SS = p.SS;
+        oldTSS.DS = p.DS;
+        oldTSS.ES = p.ES;
+        oldTSS.FS = p.FS;
+        oldTSS.GS = p.GS;
+
+        oldTSS.EIP = p.EIP;
+        oldTSS.ESP = p.ESP;
+        oldTSS.EAX = (uint)p.EAX;
+        oldTSS.EBX = (uint)p.EBX;
+        oldTSS.ECX = (uint)p.ECX;
+        oldTSS.EDX = (uint)p.EDX;
+        oldTSS.EBP = p.EBP;
+        oldTSS.ESI = p.ESI;
+        oldTSS.EDI = p.EDI;
+        oldTSS.EFLAGS = p.Flags.Value;
+        oldTSS.CR3 = p.CR3;
+        oldTSS.LDTR = this.PhysicalMemory.LDTSelector;
+
+        if (nestedTaskFlag == false)
+            oldTSS.EFLAGS &= ~EFlags.NestedTask;
+
+        p.CR3 = tss.CR3;
+        this.PhysicalMemory.DirectoryAddress = tss.CR3;
+        this.PhysicalMemory.UpdateLocalDescriptor(tss.LDTR);
+
+        WriteSegmentRegister(SegmentIndex.CS, tss.CS);
+        WriteSegmentRegister(SegmentIndex.SS, tss.SS);
+        WriteSegmentRegister(SegmentIndex.DS, tss.DS);
+        WriteSegmentRegister(SegmentIndex.ES, tss.ES);
+        WriteSegmentRegister(SegmentIndex.FS, tss.FS);
+        WriteSegmentRegister(SegmentIndex.GS, tss.GS);
+
+        p.EIP = tss.EIP;
+        p.ESP = tss.ESP;
+        p.EAX = (int)tss.EAX;
+        p.EBX = (int)tss.EBX;
+        p.ECX = (int)tss.ECX;
+        p.EDX = (int)tss.EDX;
+        p.EBP = tss.EBP;
+        p.ESI = tss.ESI;
+        p.EDI = tss.EDI;
+        p.Flags.Value = tss.EFLAGS | EFlags.Reserved1;
+
+        if (nestedTaskFlag == true)
         {
-            var newDesc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
-            var tss = (TaskStateSegment32*)this.PhysicalMemory.GetSafePointer(newDesc.Base, (uint)sizeof(TaskStateSegment32));
-
-            var oldSelector = this.PhysicalMemory.TaskSelector;
-            var oldDesc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(oldSelector);
-            var oldTSS = (TaskStateSegment32*)this.PhysicalMemory.GetSafePointer(oldDesc.Base, (uint)sizeof(TaskStateSegment32));
-
-            oldTSS->CS = p.CS;
-            oldTSS->SS = p.SS;
-            oldTSS->DS = p.DS;
-            oldTSS->ES = p.ES;
-            oldTSS->FS = p.FS;
-            oldTSS->GS = p.GS;
-
-            oldTSS->EIP = p.EIP;
-            oldTSS->ESP = p.ESP;
-            oldTSS->EAX = (uint)p.EAX;
-            oldTSS->EBX = (uint)p.EBX;
-            oldTSS->ECX = (uint)p.ECX;
-            oldTSS->EDX = (uint)p.EDX;
-            oldTSS->EBP = p.EBP;
-            oldTSS->ESI = p.ESI;
-            oldTSS->EDI = p.EDI;
-            oldTSS->EFLAGS = p.Flags.Value;
-            oldTSS->CR3 = p.CR3;
-            oldTSS->LDTR = this.PhysicalMemory.LDTSelector;
-
-            if (nestedTaskFlag == false)
-                oldTSS->EFLAGS &= ~EFlags.NestedTask;
-
-            p.CR3 = tss->CR3;
-            this.PhysicalMemory.DirectoryAddress = tss->CR3;
-            this.PhysicalMemory.UpdateLocalDescriptor(tss->LDTR);
-
-            WriteSegmentRegister(SegmentIndex.CS, tss->CS);
-            WriteSegmentRegister(SegmentIndex.SS, tss->SS);
-            WriteSegmentRegister(SegmentIndex.DS, tss->DS);
-            WriteSegmentRegister(SegmentIndex.ES, tss->ES);
-            WriteSegmentRegister(SegmentIndex.FS, tss->FS);
-            WriteSegmentRegister(SegmentIndex.GS, tss->GS);
-
-            p.EIP = tss->EIP;
-            p.ESP = tss->ESP;
-            p.EAX = (int)tss->EAX;
-            p.EBX = (int)tss->EBX;
-            p.ECX = (int)tss->ECX;
-            p.EDX = (int)tss->EDX;
-            p.EBP = tss->EBP;
-            p.ESI = tss->ESI;
-            p.EDI = tss->EDI;
-            p.Flags.Value = tss->EFLAGS | EFlags.Reserved1;
-
-            if (nestedTaskFlag == true)
-            {
-                p.Flags.NestedTask = true;
-                tss->LINK = oldSelector;
-            }
-
-            if (clearBusyFlag)
-                oldDesc.IsBusy = false;
-
-            newDesc.IsBusy = true;
-
-            this.PhysicalMemory.SetDescriptor(oldSelector, oldDesc);
-            this.PhysicalMemory.SetDescriptor(selector, newDesc);
+            p.Flags.NestedTask = true;
+            tss.LINK = oldSelector;
         }
+
+        if (clearBusyFlag)
+            oldDesc.IsBusy = false;
+
+        newDesc.IsBusy = true;
+
+        this.PhysicalMemory.SetDescriptor(oldSelector, oldDesc);
+        this.PhysicalMemory.SetDescriptor(selector, newDesc);
 
         this.PhysicalMemory.TaskSelector = selector;
     }
     internal void TaskReturn()
     {
-        unsafe
-        {
-            var selector = this.PhysicalMemory.TaskSelector;
-            var desc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
-            var tss = (TaskStateSegment32*)this.PhysicalMemory.GetSafePointer(desc.Base, (uint)sizeof(TaskStateSegment32));
-            this.TaskSwitch32(tss->LINK, true, false);
-        }
+        var selector = this.PhysicalMemory.TaskSelector;
+        var desc = (TaskSegmentDescriptor)this.PhysicalMemory.GetDescriptor(selector);
+        ref var tss = ref Unsafe.As<byte, TaskStateSegment32>(ref MemoryMarshal.GetReference(this.PhysicalMemory.GetPagedSpan(desc.Base, Unsafe.SizeOf<TaskStateSegment32>())));
+        this.TaskSwitch32(tss.LINK, true, false);
     }
     internal ushort GetPrivilegedSS(uint privilegeLevel, uint wordSize)
     {
@@ -854,10 +850,7 @@ public sealed class VirtualMachine : IDisposable
             ThrowHelper.ThrowInvalidTaskSegmentSelectorException();
 
         var segmentDescriptor = (SegmentDescriptor)this.PhysicalMemory.GetDescriptor(tss);
-        unsafe
-        {
-            return *(ushort*)this.PhysicalMemory.GetSafePointer(segmentDescriptor.Base + (wordSize * 2u) + (privilegeLevel * (wordSize * 2u)), 2u);
-        }
+        return this.PhysicalMemory.GetUInt16(segmentDescriptor.Base + (wordSize * 2u) + (privilegeLevel * (wordSize * 2u)));
     }
     internal uint GetPrivilegedESP(uint privilegeLevel, uint wordSize)
     {
@@ -866,14 +859,10 @@ public sealed class VirtualMachine : IDisposable
             ThrowHelper.ThrowInvalidTaskSegmentSelectorException();
 
         var segmentDescriptor = (SegmentDescriptor)this.PhysicalMemory.GetDescriptor(tss);
-        unsafe
-        {
-            byte* ptr = (byte*)this.PhysicalMemory.GetSafePointer(segmentDescriptor.Base + wordSize + (privilegeLevel * (wordSize * 2u)), wordSize);
-            if (wordSize == 4u)
-                return *(uint*)ptr;
-            else
-                return *(ushort*)ptr;
-        }
+        if (wordSize == 4u)
+            return this.PhysicalMemory.GetUInt32(segmentDescriptor.Base + wordSize + (privilegeLevel * (wordSize * 2u)));
+        else
+            return this.PhysicalMemory.GetUInt16(segmentDescriptor.Base + wordSize + (privilegeLevel * (wordSize * 2u)));
     }
     /// <summary>
     /// Raises the <see cref="VideoModeChanged" /> event.
