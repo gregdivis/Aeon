@@ -27,12 +27,12 @@ public sealed class PhysicalMemory
     /// <summary>
     /// Array of cached physical page addresses.
     /// </summary>
-    private unsafe uint* pageCache;
+    private readonly uint[] pageCache;
 
     /// <summary>
     /// Pointer to emulated physical memory.
     /// </summary>
-    private unsafe byte* RawView;
+    private readonly byte[] rawView;
 
     /// <summary>
     /// The linear address of the page table directory.
@@ -96,21 +96,13 @@ public sealed class PhysicalMemory
     /// </summary>
     private const ushort HandlerSegment = 0xF100;
 
-    internal PhysicalMemory()
-        : this(1024 * 1024 * 16)
-    {
-    }
     internal PhysicalMemory(int memorySize)
     {
-        if (memorySize < ConvMemorySize)
-            throw new ArgumentException("Memory size must be at least 1 MB.");
+        ArgumentOutOfRangeException.ThrowIfLessThan(memorySize, (int)ConvMemorySize);
 
         this.MemorySize = memorySize;
-        unsafe
-        {
-            this.RawView = (byte*)NativeMemory.AllocZeroed((nuint)(memorySize / 4096), 4096);
-            this.pageCache = (uint*)NativeMemory.AllocZeroed(PageAddressCacheSize, 4);
-        }
+        this.rawView = new byte[memorySize];
+        this.pageCache = new uint[PageAddressCacheSize];
 
         // Reserve room for the real-mode interrupt table.
         this.Reserve(0x0000, 256 * 4);
@@ -131,8 +123,6 @@ public sealed class PhysicalMemory
         InitializeBiosData();
     }
 
-    ~PhysicalMemory() => this.InternalDispose();
-
     /// <summary>
     /// Gets the amount of emulated RAM in bytes.
     /// </summary>
@@ -144,16 +134,7 @@ public sealed class PhysicalMemory
     /// <summary>
     /// Gets the entire emulated RAM as a <see cref="Span{byte}"/>.
     /// </summary>
-    public Span<byte> Span
-    {
-        get
-        {
-            unsafe
-            {
-                return new Span<byte>(this.RawView, this.MemorySize);
-            }
-        }
-    }
+    public Span<byte> Span => this.rawView;
     /// <summary>
     /// Gets the BIOS mapped regions of memory.
     /// </summary>
@@ -198,10 +179,7 @@ public sealed class PhysicalMemory
         {
             this.directoryAddress = value;
             // flush the page cache
-            unsafe
-            {
-                new Span<uint>(this.pageCache, PageAddressCacheSize).Clear();
-            }
+            this.pageCache.AsSpan().Clear();
         }
     }
     /// <summary>
@@ -306,10 +284,7 @@ public sealed class PhysicalMemory
         if (physicalAddress >= VramAddress && physicalAddress < VramUpperBound)
             throw new ArgumentException("Not supported for video RAM mapped addresses.");
 
-        unsafe
-        {
-            return new Span<byte>(RawView + physicalAddress, length);
-        }
+        return this.Span.Slice((int)physicalAddress, length);
     }
     public Span<byte> GetSpan(uint segment, uint offset, int length)
     {
@@ -695,7 +670,7 @@ public sealed class PhysicalMemory
             unsafe
             {
                 for (int i = 0; i < count; i++)
-                    buffer[bufferOffset + i] = this.RawView[offset + i];
+                    buffer[bufferOffset + i] = this.rawView[offset + i];
             }
 
             return;
@@ -926,16 +901,9 @@ public sealed class PhysicalMemory
     internal void FetchInstruction(uint address, out CachedInstruction buffer)
     {
         if (this.PagingEnabled)
-        {
             PagedFetchInstruction(address, out buffer);
-        }
         else
-        {
-            unsafe
-            {
-                buffer = Unsafe.ReadUnaligned<CachedInstruction>(this.RawView + (address & this.addressMask));
-            }
-        }
+            buffer = Unsafe.ReadUnaligned<CachedInstruction>(in this.Span[(int)(address & this.addressMask)]);
     }
     internal void UpdateLocalDescriptor(ushort selector)
     {
@@ -952,36 +920,6 @@ public sealed class PhysicalMemory
         }
     }
 
-    /// <summary>
-    /// Frees unmanaged memory.
-    /// </summary>
-    /// <remarks>
-    /// Implemented this way instead of with <see cref="IDisposable"/> because it's not
-    /// intended to be publicly exposed. <see cref="VirtualMachine"/> is responsible for
-    /// calling this.
-    /// </remarks>
-    internal void InternalDispose()
-    {
-        unsafe
-        {
-            if (this.pageCache != null)
-            {
-                NativeMemory.Free(this.pageCache);
-                this.pageCache = null;
-            }
-
-            if (this.RawView != null)
-            {
-                NativeMemory.Free(this.RawView);
-                this.RawView = null;
-            }
-
-#pragma warning disable CA1816 // Dispose methods should call SuppressFinalize
-            GC.SuppressFinalize(this);
-#pragma warning restore CA1816 // Dispose methods should call SuppressFinalize
-        }
-    }
-
     private void PagedFetchInstruction(uint address, out CachedInstruction buffer)
     {
         unsafe
@@ -989,7 +927,7 @@ public sealed class PhysicalMemory
             uint fullPagedAddress = GetPagedPhysicalAddress(address, PageFaultCause.InstructionFetch);
             if ((fullPagedAddress & 0xFFFu) < 4096u - 16u)
             {
-                buffer = Unsafe.ReadUnaligned<CachedInstruction>(this.RawView + fullPagedAddress);
+                buffer = Unsafe.ReadUnaligned<CachedInstruction>(in this.Span[(int)fullPagedAddress]);
             }
             else
             {
@@ -1018,7 +956,7 @@ public sealed class PhysicalMemory
                 if (fullAddress >= (uint)this.MemorySize)
                     ThrowOutOfRange(fullAddress);
 
-                return Unsafe.ReadUnaligned<T>(this.RawView + fullAddress);
+                return Unsafe.ReadUnaligned<T>(in this.Span[(int)fullAddress]);
             }
             else
             {
@@ -1056,7 +994,7 @@ public sealed class PhysicalMemory
                 if (fullAddress >= (uint)this.MemorySize)
                     ThrowOutOfRange(fullAddress);
 
-                Unsafe.WriteUnaligned(this.RawView + fullAddress, value);
+                Unsafe.WriteUnaligned(ref this.Span[(int)fullAddress], value);
             }
             else
             {
@@ -1157,12 +1095,14 @@ public sealed class PhysicalMemory
 
         unsafe
         {
-            uint* dirPtr = (uint*)(RawView + directoryAddress);
+            var dirPtr = new UnsafePointer<uint>(ref Unsafe.As<byte, uint>(ref this.Span[(int)directoryAddress]));
+            //uint* dirPtr = (uint*)(rawView + directoryAddress);
             if ((dirPtr[dir] & PagePresent) == 0)
                 throw new PageFaultException(linearAddress, operation);
 
             uint pageAddress = dirPtr[dir] & 0xFFFFF000u;
-            uint* pagePtr = (uint*)(RawView + pageAddress);
+            var pagePtr = new UnsafePointer<uint>(ref Unsafe.As<byte, uint>(ref this.Span[(int)pageAddress]));
+            //uint* pagePtr = (uint*)(rawView + pageAddress);
             if ((pagePtr[page] & PagePresent) == 0)
                 throw new PageFaultException(linearAddress, operation);
 
@@ -1188,7 +1128,7 @@ public sealed class PhysicalMemory
     {
         unsafe
         {
-            return RawView[index];
+            return rawView[index];
         }
     }
     /// <summary>

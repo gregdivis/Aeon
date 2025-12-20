@@ -903,8 +903,6 @@ public sealed class VirtualMachine : IDisposable
                     if (device is IDisposable d)
                         d.Dispose();
                 }
-
-                this.PhysicalMemory.InternalDispose();
             }
 
             this.disposed = true;
