@@ -5,6 +5,7 @@
 		<PublishTrimmed Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishTrimmed>
 		<PublishAot Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishAot>
 		<PublishAot>true</PublishAot>
+		<OptimizationPreference>Speed</OptimizationPreference>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RootNamespace>Aeon.Emulator.Launcher</RootNamespace>

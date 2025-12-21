@@ -1,19 +1,12 @@
 ﻿using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.X86;
 
 namespace Aeon.Emulator;
 
 public static class Intrinsics
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint ExtractBits(uint value, byte start, byte length, uint mask)
-    {
-        if (Bmi1.IsSupported)
-            return Bmi1.BitFieldExtract(value, start, length);
-        else
-            return (value & mask) >>> start;
-    }
+    public static uint ExtractBits(uint value, byte start, byte length, uint mask) => (value & mask) >>> start;
     /// <summary>
     /// Returns <paramref name="a"/> &amp; ~<paramref name="b"/>.
     /// </summary>
@@ -21,28 +14,12 @@ public static class Intrinsics
     /// <param name="b">The second value.</param>
     /// <returns>The result of <paramref name="a"/> &amp; ~<paramref name="b"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static uint AndNot(uint a, uint b)
-    {
-        if (Bmi1.IsSupported)
-            return Bmi1.AndNot(b, a);
-        else
-            return a & ~b;
-    }
+    public static uint AndNot(uint a, uint b) => a & ~b;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint ResetLowestSetBit(uint value)
     {
-        if (Bmi1.IsSupported)
-        {
-            return Bmi1.ResetLowestSetBit(value);
-        }
-        else
-        {
-            int trailingZeroCount = BitOperations.TrailingZeroCount(value);
-            if (trailingZeroCount < 32)
-                return value & ~(1u << trailingZeroCount);
-            else
-                return 0;
-        }
+        int trailingZeroCount = BitOperations.TrailingZeroCount(value);
+        return trailingZeroCount < 32 ? value & ~(1u << trailingZeroCount) : 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

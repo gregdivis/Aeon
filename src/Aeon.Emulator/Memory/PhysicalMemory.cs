@@ -1085,13 +1085,9 @@ public sealed class PhysicalMemory
     /// <returns>Physical address of the page.</returns>
     private uint GetPage(uint linearAddress, PageFaultCause operation)
     {
-        uint page;
-        if (Bmi1.IsSupported)
-            page = Bmi1.BitFieldExtract(linearAddress, 0x0A0C);
-        else
-            page = (linearAddress >> 12) & 0x3FFu;
+        uint page = (linearAddress >>> 12) & 0x3FFu;
 
-        uint dir = linearAddress >> 22;
+        uint dir = linearAddress >>> 22;
 
         unsafe
         {
