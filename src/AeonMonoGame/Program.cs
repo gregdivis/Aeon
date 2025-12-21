@@ -2,9 +2,9 @@
 using Aeon.Emulator.Configuration;
 using Aeon.Emulator.Launcher;
 
-var emulator = EmulatorHost.CreateWithConfig(GetLaunchConfig(args));
-
-using var game = new AeonGame(emulator, GlobalConfiguration.Load().ShowIps);
+var config = GetLaunchConfig(args);
+var emulator = EmulatorHost.CreateWithConfig(config);
+using var game = new AeonGame(emulator, config.ShowIps.GetValueOrDefault());
 game.Run();
 
 static AeonConfiguration GetLaunchConfig(string[] args)

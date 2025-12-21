@@ -19,20 +19,18 @@ public static class EmulatorHostExtensions
         /// </summary>
         /// <param name="config">Additional configuration.</param>
         /// <returns><see cref="EmulatorHost"/> instance configured using the specified options.</returns>
-        public static EmulatorHost CreateWithConfig(AeonConfiguration? config = null)
+        public static EmulatorHost CreateWithConfig(AeonConfiguration config)
         {
-            var global = GlobalConfiguration.Load();
-
             var emulator = new EmulatorHost(
                 new VirtualMachineInitializationOptions
                 {
-                    PhysicalMemorySize = config?.PhysicalMemorySize ?? 16,
+                    PhysicalMemorySize = config.PhysicalMemorySize ?? 16,
                     AdditionalDevices =
                     [
                         _ => new InternalSpeaker(),
                         vm => new SoundBlaster(vm),
                         _ => new FmSoundCard(),
-                        _ => new GeneralMidi(new GeneralMidiOptions(config?.MidiEngine ?? global.MidiEngine ?? MidiEngine.MidiMapper, global.SoundfontPath, global.Mt32RomsPath))
+                        _ => new GeneralMidi(new GeneralMidiOptions(config.MidiEngine ?? MidiEngine.MidiMapper, config.SoundfontPath, config.Mt32RomsPath))
                     ]
                 }
             );

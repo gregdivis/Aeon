@@ -46,8 +46,6 @@ namespace Aeon.Emulator.Launcher
 
         private void ApplyConfiguration(AeonConfiguration config)
         {
-            var globalConfig = GlobalConfiguration.Load();
-
             this.emulatorDisplay.EmulatorHost = new EmulatorHost(
                 new VirtualMachineInitializationOptions
                 {
@@ -56,7 +54,7 @@ namespace Aeon.Emulator.Launcher
                         _ => new Sound.PCSpeaker.InternalSpeaker(),
                         vm => new Sound.Blaster.SoundBlaster(vm),
                         _ => new Sound.FM.FmSoundCard(),
-                        _ => new Sound.GeneralMidi(new Sound.GeneralMidiOptions(config.MidiEngine ?? globalConfig.MidiEngine ?? Sound.MidiEngine.MidiMapper, globalConfig.SoundfontPath, globalConfig.Mt32RomsPath))
+                        _ => new Sound.GeneralMidi(new Sound.GeneralMidiOptions(config.MidiEngine ?? Sound.MidiEngine.MidiMapper, config.SoundfontPath, config.Mt32RomsPath))
                     ]
                 }
             )
