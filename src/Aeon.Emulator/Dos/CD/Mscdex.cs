@@ -1,6 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Memory;
 
@@ -45,6 +46,11 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
 
             case Functions.MSCDEXVersion:
                 vm.Processor.BX = 0x020A; // Version 2.1
+                break;
+
+            case Functions.ReadVTOC:
+                ReadVTOC();
+                SaveFlags(EFlags.Carry);
                 break;
 
             case Functions.GetDirectoryEntry:
@@ -142,6 +148,10 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
                 status = Status_Done;
                 break;
 
+            case CommandCodes.InputFlush:
+                status = Status_Done;
+                break;
+
             case CommandCodes.ReadLongPrefetch:
                 System.Diagnostics.Debug.WriteLine("MSCDEX: ReadLongPrefetch");
                 break;
@@ -157,14 +167,20 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
     {
         switch (data[0])
         {
-            case 1:
+            case IoctlReadFunction.DeviceHeaderAddress:
                 return Status_Done;
 
-            case 8:
+            case IoctlReadFunction.DeviceStatus:
+                // Door closed/locked, supports cooked+raw, read-only,
+                // data+audio, audio channel manipulation, HSG+Red Book addressing, disc present
+                BinaryPrimitives.WriteInt32LittleEndian(data[1..], 0x00000314);
+                return Status_Done;
+
+            case IoctlReadFunction.VolumeSize:
                 BinaryPrimitives.WriteInt32LittleEndian(data[1..], cd.TotalSectors);
                 return Status_Done;
 
-            case 10:
+            case IoctlReadFunction.AudioDiscInfo:
                 {
                     var leadOut = new CDTimeSpan(cd.TotalSectors + LeadInSectors);
                     data[1] = 1;
@@ -177,7 +193,7 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
                 }
                 return Status_Done;
 
-            case 11:
+            case IoctlReadFunction.AudioTrackInfo:
                 {
                     var offset = cd.Tracks[data[1] - 1].Offset + new CDTimeSpan(LeadInSectors);
                     data[2] = (byte)offset.Frames;
@@ -188,7 +204,7 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
                 }
                 return Status_Done;
 
-            case 12:
+            case IoctlReadFunction.AudioQChannelInfo:
                 {
                     var pos = new CDTimeSpan(cd.PlaybackSector);
                     int trackNumber = 0;
@@ -235,6 +251,12 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
                 }
                 return Status_Done;
 
+            case IoctlReadFunction.AudioStatusInfo:
+                BinaryPrimitives.WriteUInt16LittleEndian(data[1..], (ushort)(cd.Playing ? 1 : 0));
+                BinaryPrimitives.WriteInt32LittleEndian(data[3..], cd.PlaybackSector);
+                BinaryPrimitives.WriteInt32LittleEndian(data[7..], cd.TotalSectors);
+                return Status_Done;
+
             default:
                 throw new NotImplementedException();
         }
@@ -243,11 +265,10 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
     {
         switch (data[0])
         {
-            case 2:
-                // reset drive
+            case IoctlWriteFunction.ResetDrive:
                 return Status_Done;
 
-            case 3:
+            case IoctlWriteFunction.AudioChannelControl:
                 System.Diagnostics.Debug.WriteLine("CD volume control");
                 return Status_Done;
 
@@ -389,6 +410,53 @@ internal sealed class Mscdex(VirtualMachine vm) : IMultiplexInterruptHandler
         vm.PhysicalMemory.SetString(vm.Processor.SI, (uint)(vm.Processor.DI + Unsafe.SizeOf<DirectoryEntry>()), identifier, (identifier.Length % 2) == 0);
 
         vm.Processor.Flags.Carry = false;
+    }
+    /// <summary>
+    /// Reads the Volume Table of Contents to ES:BX.
+    /// </summary>
+    private void ReadVTOC()
+    {
+        int driveIndex = this.vm.Processor.CX;
+        if (driveIndex < 0 || driveIndex >= 26 || this.vm.FileSystem.Drives[driveIndex].DriveType != DriveType.CDROM)
+        {
+            this.vm.Processor.AX = 15; // Invalid drive
+            this.vm.Processor.Flags.Carry = true;
+            return;
+        }
+
+        if (this.vm.FileSystem.Drives[driveIndex].Mapping is not IRawSectorReader drive)
+        {
+            this.vm.Processor.AX = 21; // Drive not ready
+            this.vm.Processor.Flags.Carry = true;
+            return;
+        }
+
+        int startingSector = 16 + (ushort)this.vm.Processor.DX;
+        var buffer = new byte[drive.SectorSize];
+        drive.ReadSectors(startingSector, 1, buffer);
+
+        var sectorSpan = buffer.AsSpan();
+        int offset;
+
+        if (Encoding.ASCII.GetString(sectorSpan.Slice(1, 5)) == "CD001")
+            offset = 0;
+        else if (Encoding.ASCII.GetString(sectorSpan.Slice(9, 5)) == "CDROM")
+            offset = 8;
+        else
+        {
+            this.vm.Processor.AX = 11; // Invalid format
+            this.vm.Processor.Flags.Carry = true;
+            return;
+        }
+
+        byte type = sectorSpan[offset];
+
+        var target = this.vm.PhysicalMemory.GetSpan(this.vm.Processor.ES, (ushort)this.vm.Processor.BX, buffer.Length);
+        sectorSpan.CopyTo(target);
+
+        this.vm.Processor.AX = type;
+        this.vm.Processor.DX = (short)offset;
+        this.vm.Processor.Flags.Carry = false;
     }
     /// <summary>
     /// Reads sectors from the disc to ES:BX.
