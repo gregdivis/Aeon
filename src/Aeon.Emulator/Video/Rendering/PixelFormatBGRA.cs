@@ -1,8 +1,14 @@
-﻿namespace Aeon.Emulator.Video.Rendering;
+namespace Aeon.Emulator.Video.Rendering;
 
 public readonly struct PixelFormatBGRA : IOutputPixelFormat
 {
-    public static void ConvertBGRAPalette(ReadOnlySpan<uint> bgraPalette, Span<uint> outputPalette) => bgraPalette.CopyTo(outputPalette);
+    public static void ConvertBGRAPalette(ReadOnlySpan<uint> bgraPalette, Span<uint> outputPalette)
+    {
+        for (int i = 0; i < bgraPalette.Length; i++)
+        {
+            outputPalette[i] = bgraPalette[i] | 0xFF000000u;
+        }
+    }
 
     private const double RedRatio = 255.0 / 31.0;
     private const double GreenRatio = 255.0 / 63.0;
@@ -14,8 +20,8 @@ public readonly struct PixelFormatBGRA : IOutputPixelFormat
         uint g = (uint)(((value & 0x07E0) >> 5) * GreenRatio) & 0xFFu;
         uint b = (uint)((value & 0x001F) * BlueRatio) & 0xFFu;
 
-        return (r << 16) | (g << 8) | b;
+        return (r << 16) | (g << 8) | b | 0xFF000000u;
     }
 
-    public static uint FromBGRA(uint value) => value;
+    public static uint FromBGRA(uint value) => value | 0xFF000000u;
 }
