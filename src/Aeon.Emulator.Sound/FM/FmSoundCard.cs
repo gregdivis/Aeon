@@ -11,11 +11,9 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer audioPlayer = Audio.CreatePlayer();
+    private readonly AudioPlayer audioPlayer = AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.25), true, new AudioFormat(44100, 1, SampleFormat.IeeeFloat32));
     private int currentAddress;
     private readonly FmSynthesizer synth;
-    private Task? generateTask;
-    private CancellationTokenSource cancelPlayback = new();
     private byte timer1Data;
     private byte timer2Data;
     private byte timerControlByte;
@@ -90,22 +88,21 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
         }
     }
 
-    async Task IVirtualDevice.PauseAsync()
+    Task IVirtualDevice.PauseAsync()
     {
         if (this.initialized && !this.paused)
         {
-            this.cancelPlayback.Cancel();
-            await this.generateTask!.ConfigureAwait(false);
+            this.audioPlayer.StopPlayback();
             this.paused = true;
         }
+
+        return Task.CompletedTask;
     }
     Task IVirtualDevice.ResumeAsync()
     {
         if (paused)
         {
-            this.cancelPlayback?.Dispose();
-            this.cancelPlayback = new();
-            this.generateTask = Task.Run(this.GenerateWaveformsAsync);
+            this.audioPlayer.BeginPlayback(this.GetAudioData);
             this.paused = false;
         }
 
@@ -116,55 +113,20 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
     {
         if (this.initialized)
         {
-            if (!paused)
-            {
-                this.cancelPlayback.Cancel();
-                this.generateTask!.GetAwaiter().GetResult();
-            }
-
             this.audioPlayer.Dispose();
-            this.cancelPlayback.Dispose();
             this.initialized = false;
         }
     }
 
-    private async Task GenerateWaveformsAsync()
+    private void GetAudioData(Span<float> buffer, out int samplesWritten)
     {
-        var buffer = new float[1024];
-        float[] playBuffer;
-
-        bool expandToStereo = this.audioPlayer.Format.Channels == 2;
-        if (expandToStereo)
-            playBuffer = new float[buffer.Length * 2];
-        else
-            playBuffer = buffer;
-
-        this.audioPlayer.BeginPlayback();
-        fillBuffer();
-        try
-        {
-            while (!cancelPlayback.IsCancellationRequested)
-            {
-                await this.audioPlayer.WriteDataAsync(playBuffer, this.cancelPlayback.Token).ConfigureAwait(false);
-                fillBuffer();
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-
-        this.audioPlayer.StopPlayback();
-
-        void fillBuffer()
-        {
-            this.synth.GetData(buffer);
-            if (expandToStereo)
-                ChannelAdapter.MonoToStereo(buffer.AsSpan(), playBuffer.AsSpan());
-        }
+        this.synth.GetData(buffer);
+        samplesWritten = buffer.Length;
     }
     private void Initialize()
     {
-        this.generateTask = Task.Run(this.GenerateWaveformsAsync);
+        this.audioPlayer.BeginPlayback(this.GetAudioData);
+        // this.generateTask = Task.Run(this.GenerateWaveformsAsync);
         this.initialized = true;
     }
 }

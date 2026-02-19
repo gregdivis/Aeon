@@ -2,9 +2,9 @@
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net10.0</TargetFramework>
-		<PublishTrimmed Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishTrimmed>
+		<!-- <PublishTrimmed Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishTrimmed>
 		<PublishAot Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</PublishAot>
-		<PublishAot>true</PublishAot>
+		<PublishAot>true</PublishAot> -->
 		<OptimizationPreference>Speed</OptimizationPreference>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
