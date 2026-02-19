@@ -245,40 +245,22 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
-                dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
-                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM4 with reference byte");
-                vm.PerformDmaTransfers();
-                break;
+                throw new NotImplementedException("Single-cycle DMA ADPCM4 with reference byte not implemented.");
 
             case Commands.SingleCycleDmaOutputADPCM4:
-                dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
-                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM4");
-                vm.PerformDmaTransfers();
-                break;
+                throw new NotImplementedException("Single-cycle DMA ADPCM4 not implemented.");
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
-                dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
-                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM2 with reference byte");
-                vm.PerformDmaTransfers();
-                break;
+                throw new NotImplementedException("Single-cycle DMA ADPCM2 with reference byte not implemented.");
 
             case Commands.SingleCycleDmaOutputADPCM2:
-                dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
-                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM2");
-                vm.PerformDmaTransfers();
-                break;
+                throw new NotImplementedException("Single-cycle DMA ADPCM2 not implemented.");
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
-                dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
-                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM3 with reference byte");
-                vm.PerformDmaTransfers();
-                break;
+                throw new NotImplementedException("Single-cycle DMA ADPCM3 with reference byte not implemented.");
 
             case Commands.SingleCycleDmaOutputADPCM3:
-                dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
-                System.Diagnostics.Debug.WriteLine("Single-cycle DMA ADPCM3");
-                vm.PerformDmaTransfers();
-                break;
+                throw new NotImplementedException("Single-cycle DMA ADPCM3 not implemented.");
 
             case Commands.AutoInitDmaOutput8:
             case Commands.HighSpeedAutoInitDmaOutput8:

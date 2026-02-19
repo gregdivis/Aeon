@@ -55,26 +55,12 @@ internal sealed class Dsp
     /// <param name="is16Bit">Value indicating whether this is a 16-bit transfer.</param>
     /// <param name="isStereo">Value indicating whether this is a stereo transfer.</param>
     /// <param name="autoInitialize">Value indicating whether the DMA controller is in auto-initialize mode.</param>
-    /// <param name="compression">Compression level of the expected data.</param>
-    /// <param name="referenceByte">Value indicating whether a reference byte is expected.</param>
-    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compression = CompressionLevel.None, bool referenceByte = false)
+    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize)
     {
         this.Is16Bit = is16Bit;
         this.IsStereo = isStereo;
         this.AutoInitialize = autoInitialize;
-        this.referenceByteExpected = referenceByte;
-        this.compression = compression;
         this.IsEnabled = true;
-
-        this.decodeRemainderOffset = -1;
-
-        this.decoder = compression switch
-        {
-            CompressionLevel.ADPCM2 => new ADPCM2(),
-            CompressionLevel.ADPCM3 => new ADPCM3(),
-            CompressionLevel.ADPCM4 => new ADPCM4(),
-            _ => null,
-        };
 
         this.currentChannel = this.dmaChannel8;
 
@@ -104,56 +90,7 @@ internal sealed class Dsp
     /// <param name="buffer">Buffer into which sample data is written.</param>
     public void Read(Span<byte> buffer)
     {
-        if (this.compression == CompressionLevel.None)
-        {
-            this.InternalRead(buffer);
-            return;
-        }
-
-        if (this.decodeBuffer == null || this.decodeBuffer.Length < buffer.Length * 4)
-            this.decodeBuffer = new byte[buffer.Length * 4];
-
-        int offset = 0;
-        int length = buffer.Length;
-
-        while (buffer.Length > 0 && this.decodeRemainderOffset >= 0)
-        {
-            buffer[offset] = this.decodeRemainder[this.decodeRemainderOffset];
-            offset++;
-            length--;
-            this.decodeRemainderOffset--;
-        }
-
-        if (length <= 0)
-            return;
-
-        if (this.referenceByteExpected)
-        {
-            this.InternalRead(buffer.Slice(offset, 1));
-            this.referenceByteExpected = false;
-            this.decoder!.Reference = decodeBuffer[offset];
-            offset++;
-            length--;
-        }
-
-        if (length <= 0)
-            return;
-
-        int blocks = length / this.decoder!.CompressionFactor;
-
-        if (blocks > 0)
-        {
-            this.InternalRead(this.decodeBuffer.AsSpan(0, blocks));
-            this.decoder.Decode(this.decodeBuffer, 0, blocks, buffer[offset..]);
-        }
-
-        int remainder = length % this.decoder.CompressionFactor;
-        if (remainder > 0)
-        {
-            this.InternalRead(this.decodeRemainder.AsSpan(0, remainder));
-            Array.Reverse(this.decodeRemainder, 0, remainder);
-            this.decodeRemainderOffset = remainder - 1;
-        }
+        this.InternalRead(buffer);
     }
     /// <summary>
     /// Writes data from a DMA transfer.
@@ -249,31 +186,6 @@ internal sealed class Dsp
     /// Number of cycles with no new input data.
     /// </summary>
     private int readIdleCycles;
-
-    /// <summary>
-    /// The current compression level.
-    /// </summary>
-    private CompressionLevel compression;
-    /// <summary>
-    /// Indicates whether a reference byte is expected.
-    /// </summary>
-    private bool referenceByteExpected;
-    /// <summary>
-    /// Current ADPCM decoder instance.
-    /// </summary>
-    private ADPCMDecoder? decoder;
-    /// <summary>
-    /// Buffer used for ADPCM decoding.
-    /// </summary>
-    private byte[]? decodeBuffer;
-    /// <summary>
-    /// Last index of remaining decoded bytes.
-    /// </summary>
-    private int decodeRemainderOffset;
-    /// <summary>
-    /// Remaining decoded bytes.
-    /// </summary>
-    private readonly byte[] decodeRemainder = new byte[4];
 
     /// <summary>
     /// Contains generated waveform data waiting to be read.
