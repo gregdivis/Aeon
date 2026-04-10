@@ -1,6 +1,6 @@
 ﻿using MeltySynth;
 
-namespace Aeon.Emulator.Sound;
+namespace Aeon.Emulator.Sound.Midi;
 
 internal sealed class MeltySynthMidiMapper : MidiDevice
 {

@@ -1,7 +1,7 @@
 ﻿using Aeon.Emulator.Dos.VirtualFileSystem;
-using Aeon.Emulator.Sound;
 using Aeon.Emulator.Sound.Blaster;
 using Aeon.Emulator.Sound.FM;
+using Aeon.Emulator.Sound.Midi;
 using Aeon.Emulator.Sound.PCSpeaker;
 
 namespace Aeon.Emulator.Configuration;

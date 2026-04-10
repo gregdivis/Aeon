@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Sound;
+﻿namespace Aeon.Emulator.Sound.Midi;
 
 /// <summary>
 /// Virtual device which emulates general midi playback.

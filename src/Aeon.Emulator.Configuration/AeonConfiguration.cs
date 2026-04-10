@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Aeon.Emulator.Sound;
+using Aeon.Emulator.Sound.Midi;
 
 namespace Aeon.Emulator.Configuration;
 

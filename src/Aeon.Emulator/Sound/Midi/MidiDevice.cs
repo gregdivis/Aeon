@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Sound;
+﻿namespace Aeon.Emulator.Sound.Midi;
 
 internal abstract class MidiDevice : IDisposable
 {

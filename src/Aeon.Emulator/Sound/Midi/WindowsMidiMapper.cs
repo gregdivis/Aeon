@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Versioning;
 
-namespace Aeon.Emulator.Sound;
+namespace Aeon.Emulator.Sound.Midi;
 
 /// <summary>
 /// Provides access to the Windows MIDI mapper.
@@ -12,15 +12,15 @@ internal sealed class WindowsMidiMapper : MidiDevice
 
     public WindowsMidiMapper()
     {
-        _ = NativeMethods.midiOutOpen(out this.midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
+        _ = WinMM.midiOutOpen(out this.midiOutHandle, WinMM.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
     }
     ~WindowsMidiMapper() => this.Dispose(false);
 
     public override bool GeneratesWaveformData => false;
 
-    protected override void PlayShortMessage(uint message) => _ = NativeMethods.midiOutShortMsg(this.midiOutHandle, message);
+    protected override void PlayShortMessage(uint message) => _ = WinMM.midiOutShortMsg(this.midiOutHandle, message);
     protected override void PlaySysex(ReadOnlySpan<byte> data) { }
-    public override void Pause() => _ = NativeMethods.midiOutReset(this.midiOutHandle);
+    public override void Pause() => _ = WinMM.midiOutReset(this.midiOutHandle);
     public override void Resume() { }
     public override void RenderAudio(Span<float> left, Span<float> right)
     {
@@ -30,10 +30,10 @@ internal sealed class WindowsMidiMapper : MidiDevice
 
     protected override void Dispose(bool disposing)
     {
-        if (midiOutHandle != IntPtr.Zero)
+        if (midiOutHandle != 0)
         {
-            _ = NativeMethods.midiOutClose(midiOutHandle);
-            midiOutHandle = IntPtr.Zero;
+            _ = WinMM.midiOutClose(midiOutHandle);
+            midiOutHandle = 0;
         }
     }
 }

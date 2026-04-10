@@ -1,7 +1,7 @@
 ﻿using System.IO.Compression;
 using Mt32emu;
 
-namespace Aeon.Emulator.Sound;
+namespace Aeon.Emulator.Sound.Midi;
 
 internal sealed class Mt32Player : IDisposable
 {

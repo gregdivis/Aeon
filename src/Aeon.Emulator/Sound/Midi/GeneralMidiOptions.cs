@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Sound;
+﻿namespace Aeon.Emulator.Sound.Midi;
 
 /// <summary>
 /// Contains initialization options for the <see cref="GeneralMidi"/> class.

@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Sound;
+﻿namespace Aeon.Emulator.Sound.Midi;
 
 /// <summary>
 /// Specifies the engine to use for MIDI playback.

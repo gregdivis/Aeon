@@ -1,4 +1,4 @@
-﻿namespace Aeon.Emulator.Sound;
+﻿namespace Aeon.Emulator.Sound.Midi;
 
 /// <summary>
 /// Specifies the current state of the General MIDI device.
