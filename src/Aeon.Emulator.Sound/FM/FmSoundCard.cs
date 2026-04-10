@@ -1,17 +1,15 @@
-﻿using TinyAudio;
-using Ymf262Emu;
+﻿using Ymf262Emu;
 
 namespace Aeon.Emulator.Sound.FM;
 
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
+public sealed class FmSoundCard : IInputPort, IOutputPort, IAudioSource
 {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer audioPlayer = AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.25), true, new AudioFormat(44100, 1, SampleFormat.IeeeFloat32));
     private int currentAddress;
     private readonly FmSynthesizer synth;
     private byte timer1Data;
@@ -19,11 +17,11 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
     private byte timerControlByte;
     private byte statusByte;
     private bool initialized;
-    private bool paused;
 
     public FmSoundCard()
     {
-        this.synth = new FmSynthesizer(this.audioPlayer.Format.SampleRate);
+        #warning sample rate
+        this.synth = new FmSynthesizer(44100);
     }
 
     ReadOnlySpan<ushort> IInputPort.InputPorts => [0x388];
@@ -48,6 +46,9 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
     ushort IInputPort.ReadWord(int port) => this.statusByte;
 
     ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x388, 0x389];
+
+    bool IAudioSource.Active => this.initialized;
+
     void IOutputPort.WriteByte(int port, byte value)
     {
         if (port == 0x388)
@@ -72,8 +73,7 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
             }
             else
             {
-                if (!this.initialized)
-                    this.Initialize();
+                this.initialized = true;
 
                 this.synth.SetRegisterValue(0, currentAddress, value);
             }
@@ -88,45 +88,9 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IDisposable
         }
     }
 
-    Task IVirtualDevice.PauseAsync()
+    void IAudioSource.RenderAudio(Span<float> left, Span<float> right)
     {
-        if (this.initialized && !this.paused)
-        {
-            this.audioPlayer.StopPlayback();
-            this.paused = true;
-        }
-
-        return Task.CompletedTask;
-    }
-    Task IVirtualDevice.ResumeAsync()
-    {
-        if (paused)
-        {
-            this.audioPlayer.BeginPlayback(this.GetAudioData);
-            this.paused = false;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        if (this.initialized)
-        {
-            this.audioPlayer.Dispose();
-            this.initialized = false;
-        }
-    }
-
-    private void GetAudioData(Span<float> buffer, out int samplesWritten)
-    {
-        this.synth.GetData(buffer);
-        samplesWritten = buffer.Length;
-    }
-    private void Initialize()
-    {
-        this.audioPlayer.BeginPlayback(this.GetAudioData);
-        // this.generateTask = Task.Run(this.GenerateWaveformsAsync);
-        this.initialized = true;
+        this.synth.GetData(left);
+        left.CopyTo(right);
     }
 }

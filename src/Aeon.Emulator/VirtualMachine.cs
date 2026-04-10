@@ -7,6 +7,7 @@ using Aeon.Emulator.Dos.VirtualFileSystem;
 using Aeon.Emulator.Interrupts;
 using Aeon.Emulator.Memory;
 using Aeon.Emulator.RuntimeExceptions;
+using Aeon.Emulator.Sound;
 using Aeon.Emulator.Video.Rendering;
 
 namespace Aeon.Emulator;
@@ -96,6 +97,7 @@ public sealed class VirtualMachine : IDisposable
         var outputPorts = new SortedList<ushort, IOutputPort>();
         var callbacks = new List<ICallbackProvider>();
         var allDevices = new List<IVirtualDevice>();
+        var audioSources = new List<IAudioSource>();
 
         RegisterDevice(this.Dos);
         RegisterDevice(this.Video);
@@ -119,6 +121,7 @@ public sealed class VirtualMachine : IDisposable
         this.inputPorts = new SparseArray<ushort, IInputPort>(inputPorts);
         this.outputPorts = new SparseArray<ushort, IOutputPort>(outputPorts);
         this.callbackProviders = [.. callbacks];
+        this.AudioMixer = new AudioMixer([.. audioSources]);
         this.allDevices = [.. allDevices];
 
         this.PhysicalMemory.AddTimerInterruptHandler();
@@ -166,6 +169,9 @@ public sealed class VirtualMachine : IDisposable
                 callbackProvider.CallbackAddress = this.PhysicalMemory.AddCallbackHandler((byte)id, callbackProvider.IsHookable);
                 callbacks.Add(callbackProvider);
             }
+
+            if (virtualDevice is IAudioSource audioSource)
+                audioSources.Add(audioSource);
 
             allDevices.Add(virtualDevice);
             virtualDevice.DeviceRegistered(this);
@@ -282,6 +288,10 @@ public sealed class VirtualMachine : IDisposable
     /// Gets information about the current process.
     /// </summary>
     public Dos.DosProcess CurrentProcess => this.Dos.CurrentProcess;
+    /// <summary>
+    /// Gets the audio mixer.
+    /// </summary>
+    public AudioMixer AudioMixer { get; }
 
     internal Keyboard.KeyboardDevice Keyboard { get; }
     internal Mouse.MouseHandler Mouse { get; }

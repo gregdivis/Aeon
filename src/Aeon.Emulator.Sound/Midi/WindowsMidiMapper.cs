@@ -16,10 +16,17 @@ internal sealed class WindowsMidiMapper : MidiDevice
     }
     ~WindowsMidiMapper() => this.Dispose(false);
 
+    public override bool GeneratesWaveformData => false;
+
     protected override void PlayShortMessage(uint message) => _ = NativeMethods.midiOutShortMsg(this.midiOutHandle, message);
     protected override void PlaySysex(ReadOnlySpan<byte> data) { }
     public override void Pause() => _ = NativeMethods.midiOutReset(this.midiOutHandle);
     public override void Resume() { }
+    public override void RenderAudio(Span<float> left, Span<float> right)
+    {
+        left.Clear();
+        right.Clear();
+    }
 
     protected override void Dispose(bool disposing)
     {

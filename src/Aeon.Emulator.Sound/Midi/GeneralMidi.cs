@@ -3,7 +3,7 @@
 /// <summary>
 /// Virtual device which emulates general midi playback.
 /// </summary>
-public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
+public sealed class GeneralMidi : IInputPort, IOutputPort, IAudioSource, IDisposable
 {
     private MidiDevice? midiMapper;
     private readonly Queue<byte> dataBytes = new();
@@ -77,6 +77,9 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
     ushort IInputPort.ReadWord(int port) => ((IInputPort)this).ReadByte(port);
 
     ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x330, 0x331];
+
+    bool IAudioSource.Active => this.midiMapper?.GeneratesWaveformData ?? false;
+
     void IOutputPort.WriteByte(int port, byte value)
     {
         switch (port)
@@ -134,6 +137,20 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
         };
     }
 
+    void IAudioSource.RenderAudio(Span<float> left, Span<float> right)
+    {
+        var m = this.midiMapper;
+        if(m is not null && m.GeneratesWaveformData)
+        {
+            m.RenderAudio(left, right);
+        }
+        else
+        {
+            left.Clear();
+            right.Clear();
+        }
+    }
+
     [Flags]
     private enum GeneralMidiStatus : byte
     {
@@ -144,10 +161,10 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IDisposable
         /// <summary>
         /// The command port may be written to.
         /// </summary>
-        OutputReady = (1 << 6),
+        OutputReady = 1 << 6,
         /// <summary>
         /// The data port may be read from.
         /// </summary>
-        InputReady = (1 << 7)
+        InputReady = 1 << 7
     }
 }

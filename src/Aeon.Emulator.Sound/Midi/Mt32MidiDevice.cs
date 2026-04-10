@@ -14,14 +14,10 @@ internal sealed class Mt32MidiDevice : MidiDevice
 
     public override void Pause()
     {
-        if (this.player.IsValueCreated)
-            this.player.Value.Pause();
     }
 
     public override void Resume()
     {
-        if (this.player.IsValueCreated)
-            this.player.Value.Resume();
     }
 
     protected override void PlayShortMessage(uint message) => this.player.Value.PlayShortMessage(message);
@@ -36,5 +32,11 @@ internal sealed class Mt32MidiDevice : MidiDevice
 
             this.disposed = true;
         }
+    }
+
+    public override void RenderAudio(Span<float> left, Span<float> right)
+    {
+        #warning implement
+        throw new NotImplementedException();
     }
 }

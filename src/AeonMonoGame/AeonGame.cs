@@ -4,6 +4,7 @@ using Aeon.Emulator.Video.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using TinyAudio;
 
 namespace Aeon.Emulator.Launcher;
 
@@ -27,6 +28,7 @@ public sealed class AeonGame : Game
     private readonly bool showIps;
     private string? currentProcess;
     private bool currentProcessChanged;
+    private AudioPlayer audioPlayer = AudioPlayer.CreateDefault(TimeSpan.FromMilliseconds(250), true, new AudioFormat(44100, 2, SampleFormat.IeeeFloat32));
 
     public AeonGame(EmulatorHost emulator, bool showIps)
     {
@@ -53,8 +55,15 @@ public sealed class AeonGame : Game
         this.currentProcessChanged = true;
 
         this.emulator.Run();
+        this.audioPlayer.BeginPlayback(this.FillAudioBuffer);        
 
         base.Initialize();
+    }
+
+    private void FillAudioBuffer(Span<float> buffer, out int samplesWritten)
+    {
+        this.emulator.VirtualMachine.AudioMixer.FillBuffer(buffer);
+        samplesWritten = buffer.Length;
     }
 
     protected override void OnActivated(object sender, EventArgs args)

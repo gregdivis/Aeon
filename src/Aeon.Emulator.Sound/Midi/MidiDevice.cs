@@ -12,6 +12,8 @@ internal abstract class MidiDevice : IDisposable
     {
     }
 
+    public virtual bool GeneratesWaveformData => true;
+
     private static ReadOnlySpan<byte> MessageLength => [3, 3, 3, 3, 2, 2, 3, 1];
 
     public void SendByte(byte value)
@@ -68,6 +70,7 @@ internal abstract class MidiDevice : IDisposable
         this.Dispose(true);
         GC.SuppressFinalize(this);
     }
+    public abstract void RenderAudio(Span<float> left, Span<float> right);
 
     protected abstract void PlayShortMessage(uint message);
     protected abstract void PlaySysex(ReadOnlySpan<byte> data);

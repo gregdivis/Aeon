@@ -1,12 +1,9 @@
-﻿using System.Runtime.InteropServices;
-using TinyAudio;
-
-namespace Aeon.Emulator.Sound.Blaster;
+﻿namespace Aeon.Emulator.Sound.Blaster;
 
 /// <summary>
 /// Emulates a Sound Blaster 16 device.
 /// </summary>
-public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8, IDmaDevice16, IDisposable
+public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8, IDmaDevice16, IAudioSource
 {
     private readonly VirtualMachine vm;
     private readonly DmaChannel dmaChannel;
@@ -23,8 +20,6 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
     private readonly StatefulResampler _leftResampler = new();
     private readonly StatefulResampler _rightResampler = new();
     private readonly byte[] _tempReadBuffer = new byte[4096]; // Adjust size as needed
-    private AudioPlayer audioPlayer;
-
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -46,16 +41,6 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         this.dmaChannel = vm.DmaController.Channels[this.DMA];
         this.dsp = new Dsp(vm, dma8, dma16);
         this.dsp.AutoInitBufferComplete += (o, e) => RaiseInterrupt();
-        // this.playbackThread = new Thread(this.AudioPlayback)
-        // {
-        //     IsBackground = true,
-        //     Priority = ThreadPriority.AboveNormal
-        // };
-
-        // this.playbackThread.Start();
-
-        this.audioPlayer = AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.1), true, new AudioFormat(44100, 2, SampleFormat.IeeeFloat32));
-        this.audioPlayer.BeginPlayback(this.Render);
     }
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -161,29 +146,15 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
     }
 
     int IDmaDevice16.Channel => this.dma16;
+
+    bool IAudioSource.Active => true;
+
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
     void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
 
-    Task IVirtualDevice.PauseAsync()
-    {
-        return Task.CompletedTask;
-    }
-    Task IVirtualDevice.ResumeAsync()
-    {
-        return Task.CompletedTask;
-    }
     void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
     {
         vm.EnvironmentVariables["BLASTER"] = $"A220 I{this.IRQ} D{this.DMA} T4";
-    }
-
-    public void Dispose()
-    {
-        // if (this.playbackThread != null && this.playbackThread.IsAlive)
-        // {
-        //     this.endPlayback = true;
-        //     this.playbackThread.Join();
-        // }
     }
 
     /// <summary>
@@ -341,34 +312,32 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         this.state = BlasterState.WaitingForCommand;
     }
 
-    /// <summary>
-    /// Renders Sound Blaster samples into the provided stereo interleaved float buffer (called by audio callback).
-    /// </summary>
-    /// <param name="buffer">Stereo interleaved buffer to fill (-1 to 1).</param>
-    /// <param name="outputSampleRate">Output sample rate (e.g., 48000).</param>
-    public void Render(Span<float> buffer, out int samplesWritten)
+    void IAudioSource.RenderAudio(Span<float> left, Span<float> right)
     {
-        int outputSampleRate = this.audioPlayer.Format.SampleRate;
-        samplesWritten = buffer.Length;
+        #warning sample rate
+        int outputSampleRate = 44100;
 
         if (!dsp.IsEnabled)
         {
-            buffer.Fill(0f);
+            left.Clear();
+            right.Clear();
             return;
         }
 
-        int frames = buffer.Length / 2;
+        int frames = left.Length;
         double inputEquiv = (double)frames * (dsp.SampleRate / (double)outputSampleRate);
 
         if (_remainingPauseSamples > 0)
         {
-            buffer.Fill(0f);
+            left.Clear();
+            right.Clear();
             _remainingPauseSamples -= inputEquiv;
             if (_remainingPauseSamples <= 0)
             {
                 _remainingPauseSamples = 0;
                 RaiseInterrupt();
             }
+
             return;
         }
 
@@ -383,7 +352,8 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
 
         if (bytesRead == 0)
         {
-            buffer.Fill(0f);
+            left.Clear();
+            right.Clear();
             return;
         }
 
@@ -398,53 +368,45 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         for (int f = 0; f < numFrames; f++)
         {
             int offset = f * bytesPerFrame;
-            float left;
+            float leftChannel;
             if (dsp.Is16Bit)
             {
                 short l = BitConverter.ToInt16(inputBytes.Slice(offset, 2));
-                left = l / 32768f;
+                leftChannel = l / 32768f;
             }
             else
             {
                 byte l = inputBytes[offset];
-                left = (l - 128f) / 128f;
+                leftChannel = (l - 128f) / 128f;
             }
 
-            float right = left; // Default for mono
+            float rightChannel = leftChannel; // Default for mono
             if (dsp.IsStereo)
             {
                 if (dsp.Is16Bit)
                 {
                     short r = BitConverter.ToInt16(inputBytes.Slice(offset + 2, 2));
-                    right = r / 32768f;
+                    rightChannel = r / 32768f;
                 }
                 else
                 {
                     byte r = inputBytes[offset + 1];
-                    right = (r - 128f) / 128f;
+                    rightChannel = (r - 128f) / 128f;
                 }
             }
 
-            leftSamples[f] = left;
-            rightSamples[f] = right;
+            leftSamples[f] = leftChannel;
+            rightSamples[f] = rightChannel;
         }
 
         _leftResampler.AddInput(leftSamples);
         _rightResampler.AddInput(rightSamples);
 
-        Span<float> leftOut = stackalloc float[frames];
-        Span<float> rightOut = stackalloc float[frames];
-
-        _leftResampler.Resample(leftOut);
-        _rightResampler.Resample(rightOut);
-
-        for (int i = 0; i < frames; i++)
-        {
-            buffer[i * 2] = leftOut[i];
-            buffer[i * 2 + 1] = rightOut[i];
-        }
+        _leftResampler.Resample(left);
+        _rightResampler.Resample(right);
     }
 
+    #warning remove
     // private void AudioPlayback()
     // {
     //     Span<byte> buffer = stackalloc byte[512];
@@ -494,4 +456,5 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
     //         }
     //     }
     // }
+
 }
