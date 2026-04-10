@@ -241,8 +241,7 @@ public sealed class DmaChannel
                 }
             }
 
-            this.transferTimer.Reset();
-            this.transferTimer.Start();
+            this.transferTimer.Restart();
         }
     }
 

@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using TinyAudio;
 
 namespace Aeon.Emulator.Sound.Blaster;
 
@@ -12,16 +13,18 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
     private readonly List<byte> commandData = [];
     private readonly Queue<byte> outputData = new();
     private readonly int dma16;
-    private readonly Thread playbackThread;
     private readonly Dsp dsp;
     private readonly Mixer mixer;
-    private volatile bool pausePlayback;
-    private volatile bool endPlayback;
     private byte currentCommand;
     private byte commandDataLength;
     private BlasterState state;
     private bool blockTransferSizeSet;
-    private int pauseDuration;
+    private double _remainingPauseSamples;
+    private readonly StatefulResampler _leftResampler = new();
+    private readonly StatefulResampler _rightResampler = new();
+    private readonly byte[] _tempReadBuffer = new byte[4096]; // Adjust size as needed
+    private AudioPlayer audioPlayer;
+
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -43,13 +46,16 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         this.dmaChannel = vm.DmaController.Channels[this.DMA];
         this.dsp = new Dsp(vm, dma8, dma16);
         this.dsp.AutoInitBufferComplete += (o, e) => RaiseInterrupt();
-        this.playbackThread = new Thread(this.AudioPlayback)
-        {
-            IsBackground = true,
-            Priority = ThreadPriority.AboveNormal
-        };
+        // this.playbackThread = new Thread(this.AudioPlayback)
+        // {
+        //     IsBackground = true,
+        //     Priority = ThreadPriority.AboveNormal
+        // };
 
-        this.playbackThread.Start();
+        // this.playbackThread.Start();
+
+        this.audioPlayer = AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.1), true, new AudioFormat(44100, 2, SampleFormat.IeeeFloat32));
+        this.audioPlayer.BeginPlayback(this.Render);
     }
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -160,12 +166,10 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
 
     Task IVirtualDevice.PauseAsync()
     {
-        this.pausePlayback = true;
         return Task.CompletedTask;
     }
     Task IVirtualDevice.ResumeAsync()
     {
-        this.pausePlayback = false;
         return Task.CompletedTask;
     }
     void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
@@ -175,11 +179,11 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
 
     public void Dispose()
     {
-        if (this.playbackThread != null && this.playbackThread.IsAlive)
-        {
-            this.endPlayback = true;
-            this.playbackThread.Join();
-        }
+        // if (this.playbackThread != null && this.playbackThread.IsAlive)
+        // {
+        //     this.endPlayback = true;
+        //     this.playbackThread.Join();
+        // }
     }
 
     /// <summary>
@@ -201,6 +205,9 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         this.state = BlasterState.WaitingForCommand;
         this.blockTransferSizeSet = false;
         this.dsp.Reset();
+        _leftResampler.Reset();
+        _rightResampler.Reset();
+        _remainingPauseSamples = 0;
     }
     /// <summary>
     /// Performs the action associated with the current DSP command.
@@ -324,7 +331,7 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
                 break;
 
             case Commands.PauseForDuration:
-                this.pauseDuration = commandData[0] | (commandData[1] << 8);
+                this._remainingPauseSamples = commandData[0] | (commandData[1] << 8);
                 break;
 
             default:
@@ -334,53 +341,157 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         this.state = BlasterState.WaitingForCommand;
     }
 
-    private void AudioPlayback()
+    /// <summary>
+    /// Renders Sound Blaster samples into the provided stereo interleaved float buffer (called by audio callback).
+    /// </summary>
+    /// <param name="buffer">Stereo interleaved buffer to fill (-1 to 1).</param>
+    /// <param name="outputSampleRate">Output sample rate (e.g., 48000).</param>
+    public void Render(Span<float> buffer, out int samplesWritten)
     {
-        Span<byte> buffer = stackalloc byte[512];
-        short[] writeBuffer = new short[65536 * 2];
+        int outputSampleRate = this.audioPlayer.Format.SampleRate;
+        samplesWritten = buffer.Length;
 
-        using var player = Audio.CreatePlayer();
-        int sampleRate = (int)player.Format.SampleRate;
-        player.BeginPlayback();
-
-        while (!this.endPlayback)
+        if (!dsp.IsEnabled)
         {
-            this.dsp.Read(buffer);
-            int length;
-            if (this.dsp.Is16Bit && this.dsp.IsStereo)
-                length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
-            else if (this.dsp.Is16Bit)
-                length = LinearUpsampler.Resample16Mono(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
-            else if (this.dsp.IsStereo)
-                length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, sampleRate, buffer, writeBuffer);
-            else
-                length = LinearUpsampler.Resample8Mono(dsp.SampleRate, sampleRate, buffer, writeBuffer);
+            buffer.Fill(0f);
+            return;
+        }
 
-            Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
+        int frames = buffer.Length / 2;
+        double inputEquiv = (double)frames * (dsp.SampleRate / (double)outputSampleRate);
 
-            if (this.pausePlayback)
+        if (_remainingPauseSamples > 0)
+        {
+            buffer.Fill(0f);
+            _remainingPauseSamples -= inputEquiv;
+            if (_remainingPauseSamples <= 0)
             {
-                player.StopPlayback();
-                while (this.pausePlayback)
-                {
-                    Thread.Sleep(1);
-                    if (this.endPlayback)
-                        return;
-                }
-
-                player.BeginPlayback();
-            }
-
-            if (this.pauseDuration > 0)
-            {
-                Array.Clear(writeBuffer, 0, writeBuffer.Length);
-                int count = this.pauseDuration / (1024 / 2) + 1;
-                for (int i = 0; i < count; i++)
-                    Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, 1024));
-
-                this.pauseDuration = 0;
+                _remainingPauseSamples = 0;
                 RaiseInterrupt();
             }
+            return;
+        }
+
+        _leftResampler.SetRates(dsp.SampleRate, outputSampleRate);
+        _rightResampler.SetRates(dsp.SampleRate, outputSampleRate);
+
+        int bytesRead;
+        //lock (_bufferLock)
+        {
+            bytesRead = dsp.Read(_tempReadBuffer.AsSpan(0, _tempReadBuffer.Length));
+        }
+
+        if (bytesRead == 0)
+        {
+            buffer.Fill(0f);
+            return;
+        }
+
+        int bytesPerSample = dsp.Is16Bit ? 2 : 1;
+        int bytesPerFrame = bytesPerSample * (dsp.IsStereo ? 2 : 1);
+        int numFrames = bytesRead / bytesPerFrame;
+
+        Span<float> leftSamples = stackalloc float[numFrames];
+        Span<float> rightSamples = stackalloc float[numFrames];
+
+        var inputBytes = _tempReadBuffer.AsSpan(0, numFrames * bytesPerFrame); // Truncate partial
+        for (int f = 0; f < numFrames; f++)
+        {
+            int offset = f * bytesPerFrame;
+            float left;
+            if (dsp.Is16Bit)
+            {
+                short l = BitConverter.ToInt16(inputBytes.Slice(offset, 2));
+                left = l / 32768f;
+            }
+            else
+            {
+                byte l = inputBytes[offset];
+                left = (l - 128f) / 128f;
+            }
+
+            float right = left; // Default for mono
+            if (dsp.IsStereo)
+            {
+                if (dsp.Is16Bit)
+                {
+                    short r = BitConverter.ToInt16(inputBytes.Slice(offset + 2, 2));
+                    right = r / 32768f;
+                }
+                else
+                {
+                    byte r = inputBytes[offset + 1];
+                    right = (r - 128f) / 128f;
+                }
+            }
+
+            leftSamples[f] = left;
+            rightSamples[f] = right;
+        }
+
+        _leftResampler.AddInput(leftSamples);
+        _rightResampler.AddInput(rightSamples);
+
+        Span<float> leftOut = stackalloc float[frames];
+        Span<float> rightOut = stackalloc float[frames];
+
+        _leftResampler.Resample(leftOut);
+        _rightResampler.Resample(rightOut);
+
+        for (int i = 0; i < frames; i++)
+        {
+            buffer[i * 2] = leftOut[i];
+            buffer[i * 2 + 1] = rightOut[i];
         }
     }
+
+    // private void AudioPlayback()
+    // {
+    //     Span<byte> buffer = stackalloc byte[512];
+    //     short[] writeBuffer = new short[65536 * 2];
+
+    //     using var player = Audio.CreatePlayer();
+    //     int sampleRate = (int)player.Format.SampleRate;
+    //     player.BeginPlayback();
+
+    //     while (!this.endPlayback)
+    //     {
+    //         this.dsp.Read(buffer);
+    //         int length;
+    //         if (this.dsp.Is16Bit && this.dsp.IsStereo)
+    //             length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
+    //         else if (this.dsp.Is16Bit)
+    //             length = LinearUpsampler.Resample16Mono(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
+    //         else if (this.dsp.IsStereo)
+    //             length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, sampleRate, buffer, writeBuffer);
+    //         else
+    //             length = LinearUpsampler.Resample8Mono(dsp.SampleRate, sampleRate, buffer, writeBuffer);
+
+    //         Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
+
+    //         if (this.pausePlayback)
+    //         {
+    //             player.StopPlayback();
+    //             while (this.pausePlayback)
+    //             {
+    //                 Thread.Sleep(1);
+    //                 if (this.endPlayback)
+    //                     return;
+    //             }
+
+    //             player.BeginPlayback();
+    //         }
+
+    //         if (this.pauseDuration > 0)
+    //         {
+    //             Array.Clear(writeBuffer, 0, writeBuffer.Length);
+    //             int count = this.pauseDuration / (1024 / 2) + 1;
+    //             for (int i = 0; i < count; i++)
+    //                 Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, 1024));
+
+    //             this.pauseDuration = 0;
+    //             RaiseInterrupt();
+    //         }
+    //     }
+    // }
 }

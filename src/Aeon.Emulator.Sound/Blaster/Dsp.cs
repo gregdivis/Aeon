@@ -88,9 +88,9 @@ internal sealed class Dsp
     /// Reads samples from the internal buffer.
     /// </summary>
     /// <param name="buffer">Buffer into which sample data is written.</param>
-    public void Read(Span<byte> buffer)
+    public int Read(Span<byte> buffer)
     {
-        this.InternalRead(buffer);
+        return this.waveBuffer.Read(buffer);
     }
     /// <summary>
     /// Writes data from a DMA transfer.
@@ -127,38 +127,38 @@ internal sealed class Dsp
         this.readIdleCycles = 0;
     }
 
-    /// <summary>
-    /// Reads samples from the internal buffer.
-    /// </summary>
-    /// <param name="buffer">Buffer into which sample data is written.</param>
-    private void InternalRead(Span<byte> buffer)
-    {
-        var dest = buffer;
+    // /// <summary>
+    // /// Reads samples from the internal buffer.
+    // /// </summary>
+    // /// <param name="buffer">Buffer into which sample data is written.</param>
+    // private void InternalRead(Span<byte> buffer)
+    // {
+    //     var dest = buffer;
 
-        while (dest.Length > 0)
-        {
-            int amt = waveBuffer.Read(dest);
+    //     while (dest.Length > 0)
+    //     {
+    //         int amt = waveBuffer.Read(dest);
 
-            if (amt == 0)
-            {
-                if (!this.IsEnabled || this.readIdleCycles >= 100)
-                {
-                    byte zeroValue = this.Is16Bit ? (byte)0 : (byte)128;
-                    dest.Fill(zeroValue);
-                    return;
-                }
+    //         if (amt == 0)
+    //         {
+    //             if (!this.IsEnabled || this.readIdleCycles >= 100)
+    //             {
+    //                 byte zeroValue = this.Is16Bit ? (byte)0 : (byte)128;
+    //                 dest.Fill(zeroValue);
+    //                 return;
+    //             }
 
-                this.readIdleCycles++;
-                Thread.Sleep(1);
-            }
-            else
-            {
-                this.readIdleCycles = 0;
-            }
+    //             this.readIdleCycles++;
+    //             Thread.Sleep(1);
+    //         }
+    //         else
+    //         {
+    //             this.readIdleCycles = 0;
+    //         }
 
-            dest = dest[amt..];
-        }
-    }
+    //         dest = dest[amt..];
+    //     }
+    // }
     /// <summary>
     /// Raises the AutoInitBufferComplete event.
     /// </summary>
@@ -195,5 +195,5 @@ internal sealed class Dsp
     /// <summary>
     /// Size of output buffer in samples.
     /// </summary>
-    private const int TargetBufferSize = 2048;
+    private const int TargetBufferSize = 2 * 1024;
 }

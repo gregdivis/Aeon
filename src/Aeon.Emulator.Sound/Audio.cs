@@ -4,7 +4,7 @@ namespace Aeon.Emulator.Sound;
 
 internal static class Audio
 {
-    public static AudioPlayer CreatePlayer(bool useCallback = false) => AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.25), useCallback);
+    public static AudioPlayer CreatePlayer(bool useCallback = false) => AudioPlayer.CreateDefault(TimeSpan.FromSeconds(0.1), useCallback, new AudioFormat(44100, 2, SampleFormat.IeeeFloat32));
 
     public static void WriteFullBuffer(AudioPlayer player, ReadOnlySpan<float> buffer)
     {
