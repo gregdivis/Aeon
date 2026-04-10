@@ -7,7 +7,6 @@
 		<IsAotCompatible>true</IsAotCompatible>
 	</PropertyGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\Aeon.Emulator.Sound\Aeon.Emulator.Sound.csproj" />
 	  <ProjectReference Include="..\Aeon.Emulator\Aeon.Emulator.csproj" />
 	</ItemGroup>
 </Project>
