@@ -1,4 +1,5 @@
-﻿using System.IO.Compression;
+﻿using System.Buffers;
+using System.IO.Compression;
 using Mt32emu;
 
 namespace Aeon.Emulator.Sound.Midi;
@@ -8,14 +9,12 @@ internal sealed class Mt32Player : IDisposable
     private readonly Mt32Context context = new();
     private bool disposed;
 
-    public Mt32Player(string romsPath)
+    public Mt32Player(string romsPath, int sampleRate)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(romsPath);
 
         this.LoadRoms(romsPath);
 
-        #warning sample rate
-        int sampleRate = 44100;
         var analogMode = Mt32GlobalState.GetBestAnalogOutputMode(sampleRate);
         this.context.AnalogOutputMode = analogMode;
         this.context.SetSampleRate(sampleRate);
@@ -33,20 +32,30 @@ internal sealed class Mt32Player : IDisposable
             this.disposed = true;
         }
     }
-
-    private void FillBuffer(Span<float> buffer, out int samplesWritten)
+    public void FillBuffer(Span<float> left, Span<float> right)
     {
+        var buffer = ArrayPool<float>.Shared.Rent(left.Length * 2);
         try
         {
-            this.context.Render(buffer);
-            samplesWritten = buffer.Length;
+            var span = buffer.AsSpan(0, left.Length);
+            this.context.Render(span);
+            for (int i = 0; i < span.Length; i += 2)
+            {
+                left[i / 2] = span[i];
+                right[i / 2] = span[i + 1];
+            }
         }
         catch (ObjectDisposedException)
         {
-            buffer.Clear();
-            samplesWritten = buffer.Length;
+            left.Clear();
+            right.Clear();
+        }
+        finally
+        {
+            ArrayPool<float>.Shared.Return(buffer);
         }
     }
+
     private void LoadRoms(string path)
     {
         if (path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))

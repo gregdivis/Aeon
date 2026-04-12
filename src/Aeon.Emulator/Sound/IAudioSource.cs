@@ -9,6 +9,10 @@ public interface IAudioSource
     /// Gets a value indicating whether the audio source is currently active.
     /// </summary>
     bool Active { get; }
+    /// <summary>
+    /// Gets or sets the output sample rate expected by the <see cref="RenderAudio(Span{float}, Span{float})"/> method.
+    /// </summary>
+    int OutputSampleRate { get; set; }
 
     /// <summary>
     /// Fills the specified buffers with audio samples.

@@ -4,19 +4,40 @@ namespace Aeon.Emulator.Sound;
 
 public sealed class AudioMixer
 {
-    private readonly ImmutableArray<IAudioSource> sources;
+    private ImmutableList<IAudioSource> sources = [];
     private float[] mixL = new float[4096];
     private float[] mixR = new float[4096];
     private float[] tempL = new float[4096];
     private float[] tempR = new float[4096];
 
-    internal AudioMixer(ImmutableArray<IAudioSource> sources)
+    internal AudioMixer()
     {
-        this.sources = sources;
     }
 
-#warning do not hard code
-    public int SampleRate { get; } = 44100;
+    public int SampleRate
+    {
+        get => field;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                foreach (var source in this.sources)
+                    source.OutputSampleRate = value;
+            }
+        }
+    } = 44100;
+
+    public void RegisterSource(IAudioSource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ImmutableInterlocked.Update(ref this.sources, static (sources, s) => sources.Add(s), source);
+    }
+    public void UnregisterSource(IAudioSource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ImmutableInterlocked.Update(ref this.sources, static (sources, s) => sources.Remove(s), source);
+    }
 
     public void FillBuffer(Span<float> buffer)
     {

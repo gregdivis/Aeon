@@ -89,6 +89,7 @@ public sealed class VirtualMachine : IDisposable
         this.Console = new VirtualConsole(this);
         this.multiplexHandler = new MultiplexInterruptHandler(this.Processor);
         this.realTimeClock = new RealTimeClockHandler(this);
+        this.AudioMixer = new AudioMixer();
         this.PhysicalMemory.Video = this.Video;
 
         this.Dos.InitializationComplete();
@@ -121,7 +122,6 @@ public sealed class VirtualMachine : IDisposable
         this.inputPorts = new SparseArray<ushort, IInputPort>(inputPorts);
         this.outputPorts = new SparseArray<ushort, IOutputPort>(outputPorts);
         this.callbackProviders = [.. callbacks];
-        this.AudioMixer = new AudioMixer([.. audioSources]);
         this.allDevices = [.. allDevices];
 
         this.PhysicalMemory.AddTimerInterruptHandler();

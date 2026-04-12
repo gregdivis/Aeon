@@ -149,12 +149,15 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
 
     bool IAudioSource.Active => true;
 
+    public int OutputSampleRate { get; set; } = 44100;
+
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
     void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
 
     void IVirtualDevice.DeviceRegistered(VirtualMachine vm)
     {
         vm.EnvironmentVariables["BLASTER"] = $"A220 I{this.IRQ} D{this.DMA} T4";
+        vm.AudioMixer.RegisterSource(this);
     }
 
     /// <summary>
@@ -314,8 +317,7 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
 
     void IAudioSource.RenderAudio(Span<float> left, Span<float> right)
     {
-        #warning sample rate
-        int outputSampleRate = 44100;
+        int outputSampleRate = this.OutputSampleRate;
 
         if (!dsp.IsEnabled)
         {
@@ -405,56 +407,4 @@ public sealed partial class SoundBlaster : IInputPort, IOutputPort, IDmaDevice8,
         _leftResampler.Resample(left);
         _rightResampler.Resample(right);
     }
-
-    #warning remove
-    // private void AudioPlayback()
-    // {
-    //     Span<byte> buffer = stackalloc byte[512];
-    //     short[] writeBuffer = new short[65536 * 2];
-
-    //     using var player = Audio.CreatePlayer();
-    //     int sampleRate = (int)player.Format.SampleRate;
-    //     player.BeginPlayback();
-
-    //     while (!this.endPlayback)
-    //     {
-    //         this.dsp.Read(buffer);
-    //         int length;
-    //         if (this.dsp.Is16Bit && this.dsp.IsStereo)
-    //             length = LinearUpsampler.Resample16Stereo(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
-    //         else if (this.dsp.Is16Bit)
-    //             length = LinearUpsampler.Resample16Mono(dsp.SampleRate, sampleRate, MemoryMarshal.Cast<byte, short>(buffer), writeBuffer);
-    //         else if (this.dsp.IsStereo)
-    //             length = LinearUpsampler.Resample8Stereo(dsp.SampleRate, sampleRate, buffer, writeBuffer);
-    //         else
-    //             length = LinearUpsampler.Resample8Mono(dsp.SampleRate, sampleRate, buffer, writeBuffer);
-
-    //         Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, length));
-
-    //         if (this.pausePlayback)
-    //         {
-    //             player.StopPlayback();
-    //             while (this.pausePlayback)
-    //             {
-    //                 Thread.Sleep(1);
-    //                 if (this.endPlayback)
-    //                     return;
-    //             }
-
-    //             player.BeginPlayback();
-    //         }
-
-    //         if (this.pauseDuration > 0)
-    //         {
-    //             Array.Clear(writeBuffer, 0, writeBuffer.Length);
-    //             int count = this.pauseDuration / (1024 / 2) + 1;
-    //             for (int i = 0; i < count; i++)
-    //                 Audio.WriteFullBuffer(player, writeBuffer.AsSpan(0, 1024));
-
-    //             this.pauseDuration = 0;
-    //             RaiseInterrupt();
-    //         }
-    //     }
-    // }
-
 }

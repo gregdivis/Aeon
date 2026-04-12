@@ -11,18 +11,12 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IAudioSource
     private const byte Timer2Mask = 0xA0;
 
     private int currentAddress;
-    private readonly FmSynthesizer synth;
+    private FmSynthesizer synth = new();
     private byte timer1Data;
     private byte timer2Data;
     private byte timerControlByte;
     private byte statusByte;
     private bool initialized;
-
-    public FmSoundCard()
-    {
-        #warning sample rate
-        this.synth = new FmSynthesizer(44100);
-    }
 
     ReadOnlySpan<ushort> IInputPort.InputPorts => [0x388];
     byte IInputPort.ReadByte(int port)
@@ -48,6 +42,16 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IAudioSource
     ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x388, 0x389];
 
     bool IAudioSource.Active => this.initialized;
+
+    public int OutputSampleRate
+    {
+        get => this.synth.SampleRate;
+        set
+        {
+            if (this.synth.SampleRate != value)
+                this.synth = new FmSynthesizer(value);
+        }
+    }
 
     void IOutputPort.WriteByte(int port, byte value)
     {
@@ -87,6 +91,8 @@ public sealed class FmSoundCard : IInputPort, IOutputPort, IAudioSource
             ((IOutputPort)this).WriteByte(0x389, (byte)(value >> 8));
         }
     }
+
+    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => vm.AudioMixer.RegisterSource(this);
 
     void IAudioSource.RenderAudio(Span<float> left, Span<float> right)
     {

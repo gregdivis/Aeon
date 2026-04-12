@@ -6,6 +6,7 @@
 public sealed class GeneralMidi : IInputPort, IOutputPort, IAudioSource, IDisposable
 {
     private MidiDevice? midiMapper;
+    private VirtualMachine? vm;
     private readonly Queue<byte> dataBytes = new();
 
     private const int DataPort = 0x330;
@@ -80,6 +81,8 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IAudioSource, IDispos
 
     bool IAudioSource.Active => this.midiMapper?.GeneratesWaveformData ?? false;
 
+    public int OutputSampleRate { get; set; } = 44100;
+
     void IOutputPort.WriteByte(int port, byte value)
     {
         switch (port)
@@ -120,6 +123,7 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IAudioSource, IDispos
         this.midiMapper?.Resume();
         return Task.CompletedTask;
     }
+    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => this.vm = vm;
 
     public void Dispose()
     {
@@ -129,12 +133,17 @@ public sealed class GeneralMidi : IInputPort, IOutputPort, IAudioSource, IDispos
 
     private void TryCreateMidiMapper()
     {
+        var original = this.midiMapper;
+
         this.midiMapper ??= this.Options.Engine switch
         {
-            MidiEngine.MeltySynth when !string.IsNullOrWhiteSpace(this.Options.SoundFontPath) => new MeltySynthMidiMapper(this.Options.SoundFontPath),
-            MidiEngine.Mt32 when !string.IsNullOrWhiteSpace(this.Options.Mt32RomsPath) => new Mt32MidiDevice(this.Options.Mt32RomsPath),
+            MidiEngine.MeltySynth when !string.IsNullOrWhiteSpace(this.Options.SoundFontPath) => new MeltySynthMidiMapper(this.Options.SoundFontPath, this.OutputSampleRate),
+            MidiEngine.Mt32 when !string.IsNullOrWhiteSpace(this.Options.Mt32RomsPath) => new Mt32MidiDevice(this.Options.Mt32RomsPath, this.OutputSampleRate),
             _ => OperatingSystem.IsWindows() ? new WindowsMidiMapper() : null
         };
+
+        if (original is null && this.midiMapper is not null)
+            this.vm?.AudioMixer.RegisterSource(this);
     }
 
     void IAudioSource.RenderAudio(Span<float> left, Span<float> right)

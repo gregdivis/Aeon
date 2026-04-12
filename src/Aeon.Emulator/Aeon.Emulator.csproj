@@ -13,7 +13,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="MeltySynth" Version="2.4.1" />
-		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
+		<PackageReference Include="Mt32emu.net" Version="1.0.0" />
 		<PackageReference Include="Ymf262Emu" Version="1.1.0" />
 	</ItemGroup>
 	<ItemGroup>

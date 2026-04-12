@@ -3,21 +3,17 @@
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
-internal sealed class Dsp
+internal sealed class Dsp(VirtualMachine vm, int dma8, int dma16)
 {
+    private readonly DmaChannel dmaChannel8 = vm.DmaController.Channels[dma8];
+    private readonly DmaChannel dmaChannel16 = vm.DmaController.Channels[dma16];
+    private DmaChannel? currentChannel;
     /// <summary>
-    /// Initializes a new instance of the Dsp class.
+    /// Number of bytes transferred in the current auto-init cycle.
     /// </summary>
-    /// <param name="vm">Virtual machine instance associated with the DSP.</param>
-    /// <param name="dma8">8-bit DMA channel for the DSP device.</param>
-    /// <param name="dma16">16-bit DMA channel for the DSP device.</param>
-    public Dsp(VirtualMachine vm, int dma8, int dma16)
-    {
-        this.dmaChannel8 = vm.DmaController.Channels[dma8];
-        this.dmaChannel16 = vm.DmaController.Channels[dma16];
-        this.SampleRate = 22050;
-        this.BlockTransferSize = 65536;
-    }
+    private int autoInitTotal;
+    private readonly CircularBuffer waveBuffer = new(TargetBufferSize);
+    private const int TargetBufferSize = 2 * 1024;
 
     /// <summary>
     /// Occurs when a buffer has been transferred in auto-initialize mode.
@@ -27,7 +23,7 @@ internal sealed class Dsp
     /// <summary>
     /// Gets or sets the DSP's sample rate.
     /// </summary>
-    public int SampleRate { get; set; }
+    public int SampleRate { get; set; } = 22050;
     /// <summary>
     /// Gets a value indicating whether the DMA mode is set to auto-initialize.
     /// </summary>
@@ -35,7 +31,7 @@ internal sealed class Dsp
     /// <summary>
     /// Gets or sets the size of a transfer block for auto-init mode.
     /// </summary>
-    public int BlockTransferSize { get; set; }
+    public int BlockTransferSize { get; set; } = 65536;
     /// <summary>
     /// Gets a value indicating whether the waveform data is 16-bit.
     /// </summary>
@@ -124,76 +120,11 @@ internal sealed class Dsp
         this.Is16Bit = false;
         this.IsStereo = false;
         this.autoInitTotal = 0;
-        this.readIdleCycles = 0;
     }
 
-    // /// <summary>
-    // /// Reads samples from the internal buffer.
-    // /// </summary>
-    // /// <param name="buffer">Buffer into which sample data is written.</param>
-    // private void InternalRead(Span<byte> buffer)
-    // {
-    //     var dest = buffer;
-
-    //     while (dest.Length > 0)
-    //     {
-    //         int amt = waveBuffer.Read(dest);
-
-    //         if (amt == 0)
-    //         {
-    //             if (!this.IsEnabled || this.readIdleCycles >= 100)
-    //             {
-    //                 byte zeroValue = this.Is16Bit ? (byte)0 : (byte)128;
-    //                 dest.Fill(zeroValue);
-    //                 return;
-    //             }
-
-    //             this.readIdleCycles++;
-    //             Thread.Sleep(1);
-    //         }
-    //         else
-    //         {
-    //             this.readIdleCycles = 0;
-    //         }
-
-    //         dest = dest[amt..];
-    //     }
-    // }
     /// <summary>
     /// Raises the AutoInitBufferComplete event.
     /// </summary>
     /// <param name="e">Unused EventArgs instance.</param>
     private void OnAutoInitBufferComplete(EventArgs e) => this.AutoInitBufferComplete?.Invoke(this, e);
-
-    /// <summary>
-    /// DMA channel used for 8-bit data transfers.
-    /// </summary>
-    private readonly DmaChannel dmaChannel8;
-    /// <summary>
-    /// DMA channel used for 16-bit data transfers.
-    /// </summary>
-    private readonly DmaChannel dmaChannel16;
-    /// <summary>
-    /// Currently active DMA channel.
-    /// </summary>
-    private DmaChannel? currentChannel;
-
-    /// <summary>
-    /// Number of bytes transferred in the current auto-init cycle.
-    /// </summary>
-    private int autoInitTotal;
-    /// <summary>
-    /// Number of cycles with no new input data.
-    /// </summary>
-    private int readIdleCycles;
-
-    /// <summary>
-    /// Contains generated waveform data waiting to be read.
-    /// </summary>
-    private readonly CircularBuffer waveBuffer = new(TargetBufferSize);
-
-    /// <summary>
-    /// Size of output buffer in samples.
-    /// </summary>
-    private const int TargetBufferSize = 2 * 1024;
 }

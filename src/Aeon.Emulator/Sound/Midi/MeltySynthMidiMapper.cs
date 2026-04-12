@@ -6,12 +6,10 @@ internal sealed class MeltySynthMidiMapper : MidiDevice
 {
     private readonly Synthesizer synthesizer;
 
-    public MeltySynthMidiMapper(string soundFontPath)
+    public MeltySynthMidiMapper(string soundFontPath, int sampleRate)
     {
         ArgumentException.ThrowIfNullOrEmpty(soundFontPath);
-
-        #warning sample rate
-        this.synthesizer = new Synthesizer(soundFontPath, 44100);
+        this.synthesizer = new Synthesizer(soundFontPath, sampleRate);
     }
 
     public override void Pause()

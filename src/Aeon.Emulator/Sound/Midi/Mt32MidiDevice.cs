@@ -5,11 +5,11 @@ internal sealed class Mt32MidiDevice : MidiDevice
     private readonly Lazy<Mt32Player> player;
     private bool disposed;
 
-    public Mt32MidiDevice(string romsPath)
+    public Mt32MidiDevice(string romsPath, int sampleRate)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(romsPath);
 
-        this.player = new Lazy<Mt32Player>(() => new(romsPath));
+        this.player = new Lazy<Mt32Player>(() => new(romsPath, sampleRate));
     }
 
     public override void Pause()
@@ -19,6 +19,8 @@ internal sealed class Mt32MidiDevice : MidiDevice
     public override void Resume()
     {
     }
+
+    public override void RenderAudio(Span<float> left, Span<float> right) => this.player.Value.FillBuffer(left, right);
 
     protected override void PlayShortMessage(uint message) => this.player.Value.PlayShortMessage(message);
     protected override void PlaySysex(ReadOnlySpan<byte> data) => this.player.Value.PlaySysex(data);
@@ -32,11 +34,5 @@ internal sealed class Mt32MidiDevice : MidiDevice
 
             this.disposed = true;
         }
-    }
-
-    public override void RenderAudio(Span<float> left, Span<float> right)
-    {
-        #warning implement
-        throw new NotImplementedException();
     }
 }

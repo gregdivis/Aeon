@@ -10,8 +10,6 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IAudioSource
     /// </summary>
     private const double FrequencyFactor = 1193180;
     private const float Amplitude = 0.5f;
-    #warning sample rate
-    private const int OutputSampleRate = 44100;
 
     private volatile uint frequencyRegister;
     private byte? nextFrequencyRegisterByte;
@@ -22,6 +20,7 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IAudioSource
     ReadOnlySpan<ushort> IOutputPort.OutputPorts => [0x42, 0x61];
 
     bool IAudioSource.Active => this.controlRegister.HasFlag(SpeakerControl.SpeakerOn);
+    public int OutputSampleRate { get; set; } = 44100;
 
     byte IInputPort.ReadByte(int port) => (byte)this.controlRegister;
     ushort IInputPort.ReadWord(int port) => throw new NotImplementedException();
@@ -45,6 +44,7 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IAudioSource
             }
         }
     }
+    void IVirtualDevice.DeviceRegistered(VirtualMachine vm) => vm.AudioMixer.RegisterSource(this);
 
     private void WriteAudioData(Span<float> buffer)
     {
@@ -57,7 +57,7 @@ public sealed class InternalSpeaker : IInputPort, IOutputPort, IAudioSource
             return;
         }
 
-        var phaseIncrement = frequency / OutputSampleRate;
+        var phaseIncrement = frequency / this.OutputSampleRate;
 
         for (int i = 0; i < buffer.Length; i++)
         {
